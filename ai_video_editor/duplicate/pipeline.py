@@ -170,6 +170,8 @@ def detect_duplicates(
     # ------------------------------------------------------------------
     # False-start detection — sentences between duplicate pairs
     # ------------------------------------------------------------------
+    protected_indices = {p.idx_keep for p in definite_pairs}
+
     for pair in definite_pairs:
         lo = pair.idx_cut + 1
         hi = pair.idx_keep
@@ -177,7 +179,6 @@ def detect_duplicates(
             continue
 
         block = sentences[lo:hi]
-        already_flagged_block = [i for i in range(lo, hi) if i in flagged_indices]
         unflagged_in_block = [i for i in range(lo, hi) if i not in flagged_indices]
         if not unflagged_in_block:
             continue
@@ -190,6 +191,13 @@ def detect_duplicates(
         for local_idx in verdict.filler_indices:
             global_idx = lo + local_idx
             if global_idx in flagged_indices or global_idx >= hi:
+                continue
+            if global_idx in protected_indices:
+                logger.info(
+                    "Protecting sentence {} from false-start flag — "
+                    "it is the keep-side of another duplicate pair",
+                    global_idx,
+                )
                 continue
             flags.append(DuplicateFlag(
                 idx=global_idx,

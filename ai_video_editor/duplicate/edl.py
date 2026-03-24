@@ -95,11 +95,13 @@ def build_edl(
     if not keep_regions:
         keep_regions = [KeepRegion(start=0.0, end=total_dur)]
 
+    in_keep_region: set[int] = set()
     for region in keep_regions:
         sentences_in_region = [
             (i, s) for i, s in enumerate(transcript.sentences)
             if s.start >= region.start and s.end <= region.end
         ]
+        in_keep_region.update(i for i, _ in sentences_in_region)
 
         current_start: float | None = None
         current_end: float | None = None
@@ -118,6 +120,15 @@ def build_edl(
 
         if current_start is not None and current_end is not None:
             keep_spans.append((current_start, current_end))
+
+    rescued = 0
+    for i, s in enumerate(transcript.sentences):
+        if i not in in_keep_region and i not in flagged:
+            keep_spans.append((s.start, s.end))
+            rescued += 1
+
+    if rescued:
+        logger.info("Rescued {} sentences from silence gaps", rescued)
 
     keep_spans.sort()
     merged: list[tuple[float, float]] = []
