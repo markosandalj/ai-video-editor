@@ -193,6 +193,124 @@ def batch(
     logger.info("Batch complete: {}/{} succeeded, {} failed", success, len(videos), failed)
 
 
+@app.command()
+def qa(
+    fixtures_dir: Path = typer.Argument(
+        "tests/fixtures",
+        exists=True,
+        help="Directory containing test pairs (<name>-raw.mp4 + <name>-edited.mp4).",
+    ),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Shortcut for DEBUG log level."),
+) -> None:
+    """Run QA checks on all test video pairs and record regression scores."""
+    from ai_video_editor.config.settings import Settings
+    from ai_video_editor.duplicate.edl import EditDecisionList
+    from ai_video_editor.qa.continuity import verify_continuity
+    from ai_video_editor.qa.ground_truth import compare_temporal, compare_transcripts_from_videos, transcribe_for_qa
+    from ai_video_editor.qa.models import QAIssue, QAReport, Severity
+    from ai_video_editor.qa.regression import check_regression, discover_pairs, record_scores
+    from ai_video_editor.qa.report import print_summary, save_report
+    from ai_video_editor.qa.splice import analyze_splices
+    from ai_video_editor.qa.spectrogram import compare_spectrograms
+    from ai_video_editor.transcription.models import Transcript
+
+    settings = Settings()
+    if verbose:
+        setup_logging(settings.model_copy(
+            update={"general": settings.general.model_copy(update={"log_level": "DEBUG"})}
+        ))
+
+    pairs = discover_pairs(fixtures_dir)
+    if not pairs:
+        logger.error("No test pairs found in {}", fixtures_dir)
+        raise typer.Exit(code=1)
+
+    root = Path(__file__).resolve().parent.parent.parent
+    history_path = fixtures_dir / "regression_scores.json"
+    reports: list[QAReport] = []
+
+    for name, raw_path, gt_path in pairs:
+        logger.info("QA for pair: {}", name)
+
+        pipeline_video = raw_path.with_name(f"{name}-raw_edited.mp4")
+        edl_path = raw_path.with_suffix(".edl.json")
+        edited_transcript_path = raw_path.with_name(f"{name}-raw_edited.transcript.json")
+        denoised_path = root / ".ai_video_editor_tmp" / f"{name}-raw_denoised.wav"
+
+        if not pipeline_video.exists():
+            logger.warning("Pipeline output not found: {} — skipping", pipeline_video.name)
+            continue
+
+        report = QAReport(video_name=name)
+        issues: list[QAIssue] = []
+
+        pipeline_sentences = transcribe_for_qa(pipeline_video, force=True)
+
+        tc = compare_transcripts_from_videos(pipeline_video, gt_path, pipeline_sentences=pipeline_sentences)
+        report.transcript_comparison = tc
+        if tc.f1 < 0.8:
+            issues.append(QAIssue(
+                check="transcript_comparison", severity=Severity.WARNING,
+                message=f"Low F1 score: {tc.f1:.1%}",
+            ))
+
+        if tc.matches:
+            tp = compare_temporal(pipeline_video, gt_path, [], [], tc.matches)
+            report.temporal_comparison = tp
+            if tp.temporal_score < 0.7:
+                issues.append(QAIssue(
+                    check="temporal_comparison", severity=Severity.WARNING,
+                    message=f"Low temporal score: {tp.temporal_score:.1%}",
+                ))
+
+        if edl_path.exists():
+            edl = EditDecisionList.model_validate_json(edl_path.read_text("utf-8"))
+            sa = analyze_splices(pipeline_video, edl)
+            report.splice_analysis = sa
+            if sa.harsh_splices > 0:
+                issues.append(QAIssue(
+                    check="splice_analysis", severity=Severity.WARNING,
+                    message=f"{sa.harsh_splices} harsh splices detected",
+                ))
+
+            if denoised_path.exists():
+                sc = compare_spectrograms(pipeline_video, denoised_path, edl)
+                report.spectrogram_comparison = sc
+                if not sc.passed:
+                    issues.append(QAIssue(
+                        check="spectrogram_comparison", severity=Severity.ERROR,
+                        message=f"Spectrogram similarity too low: {sc.similarity_score:.4f}",
+                    ))
+
+        if edited_transcript_path.exists():
+            edited_transcript = Transcript.model_validate_json(
+                edited_transcript_path.read_text("utf-8")
+            )
+            ct = verify_continuity(edited_transcript.sentences, pipeline_sentences)
+            report.continuity = ct
+            if ct.alignment_score < 0.9:
+                issues.append(QAIssue(
+                    check="continuity", severity=Severity.WARNING,
+                    message=f"Low continuity: {ct.alignment_score:.1%} ({len(ct.missing_sentences)} missing)",
+                ))
+
+        report.issues = issues
+        report.overall_passed = not any(i.severity == Severity.ERROR for i in issues)
+        print_summary(report)
+        save_report(report, fixtures_dir)
+        reports.append(report)
+
+    if reports:
+        entry = record_scores(reports, history_path)
+        warnings = check_regression(entry, history_path)
+        logger.info("AGGREGATE SCORE: {:.1%}", entry.aggregate_score)
+        if warnings:
+            for w in warnings:
+                logger.warning(w)
+
+    logger.info("QA complete.")
+
+
 def main() -> None:
     app()
 

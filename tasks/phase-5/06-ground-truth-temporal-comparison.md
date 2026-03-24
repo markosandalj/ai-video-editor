@@ -1,6 +1,6 @@
 # Ground Truth Temporal Comparison
 
-Status: `pending`
+Status: `done`
 Phase: 5
 Depends on: phase-4 (rendered video), manually edited reference video
 
@@ -10,11 +10,17 @@ Compare the timing and duration of our pipeline's cuts against the manually edit
 
 ## Requirements
 
-_To be filled during grilling session._
+- Compare total duration of our edited video vs the human-edited video.
+- Align cut points between the two edits to measure timing accuracy.
+- Compute per-cut-point offset (how far off each of our cuts is from the human's nearest cut).
+- Overall temporal similarity score.
+- Both metrics (precision/recall from 5.05 and temporal score from here) weighted equally in the final assessment.
 
 ## Implementation Notes
 
-_To be filled during grilling session._
+- Duration comparison is trivial (ffprobe both files).
+- For cut-point alignment: extract word-level timestamps from both transcriptions, find matching words, measure the time offset at those anchor points.
+- Output: duration delta, per-anchor timing offset, overall temporal similarity score (0-1).
 
 ## Acceptance Criteria
 
