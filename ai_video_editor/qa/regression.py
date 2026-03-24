@@ -16,6 +16,7 @@ class PairScore(BaseModel):
     precision: float = 0.0
     recall: float = 0.0
     f1: float = 0.0
+    word_f1: float = 0.0
     temporal_score: float = 0.0
     overall_score: float = 0.0
 
@@ -74,6 +75,8 @@ def record_scores(
             ps.precision = r.transcript_comparison.precision
             ps.recall = r.transcript_comparison.recall
             ps.f1 = r.transcript_comparison.f1
+        if r.word_level_comparison:
+            ps.word_f1 = r.word_level_comparison.f1
         if r.temporal_comparison:
             ps.temporal_score = r.temporal_comparison.temporal_score
         pair_scores.append(ps)

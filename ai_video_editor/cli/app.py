@@ -206,7 +206,7 @@ def qa(
     from ai_video_editor.config.settings import Settings
     from ai_video_editor.duplicate.edl import EditDecisionList
     from ai_video_editor.qa.continuity import verify_continuity
-    from ai_video_editor.qa.ground_truth import compare_temporal, compare_transcripts_from_videos, transcribe_for_qa
+    from ai_video_editor.qa.ground_truth import compare_temporal, compare_transcripts_from_videos, compare_transcripts_word_level, transcribe_for_qa
     from ai_video_editor.qa.models import QAIssue, QAReport, Severity
     from ai_video_editor.qa.regression import check_regression, discover_pairs, record_scores
     from ai_video_editor.qa.report import print_summary, save_report
@@ -245,6 +245,7 @@ def qa(
         issues: list[QAIssue] = []
 
         pipeline_sentences = transcribe_for_qa(pipeline_video, force=True)
+        gt_sentences = transcribe_for_qa(gt_path)
 
         tc = compare_transcripts_from_videos(pipeline_video, gt_path, pipeline_sentences=pipeline_sentences)
         report.transcript_comparison = tc
@@ -253,6 +254,9 @@ def qa(
                 check="transcript_comparison", severity=Severity.WARNING,
                 message=f"Low F1 score: {tc.f1:.1%}",
             ))
+
+        wl = compare_transcripts_word_level(pipeline_sentences, gt_sentences)
+        report.word_level_comparison = wl
 
         if tc.matches:
             tp = compare_temporal(pipeline_video, gt_path, [], [], tc.matches)

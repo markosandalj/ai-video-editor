@@ -26,7 +26,7 @@ def main() -> None:
     from ai_video_editor.config import Settings
     from ai_video_editor.duplicate.edl import EditDecisionList
     from ai_video_editor.qa.continuity import verify_continuity
-    from ai_video_editor.qa.ground_truth import compare_temporal, compare_transcripts_from_videos, transcribe_for_qa
+    from ai_video_editor.qa.ground_truth import compare_temporal, compare_transcripts_from_videos, compare_transcripts_word_level, transcribe_for_qa
     from ai_video_editor.qa.models import QAIssue, QAReport, Severity
     from ai_video_editor.qa.regression import check_regression, discover_pairs, record_scores
     from ai_video_editor.qa.report import print_summary, save_report
@@ -64,7 +64,10 @@ def main() -> None:
         logger.info("--- Transcribing pipeline output (once) ---")
         pipeline_sentences = transcribe_for_qa(pipeline_video, force=True)
 
-        logger.info("--- Transcript comparison (5.05) ---")
+        logger.info("--- Transcribing ground truth (cached) ---")
+        gt_sentences = transcribe_for_qa(gt_path)
+
+        logger.info("--- Transcript comparison: sentence-level (5.05) ---")
         tc = compare_transcripts_from_videos(pipeline_video, gt_path, pipeline_sentences=pipeline_sentences)
         report.transcript_comparison = tc
         if tc.f1 < 0.8:
@@ -73,6 +76,10 @@ def main() -> None:
                 severity=Severity.WARNING,
                 message=f"Low F1 score: {tc.f1:.1%}",
             ))
+
+        logger.info("--- Transcript comparison: word-level LCS ---")
+        wl = compare_transcripts_word_level(pipeline_sentences, gt_sentences)
+        report.word_level_comparison = wl
 
         logger.info("--- Temporal comparison (5.06) ---")
         if tc.matches:

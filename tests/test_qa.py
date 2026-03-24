@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from ai_video_editor.qa.ground_truth import compare_transcripts
+from ai_video_editor.qa.ground_truth import compare_transcripts, compare_transcripts_word_level
 from ai_video_editor.qa.models import (
     ContinuityResult,
     QAIssue,
@@ -18,6 +18,7 @@ from ai_video_editor.qa.models import (
     SpectrogramComparisonResult,
     TemporalComparisonResult,
     TranscriptComparisonResult,
+    WordLevelComparisonResult,
 )
 from ai_video_editor.qa.regression import (
     PairScore,
@@ -94,6 +95,58 @@ class TestTranscriptComparisonResult:
         assert r.precision == 0.0
         assert r.recall == 0.0
         assert r.f1 == 0.0
+
+
+class TestWordLevelComparison:
+    def test_perfect_match(self):
+        sentences = [_make_sentence("Hello world."), _make_sentence("How are you?")]
+        result = compare_transcripts_word_level(sentences, sentences)
+        assert result.precision == 1.0
+        assert result.recall == 1.0
+        assert result.f1 == 1.0
+        assert result.lcs_length == result.pipeline_words
+
+    def test_no_overlap(self):
+        pipeline = [_make_sentence("Ovo je test.")]
+        gt = [_make_sentence("Sasvim drugačija rečenica.")]
+        result = compare_transcripts_word_level(pipeline, gt)
+        assert result.lcs_length == 0
+        assert result.f1 == 0.0
+
+    def test_boundary_mismatch_still_matches(self):
+        """The core case: same words split into different sentences."""
+        pipeline = [_make_sentence("Hello world how are you.")]
+        gt = [_make_sentence("Hello world."), _make_sentence("How are you.")]
+        result = compare_transcripts_word_level(pipeline, gt)
+        assert result.f1 == 1.0
+
+    def test_extra_words(self):
+        pipeline = [_make_sentence("A B C D E.")]
+        gt = [_make_sentence("A B C.")]
+        result = compare_transcripts_word_level(pipeline, gt)
+        assert result.recall == 1.0
+        assert result.precision < 1.0
+        assert len(result.extra_words) == 2
+
+    def test_missing_words(self):
+        pipeline = [_make_sentence("A B.")]
+        gt = [_make_sentence("A B C D.")]
+        result = compare_transcripts_word_level(pipeline, gt)
+        assert result.precision == 1.0
+        assert result.recall < 1.0
+        assert len(result.missing_words) == 2
+
+    def test_empty(self):
+        result = compare_transcripts_word_level([], [])
+        assert result.f1 == 0.0
+        assert result.lcs_length == 0
+
+    def test_model_fields(self):
+        r = WordLevelComparisonResult(
+            pipeline_words=100, ground_truth_words=80, lcs_length=75,
+        )
+        assert r.precision == pytest.approx(0.75)
+        assert r.recall == pytest.approx(75 / 80)
 
 
 class TestTemporalComparisonResult:

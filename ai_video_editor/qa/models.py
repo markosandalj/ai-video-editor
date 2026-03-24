@@ -58,6 +58,33 @@ class TranscriptComparisonResult(BaseModel):
         return 2 * p * r / (p + r) if (p + r) > 0 else 0.0
 
 
+class WordLevelComparisonResult(BaseModel):
+    """Result of word-level LCS comparison (immune to sentence boundaries)."""
+    pipeline_words: int = 0
+    ground_truth_words: int = 0
+    lcs_length: int = 0
+    extra_words: list[str] = Field(default_factory=list)
+    missing_words: list[str] = Field(default_factory=list)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def precision(self) -> float:
+        """Of pipeline words, how many are in the LCS."""
+        return self.lcs_length / self.pipeline_words if self.pipeline_words else 0.0
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def recall(self) -> float:
+        """Of ground truth words, how many are in the LCS."""
+        return self.lcs_length / self.ground_truth_words if self.ground_truth_words else 0.0
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def f1(self) -> float:
+        p, r = self.precision, self.recall
+        return 2 * p * r / (p + r) if (p + r) > 0 else 0.0
+
+
 class TemporalComparisonResult(BaseModel):
     """Result of comparing timing between pipeline and ground truth."""
     pipeline_duration: float = 0.0
@@ -95,6 +122,7 @@ class QAReport(BaseModel):
     video_name: str
     created_at: str = ""
     transcript_comparison: TranscriptComparisonResult | None = None
+    word_level_comparison: WordLevelComparisonResult | None = None
     temporal_comparison: TemporalComparisonResult | None = None
     splice_analysis: SpliceAnalysisResult | None = None
     spectrogram_comparison: SpectrogramComparisonResult | None = None

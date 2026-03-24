@@ -2,6 +2,7 @@ from ai_video_editor.qa.ground_truth import (
     compare_temporal,
     compare_transcripts,
     compare_transcripts_from_videos,
+    compare_transcripts_word_level,
     transcribe_for_qa,
 )
 from ai_video_editor.qa.models import QAReport
@@ -19,6 +20,7 @@ __all__ = [
     "compare_temporal",
     "compare_transcripts",
     "compare_transcripts_from_videos",
+    "compare_transcripts_word_level",
     "discover_pairs",
     "transcribe_for_qa",
     "generate_report",

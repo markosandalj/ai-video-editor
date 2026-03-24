@@ -49,6 +49,20 @@ def _build_sections(report: QAReport) -> str:
 <tr><td>Ground truth only (false negatives)</td><td>{len(tc.ground_truth_only)}</td></tr>
 </table></div>""")
 
+    if report.word_level_comparison:
+        wl = report.word_level_comparison
+        parts.append(f"""<div class="section"><h2>Word-Level Comparison (LCS)</h2>
+<table><tr><th>Metric</th><th>Value</th></tr>
+<tr><td>Pipeline words</td><td>{wl.pipeline_words}</td></tr>
+<tr><td>Ground truth words</td><td>{wl.ground_truth_words}</td></tr>
+<tr><td>LCS length</td><td>{wl.lcs_length}</td></tr>
+<tr><td>Precision</td><td>{wl.precision:.1%}</td></tr>
+<tr><td>Recall</td><td>{wl.recall:.1%}</td></tr>
+<tr><td>F1</td><td>{wl.f1:.1%}</td></tr>
+<tr><td>Extra words (pipeline only)</td><td>{len(wl.extra_words)}</td></tr>
+<tr><td>Missing words (gt only)</td><td>{len(wl.missing_words)}</td></tr>
+</table></div>""")
+
     if report.temporal_comparison:
         tp = report.temporal_comparison
         parts.append(f"""<div class="section"><h2>Temporal Comparison</h2>
@@ -141,8 +155,15 @@ def print_summary(report: QAReport) -> None:
     if report.transcript_comparison:
         tc = report.transcript_comparison
         logger.info(
-            "  Transcript: P={:.1%} R={:.1%} F1={:.1%} (matched {}/{})",
+            "  Transcript (sentence): P={:.1%} R={:.1%} F1={:.1%} (matched {}/{})",
             tc.precision, tc.recall, tc.f1, tc.matched, tc.ground_truth_sentences,
+        )
+
+    if report.word_level_comparison:
+        wl = report.word_level_comparison
+        logger.info(
+            "  Transcript (word LCS): P={:.1%} R={:.1%} F1={:.1%} (LCS {}/{})",
+            wl.precision, wl.recall, wl.f1, wl.lcs_length, wl.ground_truth_words,
         )
 
     if report.temporal_comparison:

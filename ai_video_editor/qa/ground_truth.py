@@ -9,6 +9,7 @@ from ai_video_editor.qa.models import (
     SentenceMatch,
     TemporalComparisonResult,
     TranscriptComparisonResult,
+    WordLevelComparisonResult,
 )
 from ai_video_editor.transcription.chunking import chunk_into_sentences
 from ai_video_editor.transcription.elevenlabs_stt import transcribe_elevenlabs
@@ -170,6 +171,97 @@ def compare_transcripts_from_videos(
     gt_sentences = transcribe_for_qa(ground_truth_video)
 
     return compare_transcripts(pipeline_sentences, gt_sentences)
+
+
+def _lcs_length_table(a: list[str], b: list[str]) -> list[list[int]]:
+    """Build the LCS dynamic-programming table (space-optimised rows kept for backtrack)."""
+    m, n = len(a), len(b)
+    dp = [[0] * (n + 1) for _ in range(m + 1)]
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            if a[i - 1] == b[j - 1]:
+                dp[i][j] = dp[i - 1][j - 1] + 1
+            else:
+                dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
+    return dp
+
+
+def _backtrack_lcs(dp: list[list[int]], a: list[str], b: list[str]) -> set[int]:
+    """Return indices into *a* that belong to the LCS."""
+    indices: list[int] = []
+    i, j = len(a), len(b)
+    while i > 0 and j > 0:
+        if a[i - 1] == b[j - 1]:
+            indices.append(i - 1)
+            i -= 1
+            j -= 1
+        elif dp[i - 1][j] >= dp[i][j - 1]:
+            i -= 1
+        else:
+            j -= 1
+    return set(indices)
+
+
+def _backtrack_lcs_b(dp: list[list[int]], a: list[str], b: list[str]) -> set[int]:
+    """Return indices into *b* that belong to the LCS."""
+    indices: list[int] = []
+    i, j = len(a), len(b)
+    while i > 0 and j > 0:
+        if a[i - 1] == b[j - 1]:
+            indices.append(j - 1)
+            i -= 1
+            j -= 1
+        elif dp[i - 1][j] >= dp[i][j - 1]:
+            i -= 1
+        else:
+            j -= 1
+    return set(indices)
+
+
+def compare_transcripts_word_level(
+    pipeline_sentences: list[Sentence],
+    ground_truth_sentences: list[Sentence],
+) -> WordLevelComparisonResult:
+    """
+    Word-level comparison using Longest Common Subsequence.
+
+    Flattens both transcripts to normalised word lists, computes the LCS,
+    and derives precision/recall/F1 based on word coverage.  Immune to
+    sentence-boundary differences.
+    """
+    def _normalise(text: str) -> str:
+        return text.lower().strip(".,;:!?\"'()-–—…")
+
+    p_words = [_normalise(w.text) for s in pipeline_sentences for w in s.words]
+    gt_words = [_normalise(w.text) for s in ground_truth_sentences for w in s.words]
+
+    p_words = [w for w in p_words if w]
+    gt_words = [w for w in gt_words if w]
+
+    dp = _lcs_length_table(p_words, gt_words)
+    lcs_len = dp[len(p_words)][len(gt_words)]
+
+    lcs_p_indices = _backtrack_lcs(dp, p_words, gt_words)
+    lcs_gt_indices = _backtrack_lcs_b(dp, p_words, gt_words)
+
+    extra = [p_words[i] for i in range(len(p_words)) if i not in lcs_p_indices]
+    missing = [gt_words[i] for i in range(len(gt_words)) if i not in lcs_gt_indices]
+
+    result = WordLevelComparisonResult(
+        pipeline_words=len(p_words),
+        ground_truth_words=len(gt_words),
+        lcs_length=lcs_len,
+        extra_words=extra,
+        missing_words=missing,
+    )
+
+    logger.info(
+        "Word-level comparison: P={:.1%} R={:.1%} F1={:.1%} "
+        "(LCS={}, pipeline={}, gt={}, extra={}, missing={})",
+        result.precision, result.recall, result.f1,
+        lcs_len, len(p_words), len(gt_words), len(extra), len(missing),
+    )
+    return result
 
 
 def compare_temporal(
