@@ -1,0 +1,575 @@
+{
+  "video_name": "test-2",
+  "created_at": "2026-03-24T22:22:59.743740+00:00",
+  "transcript_comparison": {
+    "pipeline_sentences": 41,
+    "ground_truth_sentences": 39,
+    "matched": 36,
+    "pipeline_only": [
+      "Pa znači vidimo da ovdje imamo običan a.",
+      "Evo, znači to znači da...",
+      "A kako se potencije množe?",
+      "I kako ćemo onda računati, kako ćemo onda računati?",
+      "Dakle, rekli smo bazu prepišemo."
+    ],
+    "ground_truth_only": [
+      "Evo i za to imamo formulu koja nam zapravo samo kaže da kada se radi o nekakvom korijenu, nebitno je li to drugi, treći ili sedamstoti korijen, taj naš broj će mi zapravo biti eksponent u toj našoj potenciji, ali dolje u razlomku.",
+      "Evo, ja sam nekako uvijek zamišljao da taj broj koji mi se nalazi tu kod korijena, da on dolazi s donje strane na ovu moju potenciju.",
+      "Dobro i ovdje imamo još drugi broj."
+    ],
+    "matches": [
+      {
+        "pipeline_text": "Čemu je jednako a puta treći korijen iz a za svaki realan broj a.",
+        "ground_truth_text": "Čemu je jednako a puta treći korijen iz a za svaki realan broj a.",
+        "similarity": 100.0,
+        "pipeline_start": 0.04,
+        "pipeline_end": 4.04,
+        "gt_start": 0.46,
+        "gt_end": 5.08
+      },
+      {
+        "pipeline_text": "Evo dobro.",
+        "ground_truth_text": "Evo dobro.",
+        "similarity": 100.0,
+        "pipeline_start": 4.68,
+        "pipeline_end": 5.04,
+        "gt_start": 5.14,
+        "gt_end": 5.5
+      },
+      {
+        "pipeline_text": "Znači, imamo taj nekakav naš izraz.",
+        "ground_truth_text": "Znači, imamo taj nekakav naš izraz.",
+        "similarity": 100.0,
+        "pipeline_start": 5.08,
+        "pipeline_end": 6.939,
+        "gt_start": 5.54,
+        "gt_end": 7.84
+      },
+      {
+        "pipeline_text": "Ovdje, tu nam se radi o nekakvom tom realnom broju, a to nam nije toliko bitno.",
+        "ground_truth_text": "Ovdje tu nam se radi o nekakvom tom realnom broju, a to nam nije toliko bitno.",
+        "similarity": 99.36,
+        "pipeline_start": 7.44,
+        "pipeline_end": 11.06,
+        "gt_start": 7.88,
+        "gt_end": 11.5
+      },
+      {
+        "pipeline_text": "Idemo mi samo vidjeti kako možemo pojednostaviti ovaj naš izraz koji imamo i dobiti nešto od ovih ponuđenih odgovora.",
+        "ground_truth_text": "Idemo mi samo vidjeti kako možemo pojednostaviti ovaj naš izraz koji imamo i dobiti nešto od ovih ponuđenih odgovora.",
+        "similarity": 100.0,
+        "pipeline_start": 11.12,
+        "pipeline_end": 17.86,
+        "gt_start": 11.54,
+        "gt_end": 17.8
+      },
+      {
+        "pipeline_text": "I evo samo kada pogledamo te ponuđene odgovore ovako na prvu već vidimo da smo dobili uvijek samo nekakvu jednu potenciju.",
+        "ground_truth_text": "I evo samo kada pogledamo te ponuđene odgovore ovako na prvu već vidimo da smo dobili uvijek samo nekakvu jednu potenciju.",
+        "similarity": 100.0,
+        "pipeline_start": 17.94,
+        "pipeline_end": 25.15,
+        "gt_start": 18.42,
+        "gt_end": 25.46
+      },
+      {
+        "pipeline_text": "Znači, imamo samo a na nešto.",
+        "ground_truth_text": "Znači, imamo samo a na nešto.",
+        "similarity": 100.0,
+        "pipeline_start": 25.18,
+        "pipeline_end": 26.82,
+        "gt_start": 25.62,
+        "gt_end": 27.09
+      },
+      {
+        "pipeline_text": "Evo, pa to je nekako nama ovdje ideja.",
+        "ground_truth_text": "Evo, pa to je nekako nama je ovdje ideja.",
+        "similarity": 96.2,
+        "pipeline_start": 26.86,
+        "pipeline_end": 28.84,
+        "gt_start": 27.32,
+        "gt_end": 28.919
+      },
+      {
+        "pipeline_text": "Znači da nemamo ovaj a na dva mjesta, nego da ih sve skupimo pod taj jedan a.",
+        "ground_truth_text": "Znači da nemamo ovaj a na dva mjesta, nego da ih sve skupimo pod taj jedan a.",
+        "similarity": 100.0,
+        "pipeline_start": 28.88,
+        "pipeline_end": 32.98,
+        "gt_start": 29.3,
+        "gt_end": 33.96
+      },
+      {
+        "pipeline_text": "Dobro, evo i sada kako ćemo krenuti možda raditi.",
+        "ground_truth_text": "Dobro, evo i sada kako ćemo krenuti možda raditi, pa znači vidimo da ovdje imamo običan a.",
+        "similarity": 70.5,
+        "pipeline_start": 34.38,
+        "pipeline_end": 36.94,
+        "gt_start": 34.02,
+        "gt_end": 39.12
+      },
+      {
+        "pipeline_text": "S njim ne možemo ništa.",
+        "ground_truth_text": "S njim ne možemo ništa.",
+        "similarity": 100.0,
+        "pipeline_start": 39.94,
+        "pipeline_end": 41.18,
+        "gt_start": 39.54,
+        "gt_end": 40.8
+      },
+      {
+        "pipeline_text": "Međutim, ovako kada imamo treći korijen iz nečega ili neki korijen, ne mora nužno biti treći, mi znamo da njega možemo nekako prikazati kao potenciju.",
+        "ground_truth_text": "Međutim, ovako kada imamo treći korijen iz nečega ili neki korijen, ne mora nužno biti treći, mi znamo da njega možemo nekako prikazati kao potenciju.",
+        "similarity": 100.0,
+        "pipeline_start": 41.22,
+        "pipeline_end": 49.52,
+        "gt_start": 40.84,
+        "gt_end": 49.46
+      },
+      {
+        "pipeline_text": "Evo ja, ehm, evo ga, pa isto zato završi i s donje strane tog našeg razlomka.",
+        "ground_truth_text": "Evo ga, pa isto zato završi i s donje strane tog našeg razlomka.",
+        "similarity": 90.78,
+        "pipeline_start": 49.56,
+        "pipeline_end": 54.5,
+        "gt_start": 70.58,
+        "gt_end": 74.38
+      },
+      {
+        "pipeline_text": "A ovaj, znači imamo nekakvu potenciju a na n.",
+        "ground_truth_text": "Znači, imamo nekakvu potenciju a na n.",
+        "similarity": 86.75,
+        "pipeline_start": 54.56,
+        "pipeline_end": 58.08,
+        "gt_start": 76.3,
+        "gt_end": 78.82
+      },
+      {
+        "pipeline_text": "Evo, n mi isto tako mijenja možda nekakav broj ili neko slovo, ali ono što mi je ovdje bitno je da, dakle, on dolazi s gornje strane, pa će isto tako završiti u tom našem eksponentu, ali u razlomku s gornje strane.",
+        "ground_truth_text": "Evo n mi isto tako mijenja možda nekakav broj ili neko slovo, ali ono što mi je ovdje bitno je da, dakle on dolazi s gornje strane, pa će isto tako završiti u tom našem eksponentu, ali u razlomku s gornje strane.",
+        "similarity": 99.53,
+        "pipeline_start": 58.12,
+        "pipeline_end": 70.32,
+        "gt_start": 79.26,
+        "gt_end": 91.8
+      },
+      {
+        "pipeline_text": "Evo i to ćemo mi sad ovdje napraviti.",
+        "ground_truth_text": "Evo i to ćemo mi sad ovdje napraviti.",
+        "similarity": 100.0,
+        "pipeline_start": 70.35,
+        "pipeline_end": 71.82,
+        "gt_start": 91.86,
+        "gt_end": 93.4
+      },
+      {
+        "pipeline_text": "Znači, a nam ostaje kao baza.",
+        "ground_truth_text": "Znači, a nam ostaje kao baza.",
+        "similarity": 100.0,
+        "pipeline_start": 71.88,
+        "pipeline_end": 73.49,
+        "gt_start": 93.44,
+        "gt_end": 95.4
+      },
+      {
+        "pipeline_text": "Znači, ovo što je bila baza ispod korijena, to mi je i dalje baza i onda znamo da imamo jedan razlomak.",
+        "ground_truth_text": "Znači, ovo što je bila baza ispod korijena, to mi je i dalje baza i onda znamo da imamo jedan razlomak.",
+        "similarity": 100.0,
+        "pipeline_start": 73.92,
+        "pipeline_end": 78.72,
+        "gt_start": 95.48,
+        "gt_end": 100.64
+      },
+      {
+        "pipeline_text": "Ok, dolje će mi doći ovaj dio koji mi je bio kod korijena.",
+        "ground_truth_text": "Ok, dolje će mi doći ovaj dio koji mi je bio kod korijena.",
+        "similarity": 100.0,
+        "pipeline_start": 79.12,
+        "pipeline_end": 82.18,
+        "gt_start": 100.7,
+        "gt_end": 103.72
+      },
+      {
+        "pipeline_text": "Znači, imat ćemo kroz tri, a što mi je gore, pa a nije imao nikakav eksponent, a to zapravo znači da je bio a na prvu.",
+        "ground_truth_text": "Znači, imat ćemo kroz tri, a što mi je gore, pa a nije imao nikakav eksponent, a to zapravo znači da je bio a na prvu.",
+        "similarity": 100.0,
+        "pipeline_start": 82.22,
+        "pipeline_end": 89.78,
+        "gt_start": 103.8,
+        "gt_end": 111.14
+      },
+      {
+        "pipeline_text": "Dakle, to zapravo znači da kod njega stoji ta jedinica.",
+        "ground_truth_text": "Dakle, to zapravo znači da kod njega stoji ta jedinica.",
+        "similarity": 100.0,
+        "pipeline_start": 92.04,
+        "pipeline_end": 95.94,
+        "gt_start": 111.38,
+        "gt_end": 114.0
+      },
+      {
+        "pipeline_text": "Ok, evo, znači, tu smo napravili već veliki dio posla i sad nam je ostalo zapravo samo pomnožiti te naše potencije.",
+        "ground_truth_text": "Ok, evo znači, tu smo napravili već veliki dio posla i sad nam je ostalo zapravo samo pomnožiti te naše potencije, a kako se potencije množe?",
+        "similarity": 88.28,
+        "pipeline_start": 96.96,
+        "pipeline_end": 103.58,
+        "gt_start": 114.48,
+        "gt_end": 122.76
+      },
+      {
+        "pipeline_text": "Pa isto tako imamo formulu.",
+        "ground_truth_text": "Pa isto tako imamo formulu.",
+        "similarity": 100.0,
+        "pipeline_start": 105.0,
+        "pipeline_end": 106.68,
+        "gt_start": 122.86,
+        "gt_end": 124.28
+      },
+      {
+        "pipeline_text": "Evo, ona glasi nekako ovako: znači a na m, dakle na neki broj puta a na n, na neki drugi broj, mi je zapravo jednako a na zbroj te dvije stvari.",
+        "ground_truth_text": "Evo, ona glasi nekako ovako znači a na m, dakle na neki broj puta a na n, na neki drugi broj, mi je zapravo jednako a na zbroj te dvije stvari.",
+        "similarity": 99.65,
+        "pipeline_start": 106.72,
+        "pipeline_end": 117.7,
+        "gt_start": 124.6,
+        "gt_end": 134.98
+      },
+      {
+        "pipeline_text": "Evo, i to ćemo mi ovdje primijeniti.",
+        "ground_truth_text": "Evo i to ćemo mi ovdje primijeniti.",
+        "similarity": 98.59,
+        "pipeline_start": 117.76,
+        "pipeline_end": 119.54,
+        "gt_start": 135.04,
+        "gt_end": 136.42
+      },
+      {
+        "pipeline_text": "Možemo čak to možda i lakše pamtiti jednom ovako kratkom rečenicom.",
+        "ground_truth_text": "Možemo čak to možda i lakše pamtiti jednom ovako kratkom rečenicom.",
+        "similarity": 100.0,
+        "pipeline_start": 119.58,
+        "pipeline_end": 123.38,
+        "gt_start": 136.88,
+        "gt_end": 140.68
+      },
+      {
+        "pipeline_text": "Znači, kada potencije množimo, bazu prepišemo, a eksponente zbrojimo.",
+        "ground_truth_text": "Znači, kada potencije množimo, bazu prepišemo, a eksponente zbrojimo.",
+        "similarity": 100.0,
+        "pipeline_start": 123.44,
+        "pipeline_end": 128.46,
+        "gt_start": 140.72,
+        "gt_end": 145.76
+      },
+      {
+        "pipeline_text": "Evo, ima samo nekoliko riječi, pa možda nam je dobro to zapamtiti da se malo ubrzamo, a i možda ćemo na taj način manje grešaka raditi.",
+        "ground_truth_text": "Evo, ima samo nekoliko riječi, pa možda nam je dobro to zapamtiti da se malo ubrzamo, a i možda ćemo na taj način manje grešaka raditi.",
+        "similarity": 100.0,
+        "pipeline_start": 128.72,
+        "pipeline_end": 136.06,
+        "gt_start": 146.02,
+        "gt_end": 153.42
+      },
+      {
+        "pipeline_text": "Pa dobro, evo, znači, mi moramo ovdje imati onda dvije potencije.",
+        "ground_truth_text": "Pa dobro, evo znači, mi moramo ovdje imati onda dvije potencije.",
+        "similarity": 99.22,
+        "pipeline_start": 136.7,
+        "pipeline_end": 139.28,
+        "gt_start": 154.0,
+        "gt_end": 156.58
+      },
+      {
+        "pipeline_text": "Vidimo da imamo.",
+        "ground_truth_text": "Vidimo da imamo.",
+        "similarity": 100.0,
+        "pipeline_start": 139.32,
+        "pipeline_end": 140.08,
+        "gt_start": 156.62,
+        "gt_end": 157.39
+      },
+      {
+        "pipeline_text": "Imamo a i a na jednu trećinu.",
+        "ground_truth_text": "Imamo a i a na jednu trećinu.",
+        "similarity": 100.0,
+        "pipeline_start": 140.12,
+        "pipeline_end": 142.02,
+        "gt_start": 157.42,
+        "gt_end": 159.92
+      },
+      {
+        "pipeline_text": "Opet imamo, znači, samo jedan običan a, pa to mi je kao da piše a na prvu.",
+        "ground_truth_text": "Opet imamo znači samo jedan običan a, pa to mi je kao da piše a na prvu.",
+        "similarity": 98.63,
+        "pipeline_start": 142.68,
+        "pipeline_end": 146.18,
+        "gt_start": 159.98,
+        "gt_end": 163.48
+      },
+      {
+        "pipeline_text": "Evo, to si, naravno, možemo napisati ako će nam olakšati.",
+        "ground_truth_text": "Evo, to si naravno možemo napisati ako će nam olakšati i kako ćemo onda računati.",
+        "similarity": 79.71,
+        "pipeline_start": 146.24,
+        "pipeline_end": 149.44,
+        "gt_start": 163.56,
+        "gt_end": 168.12
+      },
+      {
+        "pipeline_text": "To mi je a, a eksponente što su mi jedan i jedna trećina, njih samo zbrojimo.",
+        "ground_truth_text": "Dakle, rekli smo bazu prepišemo, to mi je a, a eksponente što su mi jedan i jedna trećina, njih samo zbrojimo.",
+        "similarity": 81.28,
+        "pipeline_start": 154.6,
+        "pipeline_end": 160.74,
+        "gt_start": 168.54,
+        "gt_end": 175.42
+      },
+      {
+        "pipeline_text": "Ok, evo ga i tu smo došli do rješenja.",
+        "ground_truth_text": "Ok, evo ga i tu smo došli do rješenja.",
+        "similarity": 100.0,
+        "pipeline_start": 160.82,
+        "pipeline_end": 162.4,
+        "gt_start": 175.86,
+        "gt_end": 177.46
+      },
+      {
+        "pipeline_text": "Znači, ovo napišemo jednostavno u kalkulator ili možda znamo napamet da ćemo dobiti a na četiri trećine, pa je naš točan odgovor za ovaj zadatak pod c.",
+        "ground_truth_text": "Znači, ovo napišemo jednostavno u kalkulator ili možda znamo napamet da ćemo dobiti a na četiri trećine, pa je naš točan odgovor za ovaj zadatak pod c.",
+        "similarity": 100.0,
+        "pipeline_start": 162.46,
+        "pipeline_end": 171.28,
+        "gt_start": 177.5,
+        "gt_end": 186.46
+      }
+    ],
+    "precision": 0.8780487804878049,
+    "recall": 0.9230769230769231,
+    "f1": 0.9
+  },
+  "word_level_comparison": {
+    "pipeline_words": 541,
+    "ground_truth_words": 604,
+    "lcs_length": 529,
+    "extra_words": [
+      "ehm",
+      "a",
+      "ovaj",
+      "evo",
+      "znači",
+      "to",
+      "znači",
+      "da",
+      "kako",
+      "ćemo",
+      "onda",
+      "računati"
+    ],
+    "missing_words": [
+      "je",
+      "evo",
+      "i",
+      "za",
+      "to",
+      "imamo",
+      "formulu",
+      "koja",
+      "nam",
+      "zapravo",
+      "samo",
+      "kaže",
+      "da",
+      "kada",
+      "se",
+      "radi",
+      "o",
+      "nekakvom",
+      "korijenu",
+      "nebitno",
+      "je",
+      "li",
+      "to",
+      "drugi",
+      "treći",
+      "ili",
+      "sedamstoti",
+      "korijen",
+      "taj",
+      "naš",
+      "broj",
+      "će",
+      "mi",
+      "zapravo",
+      "biti",
+      "eksponent",
+      "u",
+      "toj",
+      "našoj",
+      "potenciji",
+      "ali",
+      "dolje",
+      "u",
+      "razlomku",
+      "sam",
+      "nekako",
+      "uvijek",
+      "zamišljao",
+      "da",
+      "taj",
+      "broj",
+      "koji",
+      "mi",
+      "se",
+      "nalazi",
+      "tu",
+      "kod",
+      "korijena",
+      "da",
+      "on",
+      "dolazi",
+      "s",
+      "donje",
+      "strane",
+      "na",
+      "ovu",
+      "moju",
+      "potenciju",
+      "dobro",
+      "i",
+      "ovdje",
+      "imamo",
+      "još",
+      "drugi",
+      "broj"
+    ],
+    "precision": 0.977818853974122,
+    "recall": 0.8758278145695364,
+    "f1": 0.9240174672489083
+  },
+  "temporal_comparison": {
+    "pipeline_duration": 171.39,
+    "ground_truth_duration": 187.05,
+    "duration_delta": -15.66,
+    "anchor_offsets": [
+      0.42,
+      0.46,
+      0.46,
+      0.44,
+      0.42,
+      0.48,
+      0.44,
+      0.46,
+      0.42,
+      0.36,
+      0.4,
+      0.38,
+      21.02,
+      21.74,
+      21.14,
+      21.51,
+      21.56,
+      21.56,
+      21.58,
+      21.58,
+      19.34,
+      17.52,
+      17.86,
+      17.88,
+      17.28,
+      17.3,
+      17.28,
+      17.3,
+      17.3,
+      17.3,
+      17.3,
+      17.3,
+      17.32,
+      13.94,
+      15.04,
+      15.04
+    ],
+    "mean_offset": 12.476,
+    "temporal_score": 0.4581
+  },
+  "splice_analysis": {
+    "total_splices": 7,
+    "harsh_splices": 0,
+    "max_amplitude_delta": 0.0084,
+    "splice_details": [
+      {
+        "time": 49.53,
+        "delta": 0.0043,
+        "rms_before": 0.0001,
+        "rms_after": 0.0044,
+        "harsh": false
+      },
+      {
+        "time": 50.73,
+        "delta": 0.0042,
+        "rms_before": 0.0001,
+        "rms_after": 0.0042,
+        "harsh": false
+      },
+      {
+        "time": 54.53,
+        "delta": 0.0001,
+        "rms_before": 0.0004,
+        "rms_after": 0.0003,
+        "harsh": false
+      },
+      {
+        "time": 55.15,
+        "delta": 0.0014,
+        "rms_before": 0.0001,
+        "rms_after": 0.0015,
+        "harsh": false
+      },
+      {
+        "time": 70.31,
+        "delta": 0.0065,
+        "rms_before": 0.0002,
+        "rms_after": 0.0068,
+        "harsh": false
+      },
+      {
+        "time": 103.59,
+        "delta": 0.0084,
+        "rms_before": 0.0001,
+        "rms_after": 0.0085,
+        "harsh": false
+      },
+      {
+        "time": 150.71,
+        "delta": 0.0029,
+        "rms_before": 0.0063,
+        "rms_after": 0.0034,
+        "harsh": false
+      }
+    ]
+  },
+  "spectrogram_comparison": {
+    "similarity_score": 0.9922,
+    "passed": true
+  },
+  "continuity": {
+    "expected_sentences": 43,
+    "found_sentences": 39,
+    "missing_sentences": [
+      "Evo, ja.",
+      "A ovaj...",
+      "Evo, ona glasi nekako ovako.",
+      "I kako ćemo onda računati?"
+    ],
+    "alignment_score": 0.907
+  },
+  "issues": [
+    {
+      "check": "temporal_comparison",
+      "severity": "warning",
+      "message": "Low temporal score: 45.8%",
+      "details": {}
+    }
+  ],
+  "overall_passed": true,
+  "overall_score": 0.85146
+}
