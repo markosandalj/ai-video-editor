@@ -1,6 +1,6 @@
 # Core Dependencies
 
-Status: `pending`
+Status: `done`
 Phase: 0
 Depends on: 0.01
 
@@ -10,14 +10,19 @@ Add all required Python dependencies to `pyproject.toml` so the development envi
 
 ## Requirements
 
-_To be filled during grilling session._
+- Use version ranges (e.g., `>=X.Y`), let `uv.lock` handle exact pinning
+- Python version: keep `>=3.13` for now, drop if ML deps break later
+- Phase 0 deps only: `typer`, `pydantic`, `pydantic-settings`, `loguru`
+- Additional deps added as phases require them (incremental approach)
 
 ## Implementation Notes
 
-_To be filled during grilling session._
+- `pyproject.toml` updated with Phase 0 dependencies using `>=` ranges
+- `uv sync` to install and lock
+- Future phases will add: `noisereduce`, `ffmpeg-python`, `whisperx`, `sentence-transformers`, `thefuzz`, `numpy`, `scipy`, `librosa`, `opentimelineio`
 
 ## Acceptance Criteria
 
-- [ ] All dependencies added to `pyproject.toml` with version constraints
-- [ ] `uv sync` installs everything cleanly
-- [ ] No conflicting dependency versions
+- [x] `typer`, `pydantic`, `pydantic-settings`, `loguru` added to `pyproject.toml`
+- [x] `uv sync` installs everything cleanly
+- [x] No conflicting dependency versions
