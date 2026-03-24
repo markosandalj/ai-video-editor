@@ -1,0 +1,111 @@
+---
+description: Quality iteration workflow for improving pipeline edit accuracy. Governs the hypothesis-driven loop between Phase 5 (QA) and Phase 6 (Production).
+alwaysApply: true
+---
+
+# Quality Iteration Workflow
+
+Between Phase 5 and Phase 6, the project enters an iteration loop to maximize edit quality. This rule governs that loop.
+
+## Structure
+
+```
+iterations/
+  ITERATION_LOG.md          # Running table of all iterations
+  iter-001/                 # Baseline (no changes)
+    analysis.md
+    hypothesis.md
+    scores.json
+  iter-002/
+    analysis.md
+    hypothesis.md
+    scores.json
+  ...
+```
+
+## The Loop
+
+Every iteration follows these steps **in order**. Never skip a step.
+
+### Step 1: Run Pipeline + QA
+
+Run the pipeline on test videos and then run QA:
+```
+uv run python -m ai_video_editor.cli.app process tests/fixtures/test-2-raw.mp4 --force
+uv run python -m ai_video_editor.cli.app qa tests/fixtures
+```
+
+### Step 2: Write Analysis
+
+Create `iterations/iter-NNN/analysis.md` containing:
+- **Scores**: F1, precision, recall, temporal, splice, continuity
+- **Delta vs previous**: which metrics changed and by how much
+- **False positives**: sentences we kept that the human cut (list the text)
+- **False negatives**: sentences we cut that the human kept (list the text)
+- **Patterns**: group errors into categories (e.g. "3 false positives are undetected false starts")
+
+Also copy `tests/fixtures/test-2.qa.json` to `iterations/iter-NNN/scores.json`.
+
+### Step 3: Grilling Session
+
+Present the analysis to the user and ask targeted questions about what to try next. Examples:
+- "3 of 5 false positives are false starts under 4 words. Should we lower the false-start confidence threshold?"
+- "We cut 2 sentences the human kept — both are short explanations. Should we add a minimum sentence length before cutting?"
+- "Temporal delta is +16s. Is cutting more aggressively the priority, or is keeping all content safer?"
+
+### Step 4: Write Hypothesis
+
+After grilling, create `iterations/iter-NNN/hypothesis.md` containing:
+- **Problem**: the specific error pattern being targeted
+- **Hypothesis**: what change should fix it
+- **Change plan**: which file(s) and parameter(s) to modify
+- **Risk**: what could get worse
+- **Expected outcome**: predicted score changes
+
+### Step 5: Git Tag
+
+Tag the current state BEFORE making changes:
+```
+git tag iter-NNN
+```
+This creates a revert point.
+
+### Step 6: Implement ONE Change
+
+Make exactly one change based on the hypothesis. Strictly one hypothesis per iteration — this isolates cause and effect.
+
+### Step 7: Git Commit
+
+Commit the change with a message referencing the iteration:
+```
+git commit -m "iter-NNN: <brief description of change>"
+```
+
+### Step 8: Re-run Pipeline + QA
+
+Same as Step 1. This produces new scores.
+
+### Step 9: Compare and Decide
+
+Compare new scores against the previous iteration:
+- **Improved**: Update `ITERATION_LOG.md`, proceed to next iteration
+- **Regressed**: `git revert HEAD`, record the failure in `ITERATION_LOG.md`, proceed to next iteration with a different hypothesis
+- **Mixed** (some metrics up, some down): Present to user in grilling, let them decide
+
+### Step 10: Update Log
+
+Update `iterations/ITERATION_LOG.md` with the new row. Then loop back to Step 2.
+
+## Rules
+
+- **One change per iteration.** Never batch multiple hypotheses.
+- **Never skip the grilling.** The user decides what to try.
+- **On regression, revert.** Use `git revert` so the failed attempt stays in history.
+- **Tag before changing.** The tag is your safety net.
+- **Iteration numbers are zero-padded to 3 digits.** `iter-001`, `iter-002`, etc.
+
+## Session Start (during iteration phase)
+
+1. Read `iterations/ITERATION_LOG.md` to see current state.
+2. Check if there's an iteration in progress (analysis written but no scores yet).
+3. Tell the user: current iteration number, last score, and what step we're on.

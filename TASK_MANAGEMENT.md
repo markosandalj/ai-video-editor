@@ -111,8 +111,42 @@ Phase 6 (Production Render & Quality Iteration)
     +---> Phase 10 (ML Training)
 ```
 
-**Critical path:** Phases 0 → 1 → 2 → 3 → 4 → 5 → 6 produce the best possible automated edit.
+**Critical path:** Phases 0 → 1 → 2 → 3 → 4 → 5 → **iteration loop** → 6 produce the best possible automated edit.
 Phases 7+ are about exporting to other tools and building UIs — only after the edit quality is maximized.
+
+## Quality Iteration Loop (between Phase 5 and Phase 6)
+
+After Phase 5 (QA) establishes baseline scores, the project enters a **hypothesis-driven iteration loop** to maximize edit quality before moving to production settings (Phase 6).
+
+Each iteration is one isolated change, git-tagged for easy revert. See `.cursor/rules/iteration-workflow.mdc` for the full process and `iterations/ITERATION_LOG.md` for the running score table.
+
+```
+Phase 5 (QA baseline)
+    |
+    v
+┌─> Run pipeline + QA ──> Analyze differences ──> Grill user
+│                                                      |
+│                                                      v
+│   Re-run pipeline + QA <── Implement ONE change <── Write hypothesis
+│         |
+│         v
+│   Compare scores
+│     ├── Improved → update log, loop back ─┐
+│     └── Regressed → git revert, loop back ─┘
+│                                            │
+└────────────────────────────────────────────┘
+    |
+    (exit when user is satisfied with scores)
+    |
+    v
+Phase 6 (Production Render & Quality)
+```
+
+**Rules:**
+- One hypothesis per iteration (isolate cause and effect)
+- On regression: `git revert` the commit, record the failure
+- Never skip the grilling — user decides what to try next
+- All iterations tracked in `iterations/iter-NNN/` with analysis, hypothesis, and scores
 
 ## Quick Reference
 
