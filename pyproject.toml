@@ -1,0 +1,6 @@
+[project]
+name = "ai-video-editor"
+version = "0.1.0"
+description = "AI-assisted transcript-based video editing pipeline"
+requires-python = ">=3.13"
+dependencies = []
