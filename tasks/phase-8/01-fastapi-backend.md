@@ -1,7 +1,7 @@
 # FastAPI Backend
 
 Status: `pending`
-Phase: 7
+Phase: 8
 Depends on: phase-5 (JSON export), phase-4 (rendered segments)
 
 ## Objective

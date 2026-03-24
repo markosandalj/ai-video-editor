@@ -1,8 +1,8 @@
 # QA Report Generation
 
 Status: `pending`
-Phase: 6
-Depends on: 6.01, 6.02, 6.03
+Phase: 5
+Depends on: 5.01, 5.02, 5.03, 5.05, 5.06, 5.07
 
 ## Objective
 

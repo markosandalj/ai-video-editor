@@ -1,7 +1,7 @@
 # Transcript Continuity Verification
 
 Status: `pending`
-Phase: 6
+Phase: 5
 Depends on: phase-4 (rendered video), phase-2 (transcription)
 
 ## Objective

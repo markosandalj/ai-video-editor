@@ -1,7 +1,7 @@
 # Pattern Extraction via LLM
 
 Status: `pending`
-Phase: 8
+Phase: 9
 Depends on: 8.01
 
 ## Objective

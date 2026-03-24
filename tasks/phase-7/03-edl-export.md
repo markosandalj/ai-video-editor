@@ -1,7 +1,7 @@
 # EDL Export
 
 Status: `pending`
-Phase: 5
+Phase: 7
 Depends on: 5.01
 
 ## Objective

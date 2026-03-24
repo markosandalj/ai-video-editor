@@ -1,7 +1,7 @@
 # Custom Error Dictionary
 
 Status: `pending`
-Phase: 8
+Phase: 9
 Depends on: 8.02
 
 ## Objective

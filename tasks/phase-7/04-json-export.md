@@ -1,7 +1,7 @@
 # JSON Export for Web Frontend
 
 Status: `pending`
-Phase: 5
+Phase: 7
 Depends on: phase-3 (edit decision list)
 
 ## Objective

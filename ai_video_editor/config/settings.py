@@ -155,17 +155,17 @@ class RenderConfig(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     codec: str = Field(
-        default="libx265",
+        default="libx264",
         description="FFmpeg video codec (e.g. libx264, libx265).",
     )
     crf: int = Field(
-        default=18,
+        default=28,
         ge=0,
         le=51,
         description="Constant Rate Factor — lower is higher quality.",
     )
     preset: str = Field(
-        default="slow",
+        default="ultrafast",
         description="FFmpeg encoding preset (ultrafast … veryslow).",
     )
     crossfade_ms: int = Field(

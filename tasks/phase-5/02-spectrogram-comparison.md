@@ -1,7 +1,7 @@
 # Spectrogram Comparison
 
 Status: `pending`
-Phase: 6
+Phase: 5
 Depends on: phase-4 (rendered video)
 
 ## Objective

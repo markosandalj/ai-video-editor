@@ -6,16 +6,17 @@ This document defines how tasks are organized, planned, and executed in this pro
 
 ```
 tasks/
-  phase-0/          # Project Scaffolding & Infrastructure
-  phase-1/          # Acoustic Pre-Processing
-  phase-2/          # Transcription & Forced Alignment
-  phase-3/          # Semantic Duplicate Detection
-  phase-4/          # Video Assembly & Rendering
-  phase-5/          # Export & Interoperability (OTIO)
-  phase-6/          # Programmatic Verification / QA
-  phase-7/          # Web Frontend for Educator Review
-  phase-8/          # Professor Profiling (V2)
-  phase-9/          # ML Model Training (V3/V4)
+  phase-0/          # Project Scaffolding & Infrastructure         ✅
+  phase-1/          # Acoustic Pre-Processing                      ✅
+  phase-2/          # Transcription & Forced Alignment             ✅
+  phase-3/          # Semantic Duplicate Detection                 ✅
+  phase-4/          # Video Assembly & Rendering                   ✅
+  phase-5/          # Programmatic Verification / QA
+  phase-6/          # Production Render & Quality Iteration
+  phase-7/          # Export & Interoperability (OTIO)
+  phase-8/          # Web Frontend for Educator Review
+  phase-9/          # Professor Profiling (V2)
+  phase-10/         # ML Model Training (V3/V4)
 ```
 
 Each phase folder contains individual `.md` files, one per task (e.g., `01-audio-extraction.md`).
@@ -94,16 +95,24 @@ Phase 2 (Transcription & Alignment)
     v
 Phase 3 (Duplicate Detection)
     |
-    +---> Phase 4 (Video Assembly) ---> Phase 6 (QA/Verification)
+    v
+Phase 4 (Video Assembly & Rendering)
     |
-    +---> Phase 5 (OTIO Export) ---> Phase 7 (Web Frontend)
+    v
+Phase 5 (QA / Verification)  ←  improve edit quality first
     |
-    +---> Phase 8 (Professor Profiling)
+    v
+Phase 6 (Production Render & Quality Iteration)
     |
-    +---> Phase 9 (ML Training)
+    +---> Phase 7 (OTIO Export)  ---> Phase 8 (Web Frontend)
+    |
+    +---> Phase 9 (Professor Profiling)
+    |
+    +---> Phase 10 (ML Training)
 ```
 
-**Critical path:** Phases 0 -> 1 -> 2 -> 3 -> 4 produce a working end-to-end pipeline.
+**Critical path:** Phases 0 → 1 → 2 → 3 → 4 → 5 → 6 produce the best possible automated edit.
+Phases 7+ are about exporting to other tools and building UIs — only after the edit quality is maximized.
 
 ## Quick Reference
 

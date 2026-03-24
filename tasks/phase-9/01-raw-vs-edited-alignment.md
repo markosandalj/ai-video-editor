@@ -1,7 +1,7 @@
 # Raw vs. Edited Transcript Alignment
 
 Status: `pending`
-Phase: 8
+Phase: 9
 Depends on: phase-3 (duplicate detection working), 20 manually edited videos per professor
 
 ## Objective
