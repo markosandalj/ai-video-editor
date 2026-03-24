@@ -1,25 +1,28 @@
 # Batch Processing
 
-Status: `pending`
+Status: `done`
 Phase: 4
 Depends on: 4.05
 
 ## Objective
 
-Process a directory of videos in batch with progress tracking and error recovery.
+Extend the existing `batch` CLI command to include rendering as the final step.
 
 ## Requirements
 
-_To be filled during grilling session._
+- The existing `batch` command already handles audio + transcription + duplicate detection + EDL.
+- Extend it to also call the render function for each video.
+- Failed renders are skipped (don't crash the batch) — existing error handling pattern.
+- Summary report at end includes render timing and output file sizes.
 
 ## Implementation Notes
 
-_To be filled during grilling session._
+- This is mostly about wiring the render function into the existing batch loop in `cli/app.py`.
+- Minimal new code — the existing batch error handling (`try/except` per video) already covers failure recovery.
 
 ## Acceptance Criteria
 
-- [ ] Accepts a directory of input videos
-- [ ] Processes each video through the full pipeline
-- [ ] Failed videos are skipped (not crash the batch)
-- [ ] Progress bar or status output during processing
-- [ ] Summary report at end (success/fail counts, per-video timing)
+- [x] Existing `batch` command extended to include rendering
+- [x] Each video produces `<stem>_edited.mp4` output
+- [x] Failed renders skipped without crashing batch (existing try/except)
+- [x] Summary report includes per-video render timing

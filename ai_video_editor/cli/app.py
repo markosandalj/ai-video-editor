@@ -62,6 +62,7 @@ def process(
     from ai_video_editor.duplicate.debug import save_debug_files
     from ai_video_editor.duplicate.edl import build_edl
     from ai_video_editor.duplicate.pipeline import detect_duplicates
+    from ai_video_editor.render import render_video
     from ai_video_editor.transcription import load_cached_transcript, save_transcript
     from ai_video_editor.transcription.pipeline import transcribe_with_elevenlabs_and_grammar
 
@@ -85,9 +86,16 @@ def process(
 
     save_debug_files(input_path, cached, edl)
 
+    output = render_video(
+        input_path,
+        edl,
+        Path(denoised.path),
+        settings.render,
+    )
+
     log.info(
-        "Pipeline complete: {} sentences, {} flagged, keep={:.1f}s cut={:.1f}s",
-        len(cached.sentences), len(flags), edl.keep_duration, edl.cut_duration,
+        "Pipeline complete: {} sentences, {} flagged, keep={:.1f}s cut={:.1f}s → {}",
+        len(cached.sentences), len(flags), edl.keep_duration, edl.cut_duration, output.name,
     )
     remove_video_log(stem)
 
@@ -137,6 +145,7 @@ def batch(
     from ai_video_editor.duplicate.debug import save_debug_files
     from ai_video_editor.duplicate.edl import build_edl
     from ai_video_editor.duplicate.pipeline import detect_duplicates
+    from ai_video_editor.render import render_video
     from ai_video_editor.transcription import load_cached_transcript, save_transcript
     from ai_video_editor.transcription.pipeline import transcribe_with_elevenlabs_and_grammar
 
@@ -168,9 +177,11 @@ def batch(
 
             save_debug_files(p, cached, edl)
 
+            output = render_video(p, edl, Path(denoised.path), settings.render)
+
             log.info(
-                "Done: {} sentences, {} flagged, keep={:.1f}s cut={:.1f}s",
-                len(cached.sentences), len(flags), edl.keep_duration, edl.cut_duration,
+                "Done: {} sentences, {} flagged, keep={:.1f}s cut={:.1f}s → {}",
+                len(cached.sentences), len(flags), edl.keep_duration, edl.cut_duration, output.name,
             )
             success += 1
         except Exception:

@@ -1,6 +1,6 @@
 # Intro/Outro Insertion
 
-Status: `pending`
+Status: `cancelled`
 Phase: 4
 Depends on: 4.01
 

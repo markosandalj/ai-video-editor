@@ -149,6 +149,37 @@ class DuplicateDetectionConfig(BaseModel):
     )
 
 
+class RenderConfig(BaseModel):
+    """Video render / assembly parameters."""
+
+    model_config = ConfigDict(extra="allow")
+
+    codec: str = Field(
+        default="libx265",
+        description="FFmpeg video codec (e.g. libx264, libx265).",
+    )
+    crf: int = Field(
+        default=18,
+        ge=0,
+        le=51,
+        description="Constant Rate Factor — lower is higher quality.",
+    )
+    preset: str = Field(
+        default="slow",
+        description="FFmpeg encoding preset (ultrafast … veryslow).",
+    )
+    crossfade_ms: int = Field(
+        default=30,
+        ge=0,
+        le=500,
+        description="Audio crossfade duration at splice points (ms).",
+    )
+    output_suffix: str = Field(
+        default="_edited",
+        description="Suffix appended to the stem for the output filename.",
+    )
+
+
 class Settings(BaseSettings):
     """Root settings object. Nested sections added as phases land. Loaded from Python only (no env / dotenv)."""
 
@@ -158,6 +189,7 @@ class Settings(BaseSettings):
     audio: AudioConfig = Field(default_factory=AudioConfig)
     transcription: TranscriptionConfig = Field(default_factory=TranscriptionConfig)
     duplicate_detection: DuplicateDetectionConfig = Field(default_factory=DuplicateDetectionConfig)
+    render: RenderConfig = Field(default_factory=RenderConfig)
 
     @classmethod
     def settings_customise_sources(
