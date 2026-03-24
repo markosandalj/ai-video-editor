@@ -65,6 +65,7 @@ def _flag_reason_to_edit_reason(reason: FlagReason) -> EditReason:
         FlagReason.DUPLICATE: EditReason.DUPLICATE,
         FlagReason.FALSE_START: EditReason.FALSE_START,
         FlagReason.FILLER: EditReason.FALSE_START,
+        FlagReason.STUTTER: EditReason.FALSE_START,
     }[reason]
 
 

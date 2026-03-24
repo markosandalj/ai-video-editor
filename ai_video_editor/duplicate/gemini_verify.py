@@ -156,3 +156,73 @@ def detect_false_starts_with_gemini(
         len(block_sentences),
     )
     return result
+
+
+STUTTER_PROMPT = """Analiziraj sljedeću rečenicu iz video lekcije na hrvatskom. Rečenica je označena kao potencijalno mucanje ili lažni početak jer sadrži ponovljene riječi/fraze.
+
+Tvoj zadatak: odluči treba li se ova rečenica IZBACITI iz konačnog videa jer je govornik mucao, ponovio se ili krenuo ispočetka unutar iste rečenice.
+
+PRAVILA:
+- Ako govornik ponavlja iste riječi/fraze unutar rečenice pa onda kaže istu stvar čišće — IZBACI
+- Ako govornik koristi ponavljanje namjerno kao stilsko sredstvo ili za naglašavanje — ZADRŽI
+- Ako rečenica sadrži novu informaciju unatoč ponavljanju — ZADRŽI
+- Budi konzervativan: ako nisi siguran, ZADRŽI
+
+Rečenica za analizu:
+"{sentence}"
+
+Kontekst — rečenica PRIJE:
+{before}
+
+Kontekst — rečenica NAKON:
+{after}"""
+
+
+class StutterVerdict(BaseModel):
+    """Gemini's judgment on whether a sentence contains stuttering."""
+    should_cut: bool = Field(..., description="True if the sentence should be removed due to stuttering")
+    confidence: float = Field(ge=0.0, le=1.0)
+    reasoning: str = ""
+
+
+def verify_stutters_with_gemini(
+    sentences: list[Sentence],
+    stutter_indices: list[int],
+) -> list[tuple[int, StutterVerdict]]:
+    """
+    Send each stuttered sentence to Gemini for a cut/keep verdict.
+
+    Returns a list of (sentence_index, verdict) tuples.
+    """
+    if not stutter_indices:
+        return []
+
+    llm = _get_llm()
+    structured = llm.with_structured_output(StutterVerdict)
+    results: list[tuple[int, StutterVerdict]] = []
+
+    for idx in stutter_indices:
+        sentence = sentences[idx]
+        before = f'"{sentences[idx - 1].text}"' if idx > 0 else "(početak transkripta)"
+        after = f'"{sentences[idx + 1].text}"' if idx < len(sentences) - 1 else "(kraj transkripta)"
+
+        prompt = STUTTER_PROMPT.format(
+            sentence=sentence.text,
+            before=before,
+            after=after,
+        )
+
+        logger.info("Gemini stutter check: sentence {} (\"{}...\")", idx, sentence.text[:50])
+        verdict: StutterVerdict = structured.invoke(prompt)
+        results.append((idx, verdict))
+
+        logger.info(
+            "Gemini verdict: {} (confidence={:.0%}, reason={})",
+            "CUT" if verdict.should_cut else "KEEP",
+            verdict.confidence,
+            verdict.reasoning[:80],
+        )
+
+    cut_count = sum(1 for _, v in results if v.should_cut)
+    logger.info("Gemini stutter verification: {}/{} confirmed for cutting", cut_count, len(stutter_indices))
+    return results

@@ -5,8 +5,10 @@ from ai_video_editor.duplicate.windowed import windowed_pairs
 from ai_video_editor.duplicate.gemini_verify import (
     verify_duplicates_with_gemini,
     detect_false_starts_with_gemini,
+    verify_stutters_with_gemini,
 )
 from ai_video_editor.duplicate.pipeline import detect_duplicates
+from ai_video_editor.duplicate.stutter import detect_stutters
 from ai_video_editor.duplicate.edl import EditDecision, EditDecisionList, build_edl
 from ai_video_editor.duplicate.debug import save_debug_files
 
@@ -19,7 +21,9 @@ __all__ = [
     "windowed_pairs",
     "verify_duplicates_with_gemini",
     "detect_false_starts_with_gemini",
+    "verify_stutters_with_gemini",
     "detect_duplicates",
+    "detect_stutters",
     "EditDecision",
     "EditDecisionList",
     "build_edl",

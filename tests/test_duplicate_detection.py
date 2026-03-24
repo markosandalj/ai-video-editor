@@ -13,6 +13,7 @@ from ai_video_editor.duplicate.models import (
     SimilarityScore,
 )
 from ai_video_editor.duplicate.semantic import compute_semantic_similarity
+from ai_video_editor.duplicate.stutter import detect_stutters
 from ai_video_editor.duplicate.windowed import windowed_pairs
 from ai_video_editor.transcription.models import Sentence, Transcript, Word
 
@@ -185,6 +186,43 @@ class TestEditDecisionList:
 # ──────────────────────────────────────────────────────────────────────
 # Config defaults
 # ──────────────────────────────────────────────────────────────────────
+
+# ──────────────────────────────────────────────────────────────────────
+# Stutter detection
+# ──────────────────────────────────────────────────────────────────────
+
+class TestStutterDetection:
+    def _make_sentence(self, text: str, start: float = 0.0, end: float = 1.0) -> Sentence:
+        words = [Word(text=w, start=start, end=end) for w in text.split()]
+        return Sentence(words=words, text=text, start=start, end=end)
+
+    def test_detects_trigram_repetition(self):
+        s = self._make_sentence("a ovaj tu a ovaj tu broj koji je ovdje")
+        result = detect_stutters([s])
+        assert 0 in result
+
+    def test_detects_bigram_with_enough_words(self):
+        s = self._make_sentence("taj naš broj taj naš broj će mi zapravo")
+        result = detect_stutters([s])
+        assert 0 in result
+
+    def test_no_stutter_in_clean_sentence(self):
+        s = self._make_sentence("Ovo je potpuno normalna rečenica bez ponavljanja.")
+        result = detect_stutters([s])
+        assert len(result) == 0
+
+    def test_short_sentence_not_flagged(self):
+        s = self._make_sentence("Da da.")
+        result = detect_stutters([s])
+        assert len(result) == 0
+
+    def test_multiple_sentences_only_flags_stutter(self):
+        clean = self._make_sentence("Dobro idemo dalje.")
+        stutter = self._make_sentence("evo ja evo ja sam nekako uvijek zamišljao")
+        sentences = [clean, stutter]
+        result = detect_stutters(sentences)
+        assert result == [1]
+
 
 class TestDuplicateDetectionConfig:
     def test_defaults(self):

@@ -38,4 +38,6 @@ Intra-sentence stutter removal needs sub-sentence precision (trim the repeated w
 
 ## Action
 
-Reverted via `git revert`.
+Kept stutter detection code (`stutter.py`, `verify_stutters_with_gemini`) but disabled
+it from `pipeline.py`. The detection and Gemini verification modules remain available for
+re-enablement once sub-sentence trimming is implemented in a future iteration.
