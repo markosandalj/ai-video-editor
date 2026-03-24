@@ -38,8 +38,9 @@ def process(
         help="Optional Python file defining `settings` (a Settings instance).",
     ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Shortcut for DEBUG log level."),
+    force: bool = typer.Option(False, "--force", "-f", help="Ignore cached transcripts, re-process from scratch."),
 ) -> None:
-    """Process a single video (pipeline not yet implemented)."""
+    """Process a single video through the editing pipeline."""
     settings = get_settings(config_path=config)
     g_updates: dict = {}
     if output_dir is not None:
@@ -55,7 +56,39 @@ def process(
     stem = input_path.stem
     attach_video_log(settings, stem)
     log = logger.bind(video=stem)
-    log.info("Stub: single-file processing not implemented yet. Input: {}", input_path)
+    log.info("Processing: {}", input_path)
+
+    from ai_video_editor.audio import compute_keep_regions, detect_silences, extract_audio, reduce_noise
+    from ai_video_editor.duplicate.debug import save_debug_files
+    from ai_video_editor.duplicate.edl import build_edl
+    from ai_video_editor.duplicate.pipeline import detect_duplicates
+    from ai_video_editor.transcription import load_cached_transcript, save_transcript
+    from ai_video_editor.transcription.pipeline import transcribe_with_elevenlabs_and_grammar
+
+    meta = extract_audio(input_path, settings)
+    denoised = reduce_noise(meta, settings)
+    silences = detect_silences(denoised, settings)
+    keeps = compute_keep_regions(silences, denoised.duration_s, settings)
+
+    cached = None if force else load_cached_transcript(input_path)
+    if cached is not None:
+        log.info("Using cached transcript ({} sentences)", len(cached.sentences))
+    else:
+        cached = transcribe_with_elevenlabs_and_grammar(denoised, input_path, settings)
+        save_transcript(input_path, cached)
+
+    flags = detect_duplicates(cached.sentences, settings.duplicate_detection)
+    edl = build_edl(cached, keeps, flags)
+
+    edl_path = input_path.with_suffix(".edl.json")
+    edl_path.write_text(edl.model_dump_json(indent=2), encoding="utf-8")
+
+    save_debug_files(input_path, cached, edl)
+
+    log.info(
+        "Pipeline complete: {} sentences, {} flagged, keep={:.1f}s cut={:.1f}s",
+        len(cached.sentences), len(flags), edl.keep_duration, edl.cut_duration,
+    )
     remove_video_log(stem)
 
 
@@ -77,8 +110,9 @@ def batch(
         help="Optional Python file defining `settings` (a Settings instance).",
     ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Shortcut for DEBUG log level."),
+    force: bool = typer.Option(False, "--force", "-f", help="Ignore cached transcripts, re-process from scratch."),
 ) -> None:
-    """Process all videos matching a glob pattern (pipeline not yet implemented)."""
+    """Process all videos matching a glob pattern."""
     settings = get_settings(config_path=config)
     g_updates: dict = {}
     if output_dir is not None:
@@ -99,12 +133,53 @@ def batch(
         logger.warning("No video files matched pattern: {}", pattern)
         raise typer.Exit(code=1)
 
-    for p in videos:
+    from ai_video_editor.audio import compute_keep_regions, detect_silences, extract_audio, reduce_noise
+    from ai_video_editor.duplicate.debug import save_debug_files
+    from ai_video_editor.duplicate.edl import build_edl
+    from ai_video_editor.duplicate.pipeline import detect_duplicates
+    from ai_video_editor.transcription import load_cached_transcript, save_transcript
+    from ai_video_editor.transcription.pipeline import transcribe_with_elevenlabs_and_grammar
+
+    success = 0
+    failed = 0
+    for i, p in enumerate(videos, 1):
         stem = p.stem
         attach_video_log(settings, stem)
         log = logger.bind(video=stem)
-        log.info("Stub: batch item not processed yet. File: {}", p)
-        remove_video_log(stem)
+        log.info("[{}/{}] Processing: {}", i, len(videos), p)
+        try:
+            meta = extract_audio(p, settings)
+            denoised = reduce_noise(meta, settings)
+            silences = detect_silences(denoised, settings)
+            keeps = compute_keep_regions(silences, denoised.duration_s, settings)
+
+            cached = None if force else load_cached_transcript(p)
+            if cached is not None:
+                log.info("Using cached transcript ({} sentences)", len(cached.sentences))
+            else:
+                cached = transcribe_with_elevenlabs_and_grammar(denoised, p, settings)
+                save_transcript(p, cached)
+
+            flags = detect_duplicates(cached.sentences, settings.duplicate_detection)
+            edl = build_edl(cached, keeps, flags)
+
+            edl_path = p.with_suffix(".edl.json")
+            edl_path.write_text(edl.model_dump_json(indent=2), encoding="utf-8")
+
+            save_debug_files(p, cached, edl)
+
+            log.info(
+                "Done: {} sentences, {} flagged, keep={:.1f}s cut={:.1f}s",
+                len(cached.sentences), len(flags), edl.keep_duration, edl.cut_duration,
+            )
+            success += 1
+        except Exception:
+            log.exception("Failed to process {}", p)
+            failed += 1
+        finally:
+            remove_video_log(stem)
+
+    logger.info("Batch complete: {}/{} succeeded, {} failed", success, len(videos), failed)
 
 
 def main() -> None:

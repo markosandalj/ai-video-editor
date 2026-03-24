@@ -1,6 +1,6 @@
 # Word-Level Output Parsing
 
-Status: `pending`
+Status: `done`
 Phase: 2
 Depends on: 2.01, 2.02
 
@@ -10,14 +10,20 @@ Parse WhisperX raw output into the standardized `Word` model instances, handling
 
 ## Requirements
 
-_To be filled during grilling session._
+- Parse WhisperX segment/word JSON into `Word` objects
+- Drop words with missing start or end timestamps
+- Log count of dropped words for visibility
+- Preserve word ordering
 
 ## Implementation Notes
 
-_To be filled during grilling session._
+- WhisperX returns `{"segments": [{"words": [{"word": "...", "start": ..., "end": ...}]}]}`
+- Filter out any word dict where `start` or `end` is None/missing
+- Create `Word` instances from remaining dicts
+- Function: `parse_whisperx_output(result) -> list[Word]`
 
 ## Acceptance Criteria
 
-- [ ] WhisperX output parsed into `Word` objects
-- [ ] Missing timestamps handled (interpolation or flagging)
-- [ ] Confidence scores preserved where available
+- [x] WhisperX output parsed into `Word` objects
+- [x] Words with missing timestamps dropped (with log message)
+- [x] Word ordering preserved from WhisperX output

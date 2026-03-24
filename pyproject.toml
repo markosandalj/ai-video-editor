@@ -16,6 +16,13 @@ dependencies = [
     "noisereduce>=3.0",
     "soundfile>=0.12",
     "numpy>=1.26",
+    "whisperx>=3.8",
+    "python-dotenv>=1.0",
+    "langchain-google-genai>=4.0",
+    "langgraph>=0.4",
+    "elevenlabs>=2.40",
+    "rapidfuzz>=3.0",
+    "sentence-transformers>=5.0",
 ]
 
 [project.optional-dependencies]

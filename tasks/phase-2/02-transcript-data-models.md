@@ -1,6 +1,6 @@
 # Transcript Data Models
 
-Status: `pending`
+Status: `done`
 Phase: 2
 Depends on: phase-0 complete
 
@@ -10,14 +10,21 @@ Define strict Pydantic models for words, sentences, and transcripts to enforce d
 
 ## Requirements
 
-_To be filled during grilling session._
+- `Word`: text, start, end (nullable for unaligned words)
+- `Sentence`: list of words, full text, start, end timestamps
+- `Transcript`: list of sentences, source metadata
+- Words with missing timestamps are dropped (not interpolated)
 
 ## Implementation Notes
 
-_To be filled during grilling session._
+- Define in `ai_video_editor/transcription/models.py`
+- `Word.start` and `Word.end` are required floats (unaligned words filtered out before model creation)
+- `Sentence.start` = first word's start, `Sentence.end` = last word's end
+- `Transcript` includes metadata: source_video, language, model_size, processing timestamp
+- JSON serialization via Pydantic `.model_dump_json()`
 
 ## Acceptance Criteria
 
-- [ ] `Word`, `Sentence`, `Transcript` Pydantic models defined
-- [ ] Models enforce required fields (text, start, end timestamps)
-- [ ] JSON serialization/deserialization works correctly
+- [x] `Word`, `Sentence`, `Transcript` Pydantic models defined
+- [x] Models enforce required fields (text, start, end timestamps)
+- [x] JSON serialization/deserialization works correctly
