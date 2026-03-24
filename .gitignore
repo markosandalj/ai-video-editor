@@ -5,6 +5,9 @@ venv/
 __pycache__/
 *.pyc
 
+# Test fixtures (large video/audio files)
+tests/fixtures/
+
 # Build / output
 dist/
 build/

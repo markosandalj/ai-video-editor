@@ -32,12 +32,40 @@ class GeneralConfig(BaseModel):
         return Path(v).expanduser().resolve()
 
 
+class AudioConfig(BaseModel):
+    """Audio pre-processing parameters."""
+
+    model_config = ConfigDict(extra="allow")
+
+    noise_reduction_strength: float = Field(
+        default=0.3,
+        ge=0.0,
+        le=1.0,
+        description="prop_decrease for noisereduce (0 = no reduction, 1 = full). 0.3 preserves natural speech quality.",
+    )
+    silence_threshold_db: float = Field(
+        default=-40.0,
+        description="dB level below which audio is considered silent.",
+    )
+    silence_min_duration_s: float = Field(
+        default=3.0,
+        gt=0.0,
+        description="Minimum silence duration (seconds) to trigger a cut.",
+    )
+    padding_ms: int = Field(
+        default=500,
+        ge=0,
+        description="Milliseconds of padding before/after each speech segment.",
+    )
+
+
 class Settings(BaseSettings):
     """Root settings object. Nested sections added as phases land. Loaded from Python only (no env / dotenv)."""
 
     model_config = SettingsConfigDict(extra="allow")
 
     general: GeneralConfig = Field(default_factory=GeneralConfig)
+    audio: AudioConfig = Field(default_factory=AudioConfig)
 
     @classmethod
     def settings_customise_sources(
