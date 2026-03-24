@@ -6,6 +6,7 @@ from ai_video_editor.config.settings import DuplicateDetectionConfig
 from ai_video_editor.duplicate.gemini_verify import (
     detect_false_starts_with_gemini,
     verify_duplicates_with_gemini,
+    verify_stutters_with_gemini,
 )
 from ai_video_editor.duplicate.lexical import compute_lexical_similarity
 from ai_video_editor.duplicate.models import (
@@ -13,7 +14,9 @@ from ai_video_editor.duplicate.models import (
     DuplicatePair,
     FlagReason,
     SimilarityScore,
+    WordTrim,
 )
+from ai_video_editor.duplicate.stutter import compute_stutter_cut_ranges, detect_stutters
 from ai_video_editor.duplicate.semantic import compute_semantic_similarity
 from ai_video_editor.transcription.models import Sentence
 
@@ -208,13 +211,72 @@ def detect_duplicates(
             ))
             flagged_indices.add(global_idx)
 
+    # ------------------------------------------------------------------
+    # Stutter detection — word-level trims within sentences
+    # ------------------------------------------------------------------
+    stutter_indices = detect_stutters(sentences)
+    unflagged_stutters = [i for i in stutter_indices if i not in flagged_indices]
+
+    if unflagged_stutters:
+        stutter_verdicts = verify_stutters_with_gemini(sentences, unflagged_stutters)
+        for idx, verdict in stutter_verdicts:
+            if not verdict.is_stutter or idx in flagged_indices:
+                continue
+            if not verdict.word_indices_to_cut:
+                continue
+
+            sentence = sentences[idx]
+            valid_indices = [
+                wi for wi in verdict.word_indices_to_cut
+                if 0 <= wi < len(sentence.words)
+            ]
+            if not valid_indices:
+                continue
+
+            trims: list[WordTrim] = []
+            sorted_wi = sorted(valid_indices)
+
+            run_start = sorted_wi[0]
+            run_end = sorted_wi[0]
+            for wi in sorted_wi[1:]:
+                if wi == run_end + 1:
+                    run_end = wi
+                else:
+                    trims.append(WordTrim(
+                        start=sentence.words[run_start].start,
+                        end=sentence.words[run_end].end,
+                    ))
+                    run_start = wi
+                    run_end = wi
+            trims.append(WordTrim(
+                start=sentence.words[run_start].start,
+                end=sentence.words[run_end].end,
+            ))
+
+            flags.append(DuplicateFlag(
+                idx=idx,
+                reason=FlagReason.STUTTER,
+                confidence=verdict.confidence,
+                note=verdict.reasoning,
+                word_trims=trims,
+            ))
+
+            trim_dur = sum(t.end - t.start for t in trims)
+            logger.info(
+                "Stutter word-trim: sentence {} — {} trims, {:.1f}s cut",
+                idx, len(trims), trim_dur,
+            )
+
     flags.sort(key=lambda f: f.idx)
 
+    stutter_count = sum(1 for f in flags if f.reason == FlagReason.STUTTER)
     logger.info(
-        "Duplicate detection complete: {} flags ({} duplicate, {} false-start)",
+        "Duplicate detection complete: {} flags "
+        "({} duplicate, {} false-start, {} stutter word-trims)",
         len(flags),
         sum(1 for f in flags if f.reason == FlagReason.DUPLICATE),
         sum(1 for f in flags if f.reason == FlagReason.FALSE_START),
+        stutter_count,
     )
 
     return flags

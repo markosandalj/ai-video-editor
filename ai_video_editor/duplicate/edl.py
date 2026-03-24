@@ -87,7 +87,9 @@ def build_edl(
         return EditDecisionList(source_video=transcript.source_video)
 
     total_dur = transcript.sentences[-1].end
-    flagged: set[int] = {f.idx for f in duplicate_flags}
+    full_cut_flags = {f.idx for f in duplicate_flags if not f.word_trims}
+    word_trim_flags = {f.idx: f for f in duplicate_flags if f.word_trims}
+    flagged: set[int] = full_cut_flags
     flag_by_idx = {f.idx: f for f in duplicate_flags}
 
     keep_spans: list[tuple[float, float]] = []
@@ -137,6 +139,30 @@ def build_edl(
             merged[-1] = (merged[-1][0], max(merged[-1][1], end))
         else:
             merged.append((start, end))
+
+    word_trim_cuts: list[tuple[float, float]] = []
+    for flag in word_trim_flags.values():
+        for wt in flag.word_trims:
+            word_trim_cuts.append((wt.start, wt.end))
+    word_trim_cuts.sort()
+
+    if word_trim_cuts:
+        punched: list[tuple[float, float]] = []
+        for span_start, span_end in merged:
+            sub_spans = [(span_start, span_end)]
+            for cut_start, cut_end in word_trim_cuts:
+                new_sub: list[tuple[float, float]] = []
+                for ss, se in sub_spans:
+                    if cut_end <= ss or cut_start >= se:
+                        new_sub.append((ss, se))
+                    else:
+                        if cut_start > ss + 0.01:
+                            new_sub.append((ss, cut_start))
+                        if cut_end < se - 0.01:
+                            new_sub.append((cut_end, se))
+                sub_spans = new_sub
+            punched.extend(sub_spans)
+        merged = punched
 
     decisions: list[EditDecision] = []
     prev_end = 0.0

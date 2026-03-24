@@ -32,6 +32,12 @@ class DuplicatePair(BaseModel):
     tier: Literal["lexical", "semantic", "gemini"]
 
 
+class WordTrim(BaseModel):
+    """A sub-sentence time range to cut (word-level precision)."""
+    start: float = Field(..., description="Start time of the words to cut")
+    end: float = Field(..., description="End time of the words to cut")
+
+
 class DuplicateFlag(BaseModel):
     """A sentence flagged for removal."""
     idx: int
@@ -39,3 +45,8 @@ class DuplicateFlag(BaseModel):
     confidence: float = Field(default=1.0, ge=0.0, le=1.0)
     related_pair: DuplicatePair | None = None
     note: str = ""
+    word_trims: list[WordTrim] = Field(
+        default_factory=list,
+        description="Sub-sentence time ranges to cut instead of the whole sentence. "
+        "If non-empty, only these ranges are cut; the rest of the sentence is kept.",
+    )

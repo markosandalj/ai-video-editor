@@ -158,18 +158,18 @@ def detect_false_starts_with_gemini(
     return result
 
 
-STUTTER_PROMPT = """Analiziraj sljedeću rečenicu iz video lekcije na hrvatskom. Rečenica je označena kao potencijalno mucanje ili lažni početak jer sadrži ponovljene riječi/fraze.
+STUTTER_PROMPT = """Analiziraj sljedeću rečenicu iz video lekcije na hrvatskom. Rečenica sadrži ponovljene riječi/fraze koje ukazuju na mucanje ili lažni početak.
 
-Tvoj zadatak: odluči treba li se ova rečenica IZBACITI iz konačnog videa jer je govornik mucao, ponovio se ili krenuo ispočetka unutar iste rečenice.
+Tvoj zadatak: prepoznaj koje RIJEČI su dio mucanja (ponovljeni/nedovršeni dio) i koje treba IZBACITI, a koje su dio čistog izlaganja i treba ih ZADRŽATI.
 
 PRAVILA:
-- Ako govornik ponavlja iste riječi/fraze unutar rečenice pa onda kaže istu stvar čišće — IZBACI
-- Ako govornik koristi ponavljanje namjerno kao stilsko sredstvo ili za naglašavanje — ZADRŽI
-- Ako rečenica sadrži novu informaciju unatoč ponavljanju — ZADRŽI
-- Budi konzervativan: ako nisi siguran, ZADRŽI
+- Govornik obično počne frazu, zastane ili pogriješi, pa kaže istu stvar čišće — IZBACI prvi (pogrešni) pokušaj
+- Ako govornik koristi ponavljanje namjerno za naglašavanje — ZADRŽI sve
+- Budi konzervativan: ako nisi siguran, ZADRŽI sve (is_stutter=false)
+- word_indices_to_cut su indeksi (0-based) riječi koje treba izbaciti
 
-Rečenica za analizu:
-"{sentence}"
+Riječi s indeksima:
+{words_indexed}
 
 Kontekst — rečenica PRIJE:
 {before}
@@ -179,8 +179,12 @@ Kontekst — rečenica NAKON:
 
 
 class StutterVerdict(BaseModel):
-    """Gemini's judgment on whether a sentence contains stuttering."""
-    should_cut: bool = Field(..., description="True if the sentence should be removed due to stuttering")
+    """Gemini's judgment on stuttering with word-level precision."""
+    is_stutter: bool = Field(..., description="True if the sentence contains actual stuttering (not intentional repetition)")
+    word_indices_to_cut: list[int] = Field(
+        default_factory=list,
+        description="0-based indices of words to remove (the stuttered/repeated portion)",
+    )
     confidence: float = Field(ge=0.0, le=1.0)
     reasoning: str = ""
 
@@ -190,7 +194,7 @@ def verify_stutters_with_gemini(
     stutter_indices: list[int],
 ) -> list[tuple[int, StutterVerdict]]:
     """
-    Send each stuttered sentence to Gemini for a cut/keep verdict.
+    Send each stuttered sentence to Gemini for word-level trim guidance.
 
     Returns a list of (sentence_index, verdict) tuples.
     """
@@ -206,8 +210,12 @@ def verify_stutters_with_gemini(
         before = f'"{sentences[idx - 1].text}"' if idx > 0 else "(početak transkripta)"
         after = f'"{sentences[idx + 1].text}"' if idx < len(sentences) - 1 else "(kraj transkripta)"
 
+        words_indexed = "\n".join(
+            f"  [{i}] \"{w.text}\"" for i, w in enumerate(sentence.words)
+        )
+
         prompt = STUTTER_PROMPT.format(
-            sentence=sentence.text,
+            words_indexed=words_indexed,
             before=before,
             after=after,
         )
@@ -217,12 +225,13 @@ def verify_stutters_with_gemini(
         results.append((idx, verdict))
 
         logger.info(
-            "Gemini verdict: {} (confidence={:.0%}, reason={})",
-            "CUT" if verdict.should_cut else "KEEP",
+            "Gemini verdict: {} cut_words={} (confidence={:.0%}, reason={})",
+            "STUTTER" if verdict.is_stutter else "KEEP",
+            verdict.word_indices_to_cut,
             verdict.confidence,
             verdict.reasoning[:80],
         )
 
-    cut_count = sum(1 for _, v in results if v.should_cut)
-    logger.info("Gemini stutter verification: {}/{} confirmed for cutting", cut_count, len(stutter_indices))
+    stutter_count = sum(1 for _, v in results if v.is_stutter)
+    logger.info("Gemini stutter verification: {}/{} confirmed as stutters", stutter_count, len(stutter_indices))
     return results
