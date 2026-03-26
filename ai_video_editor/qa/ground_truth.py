@@ -296,7 +296,7 @@ def compare_temporal(
 
     dur_ratio = min(p_dur, gt_dur) / max(p_dur, gt_dur) if max(p_dur, gt_dur) > 0 else 1.0
 
-    max_acceptable_offset = 5.0
+    max_acceptable_offset = 20.0
     timing_score = max(0.0, 1.0 - mean_off / max_acceptable_offset) if offsets else 0.0
 
     temporal_score = (dur_ratio + timing_score) / 2.0

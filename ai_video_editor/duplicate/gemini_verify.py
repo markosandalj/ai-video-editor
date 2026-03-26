@@ -305,3 +305,71 @@ def holistic_redundancy_review(
         len(flags), len(kept_sentences),
     )
     return flags
+
+
+FRAGMENT_PROMPT = """Ti si profesionalni video editor. Pregledaj sljedeće kandidate za nepotpune fragmente u kontekstu okolnih rečenica.
+
+Za SVAKI kandidat odgovori:
+- should_cut: true AKO je fragment nepotpun/nedovršen i potpunija verzija postoji u okolnim rečenicama
+- should_cut: false AKO fragment zapravo služi svrsi (naglasak, prijelaz, uvod)
+- confidence: 0.0-1.0
+- reasoning: kratko obrazloženje
+
+Kandidati:
+{candidates_text}"""
+
+
+class FragmentVerdict(BaseModel):
+    """Gemini's judgment on a single fragment candidate."""
+    sentence_index: int
+    should_cut: bool = False
+    confidence: float = Field(ge=0.0, le=1.0, default=0.5)
+    reasoning: str = ""
+
+
+class FragmentReview(BaseModel):
+    """Gemini's review of all fragment candidates."""
+    verdicts: list[FragmentVerdict] = Field(default_factory=list)
+
+
+def verify_fragments_with_gemini(
+    candidate_indices: list[int],
+    sentences: list[Sentence],
+    context_window: int = 3,
+) -> list[FragmentVerdict]:
+    """
+    Send fragment candidates with surrounding context to Gemini for confirmation.
+    """
+    if not candidate_indices:
+        return []
+
+    parts: list[str] = []
+    for idx in candidate_indices:
+        lo = max(0, idx - context_window)
+        hi = min(len(sentences), idx + context_window + 1)
+        context_lines = []
+        for j in range(lo, hi):
+            marker = " <<< KANDIDAT" if j == idx else ""
+            context_lines.append(f'  [{j}] "{sentences[j].text}"{marker}')
+        parts.append("\n".join(context_lines))
+
+    candidates_text = "\n\n---\n\n".join(parts)
+    prompt = FRAGMENT_PROMPT.format(candidates_text=candidates_text)
+
+    llm = _get_llm()
+    structured = llm.with_structured_output(FragmentReview)
+
+    logger.info("Fragment verification: {} candidates", len(candidate_indices))
+    result: FragmentReview = structured.invoke(prompt)
+
+    valid = {idx for idx in candidate_indices}
+    verdicts = [v for v in result.verdicts if v.sentence_index in valid]
+
+    for v in verdicts:
+        action = "CUT" if v.should_cut else "KEEP"
+        logger.info(
+            "Fragment verdict: sentence {} → {} (confidence={:.0%}, reason={})",
+            v.sentence_index, action, v.confidence, v.reasoning[:80],
+        )
+
+    return verdicts

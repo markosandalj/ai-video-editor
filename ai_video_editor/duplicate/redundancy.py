@@ -66,6 +66,51 @@ def is_repeated_question(
     return False
 
 
+def is_incomplete_fragment(
+    sentence: Sentence,
+    max_words: int = 4,
+) -> bool:
+    """
+    Detect incomplete/abandoned sentence fragments.
+    E.g. "Evo, ja.", "A ovaj...", "Evo, znači, to znači da..."
+    """
+    text = sentence.text.strip()
+    words = text.split()
+
+    if len(words) > max_words:
+        return False
+
+    if text.endswith("...") or text.endswith("…"):
+        return True
+
+    norm = _normalise(text)
+    norm_words = norm.split()
+    filler_markers = {"evo", "znači", "dakle", "ovaj", "dobro", "okej", "pa", "a", "i", "ja"}
+    content_words = [w for w in norm_words if w not in filler_markers and len(w) > 2]
+    if len(content_words) == 0:
+        return True
+
+    return False
+
+
+def detect_fragment_candidates(
+    sentences: list[Sentence],
+    flagged_indices: set[int],
+    max_words: int = 4,
+) -> list[int]:
+    """
+    Return indices of sentences that look like incomplete fragments.
+    Skips already-flagged sentences.
+    """
+    candidates = []
+    for i, s in enumerate(sentences):
+        if i in flagged_indices:
+            continue
+        if is_incomplete_fragment(s, max_words=max_words):
+            candidates.append(i)
+    return candidates
+
+
 def algorithmic_redundancy_check(
     sentence_idx: int,
     sentence: Sentence,

@@ -6,8 +6,10 @@ from ai_video_editor.config.settings import DuplicateDetectionConfig
 from ai_video_editor.duplicate.gemini_verify import (
     detect_false_starts_with_gemini,
     verify_duplicates_with_gemini,
+    verify_fragments_with_gemini,
     verify_stutters_with_gemini,
 )
+from ai_video_editor.duplicate.redundancy import detect_fragment_candidates
 from ai_video_editor.duplicate.lexical import compute_lexical_similarity
 from ai_video_editor.duplicate.models import (
     DuplicateFlag,
@@ -267,9 +269,26 @@ def detect_duplicates(
                 idx, len(trims), trim_dur,
             )
 
-    # NOTE: Holistic redundancy review (holistic_redundancy_review + algorithmic_redundancy_check)
-    # is available but disabled — iter-006 showed it cuts content the human kept, causing regression.
-    # The code is preserved in gemini_verify.py and redundancy.py for future refinement.
+    # ------------------------------------------------------------------
+    # Fragment detection — hybrid (rule pre-filter + Gemini confirmation)
+    # ------------------------------------------------------------------
+    fragment_candidates = detect_fragment_candidates(sentences, flagged_indices)
+    if fragment_candidates:
+        logger.info("Fragment detection: {} candidates found", len(fragment_candidates))
+        verdicts = verify_fragments_with_gemini(fragment_candidates, sentences)
+        for v in verdicts:
+            if v.should_cut and v.confidence >= 0.8 and v.sentence_index not in flagged_indices:
+                flags.append(DuplicateFlag(
+                    idx=v.sentence_index,
+                    reason=FlagReason.FILLER,
+                    confidence=v.confidence,
+                    note=f"Fragment: {v.reasoning}",
+                ))
+                flagged_indices.add(v.sentence_index)
+                logger.info(
+                    "Fragment confirmed: sentence {} (confidence={:.0%})",
+                    v.sentence_index, v.confidence,
+                )
 
     flags.sort(key=lambda f: f.idx)
 
