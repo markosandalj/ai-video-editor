@@ -6,8 +6,15 @@ from loguru import logger
 from ai_video_editor.transcription.models import Sentence
 
 
+_PUNCT = ".,;:!?\"'()-–—…"
+
+
 def _normalise(text: str) -> str:
-    return text.lower().strip(".,;:!?\"'()-–—…").strip()
+    return text.lower().strip(_PUNCT).strip()
+
+
+def _normalise_word(word: str) -> str:
+    return word.lower().strip(_PUNCT).strip()
 
 
 def _word_count(text: str) -> int:
@@ -89,9 +96,8 @@ def is_incomplete_fragment(
     if len(words) > max_words:
         return False
 
-    norm = _normalise(text)
-    norm_words = norm.split()
     filler_markers = {"evo", "znači", "dakle", "ovaj", "dobro", "okej", "pa", "a", "i", "ja"}
+    norm_words = [_normalise_word(w) for w in words]
     content_words = [w for w in norm_words if w not in filler_markers and len(w) > 2]
     if len(content_words) == 0:
         return True
