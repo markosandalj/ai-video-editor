@@ -5,11 +5,9 @@ from loguru import logger
 from ai_video_editor.config.settings import DuplicateDetectionConfig
 from ai_video_editor.duplicate.gemini_verify import (
     detect_false_starts_with_gemini,
-    holistic_redundancy_review,
     verify_duplicates_with_gemini,
     verify_stutters_with_gemini,
 )
-from ai_video_editor.duplicate.redundancy import algorithmic_redundancy_check
 from ai_video_editor.duplicate.lexical import compute_lexical_similarity
 from ai_video_editor.duplicate.models import (
     DuplicateFlag,
