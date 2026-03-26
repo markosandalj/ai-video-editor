@@ -235,3 +235,73 @@ def verify_stutters_with_gemini(
     stutter_count = sum(1 for _, v in results if v.is_stutter)
     logger.info("Gemini stutter verification: {}/{} confirmed as stutters", stutter_count, len(stutter_indices))
     return results
+
+
+HOLISTIC_PROMPT = """Ti si profesionalni video editor za edukacijske video lekcije na hrvatskom jeziku. Pregledaj sljedeći transkript i označi rečenice koje su **nepotrebne** i mogu se izbaciti bez gubitka sadržaja.
+
+PRAVILA:
+- "Nepotrebna" znači da rečenica NE dodaje nikakvu novu informaciju koju kontekst već ne pokriva
+- Kratke nedovršene rečenice poput "Evo, ja." ili "A ovaj..." su kandidati AKO ih slijedi potpunija verzija
+- Trailing filler poput "Evo, znači, to znači da..." JEST nepotreban AKO sljedeća rečenica kaže istu stvar jasnije
+- Ponovljena pitanja su nepotrebna AKO se isto pitanje pojavljuje negdje drugdje u tekstu
+- NE brisi rečenice koje objašnjavaju, naglašavaju ili donose bilo kakvu novu informaciju
+- Budi VRLO konzervativan — bolje je ostaviti nepotrebnu rečenicu nego izbaciti korisnu
+- Za svaku označenu rečenicu navedi confidence (0.0-1.0) i kratko obrazloženje
+
+Transkript (s indeksima originalnih rečenica):
+{transcript_indexed}"""
+
+
+class RedundancyFlag(BaseModel):
+    """A single sentence flagged as redundant by Gemini."""
+    sentence_index: int = Field(..., description="Original sentence index from the transcript")
+    confidence: float = Field(ge=0.0, le=1.0)
+    reasoning: str = ""
+
+
+class RedundancyReview(BaseModel):
+    """Gemini's holistic review of the transcript."""
+    redundant_sentences: list[RedundancyFlag] = Field(default_factory=list)
+
+
+def holistic_redundancy_review(
+    kept_sentences: list[tuple[int, Sentence]],
+) -> list[RedundancyFlag]:
+    """
+    Send the full kept transcript to Gemini for a holistic redundancy review.
+
+    Args:
+        kept_sentences: List of (original_index, Sentence) for sentences that will be kept.
+
+    Returns:
+        List of RedundancyFlag for sentences Gemini considers redundant.
+    """
+    if not kept_sentences:
+        return []
+
+    transcript_indexed = "\n".join(
+        f"  [{idx}] \"{sent.text}\"" for idx, sent in kept_sentences
+    )
+
+    prompt = HOLISTIC_PROMPT.format(transcript_indexed=transcript_indexed)
+
+    llm = _get_llm()
+    structured = llm.with_structured_output(RedundancyReview)
+
+    logger.info("Holistic redundancy review: {} sentences", len(kept_sentences))
+    result: RedundancyReview = structured.invoke(prompt)
+
+    valid_indices = {idx for idx, _ in kept_sentences}
+    flags = [f for f in result.redundant_sentences if f.sentence_index in valid_indices]
+
+    for f in flags:
+        logger.info(
+            "Gemini redundancy flag: sentence {} (confidence={:.0%}, reason={})",
+            f.sentence_index, f.confidence, f.reasoning[:80],
+        )
+
+    logger.info(
+        "Holistic review: {}/{} flagged as redundant",
+        len(flags), len(kept_sentences),
+    )
+    return flags

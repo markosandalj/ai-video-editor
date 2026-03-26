@@ -11,3 +11,4 @@ Quality iteration loop for improving pipeline edit accuracy against human-edited
 | 003  | 90.0%     | 92.4%     | 97.8%    | 87.6%    | 45.8%    | 85.1%   | Intra-sentence stutter detection    | DISABLED: detection works but cutting whole sentences loses content; needs sub-sentence trimming |
 | 004  | 90.7%     | 94.7%     | 90.1%    | 99.8%    | 42.8%    | 84.2%   | Fix missing words (silence rescue + protect keep-side) | Improved: recall 97.7→99.8%, F1 94.3→94.7%, 13 fewer missing words |
 | 005  | 93.8%     | 97.1%     | 94.5%    | 99.8%    | 45.2%    | 84.0%   | Sub-sentence word-level stutter trimming | Improved: F1 94.7→97.1%, precision 90.1→94.5%, -31 extra words |
+| 006  | 90.2%     | 96.3%     | 93.9%    | 98.8%    | 45.6%    | 82.5%   | Holistic Gemini redundancy review + algorithmic backup | DISABLED: regression — cut content human kept, +6 missing words |

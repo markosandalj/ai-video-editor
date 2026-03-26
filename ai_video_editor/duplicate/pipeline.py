@@ -5,9 +5,11 @@ from loguru import logger
 from ai_video_editor.config.settings import DuplicateDetectionConfig
 from ai_video_editor.duplicate.gemini_verify import (
     detect_false_starts_with_gemini,
+    holistic_redundancy_review,
     verify_duplicates_with_gemini,
     verify_stutters_with_gemini,
 )
+from ai_video_editor.duplicate.redundancy import algorithmic_redundancy_check
 from ai_video_editor.duplicate.lexical import compute_lexical_similarity
 from ai_video_editor.duplicate.models import (
     DuplicateFlag,
@@ -267,16 +269,22 @@ def detect_duplicates(
                 idx, len(trims), trim_dur,
             )
 
+    # NOTE: Holistic redundancy review (holistic_redundancy_review + algorithmic_redundancy_check)
+    # is available but disabled — iter-006 showed it cuts content the human kept, causing regression.
+    # The code is preserved in gemini_verify.py and redundancy.py for future refinement.
+
     flags.sort(key=lambda f: f.idx)
 
     stutter_count = sum(1 for f in flags if f.reason == FlagReason.STUTTER)
+    filler_count = sum(1 for f in flags if f.reason == FlagReason.FILLER)
     logger.info(
         "Duplicate detection complete: {} flags "
-        "({} duplicate, {} false-start, {} stutter word-trims)",
+        "({} duplicate, {} false-start, {} stutter, {} filler)",
         len(flags),
         sum(1 for f in flags if f.reason == FlagReason.DUPLICATE),
         sum(1 for f in flags if f.reason == FlagReason.FALSE_START),
         stutter_count,
+        filler_count,
     )
 
     return flags
