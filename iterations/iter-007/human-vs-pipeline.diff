@@ -1,0 +1,63 @@
+--- tests/fixtures/test-2-human-edited.transcript.txt	2026-03-26 13:00:36
++++ tests/fixtures/test-2-pipeline-edited.transcript.txt	2026-03-26 13:00:36
+@@ -1,39 +1,45 @@
+ Čemu je jednako a puta treći korijen iz a za svaki realan broj a.
+ Evo dobro.
+ Znači, imamo taj nekakav naš izraz.
+-Ovdje tu nam se radi o nekakvom tom realnom broju, a to nam nije toliko bitno.
++Ovdje, tu nam se radi o nekakvom tom realnom broju, a to nam nije toliko bitno.
+ Idemo mi samo vidjeti kako možemo pojednostaviti ovaj naš izraz koji imamo i dobiti nešto od ovih ponuđenih odgovora.
+ I evo samo kada pogledamo te ponuđene odgovore ovako na prvu već vidimo da smo dobili uvijek samo nekakvu jednu potenciju.
+ Znači, imamo samo a na nešto.
+-Evo, pa to je nekako nama je ovdje ideja.
++Evo, pa to je nekako nama ovdje ideja.
+ Znači da nemamo ovaj a na dva mjesta, nego da ih sve skupimo pod taj jedan a.
+-Dobro, evo i sada kako ćemo krenuti možda raditi, pa znači vidimo da ovdje imamo običan a.
++Dobro, evo i sada kako ćemo krenuti možda raditi.
++Pa znači vidimo da ovdje imamo običan a.
+ S njim ne možemo ništa.
+ Međutim, ovako kada imamo treći korijen iz nečega ili neki korijen, ne mora nužno biti treći, mi znamo da njega možemo nekako prikazati kao potenciju.
+-Evo i za to imamo formulu koja nam zapravo samo kaže da kada se radi o nekakvom korijenu, nebitno je li to drugi, treći ili sedamstoti korijen, taj naš broj će mi zapravo biti eksponent u toj našoj potenciji, ali dolje u razlomku.
+-Evo, ja sam nekako uvijek zamišljao da taj broj koji mi se nalazi tu kod korijena, da on dolazi s donje strane na ovu moju potenciju.
+-Evo ga, pa isto zato završi i s donje strane tog našeg razlomka.
++Evo i za to imamo formulu koja nam zapravo samo kaže da kada se radi o nekakvom korijenu, nebitno je li to drugi, treći ili sedamstoti korijen, taj naš broj će mi zapravo u toj potenciji biti...
++Taj naš broj će mi zapravo biti eksponent u toj našoj potenciji, ali dolje u razlomku.
++Evo, ja.
++Evo, ja sam nekako uvijek zamišljao da taj broj koji mi se nalazi tu kod korijena, da on dolazi s donje strane na ovu moju potenciju, evo ga, pa isto zato završi i s donje strane tog našeg razlomka.
++A ovaj broj koji je ovdje predstavljen slovom n, on mi dolazi...
+ Dobro i ovdje imamo još drugi broj.
+ Znači, imamo nekakvu potenciju a na n.
+-Evo n mi isto tako mijenja možda nekakav broj ili neko slovo, ali ono što mi je ovdje bitno je da, dakle on dolazi s gornje strane, pa će isto tako završiti u tom našem eksponentu, ali u razlomku s gornje strane.
+-Evo i to ćemo mi sad ovdje napraviti.
++Evo, n mi isto tako mijenja možda nekakav broj ili neko slovo, ali ono što mi je ovdje bitno je da, dakle, on dolazi s gornje strane, pa će isto tako završiti u tom našem eksponentu, ali u razlomku s gornje strane.
++Evo, i to ćemo mi sad ovdje napraviti.
+ Znači, a nam ostaje kao baza.
+ Znači, ovo što je bila baza ispod korijena, to mi je i dalje baza i onda znamo da imamo jedan razlomak.
+ Ok, dolje će mi doći ovaj dio koji mi je bio kod korijena.
+ Znači, imat ćemo kroz tri, a što mi je gore, pa a nije imao nikakav eksponent, a to zapravo znači da je bio a na prvu.
++Evo, znači, to znači da...
+ Dakle, to zapravo znači da kod njega stoji ta jedinica.
+-Ok, evo znači, tu smo napravili već veliki dio posla i sad nam je ostalo zapravo samo pomnožiti te naše potencije, a kako se potencije množe?
++Ok, evo, znači, tu smo napravili već veliki dio posla i sad nam je ostalo zapravo samo pomnožiti te naše potencije.
++A kako se potencije množe?
+ Pa isto tako imamo formulu.
+-Evo, ona glasi nekako ovako znači a na m, dakle na neki broj puta a na n, na neki drugi broj, mi je zapravo jednako a na zbroj te dvije stvari.
+-Evo i to ćemo mi ovdje primijeniti.
++Evo, ona glasi nekako ovako.
++Znači, a na m puta a na n mi je zapravo jednako a na zbroj te dvije stvari.
++Evo, i to ćemo mi ovdje primijeniti.
+ Možemo čak to možda i lakše pamtiti jednom ovako kratkom rečenicom.
+ Znači, kada potencije množimo, bazu prepišemo, a eksponente zbrojimo.
+ Evo, ima samo nekoliko riječi, pa možda nam je dobro to zapamtiti da se malo ubrzamo, a i možda ćemo na taj način manje grešaka raditi.
+-Pa dobro, evo znači, mi moramo ovdje imati onda dvije potencije.
++Pa dobro, evo, znači, mi moramo ovdje imati onda dvije potencije.
+ Vidimo da imamo.
+ Imamo a i a na jednu trećinu.
+-Opet imamo znači samo jedan običan a, pa to mi je kao da piše a na prvu.
+-Evo, to si naravno možemo napisati ako će nam olakšati i kako ćemo onda računati.
+-Dakle, rekli smo bazu prepišemo, to mi je a, a eksponente što su mi jedan i jedna trećina, njih samo zbrojimo.
++Opet imamo, znači, samo jedan običan a, pa to mi je kao da piše a na prvu.
++I kako ćemo onda računati?
++Dakle, rekli smo bazu prepišemo, to mi je a, a eksponente, što su mi jedan i jedna trećina, njih samo zbrojimo.
+ Ok, evo ga i tu smo došli do rješenja.
+ Znači, ovo napišemo jednostavno u kalkulator ili možda znamo napamet da ćemo dobiti a na četiri trećine, pa je naš točan odgovor za ovaj zadatak pod c.

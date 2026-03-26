@@ -13,3 +13,4 @@ Quality iteration loop for improving pipeline edit accuracy against human-edited
 | 005  | 93.8%     | 97.1%     | 94.5%    | 99.8%    | 45.2%    | 84.0%   | Sub-sentence word-level stutter trimming | Improved: F1 94.7→97.1%, precision 90.1→94.5%, -31 extra words |
 | 006  | 90.2%     | 96.3%     | 93.9%    | 98.8%    | 45.6%    | 82.5%   | Holistic Gemini redundancy review + algorithmic backup | DISABLED: regression — cut content human kept, +6 missing words |
 | 007  | 88.1%     | 96.1%     | 95.3%    | 96.9%    | 67.4%    | 88.4%   | Temporal formula fix + fragment detection | Improved: overall 84→88.4%, temporal 45→67%, +4.4% overall |
+| 008  | 89.2%     | 96.3%     | 95.9%    | 96.7%    | 70.4%    | 89.0%   | Broader fragment detection + Gemini temp=0 | Improved: overall 88.4→89.0%, temporal 67→70%, -4 extra words |

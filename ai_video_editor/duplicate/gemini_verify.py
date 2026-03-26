@@ -80,7 +80,7 @@ def _load_gemini_key() -> str:
 def _get_llm() -> ChatGoogleGenerativeAI:
     return ChatGoogleGenerativeAI(
         model="gemini-2.5-flash",
-        temperature=0.1,
+        temperature=0.0,
         api_key=_load_gemini_key(),
     )
 

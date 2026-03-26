@@ -68,20 +68,26 @@ def is_repeated_question(
 
 def is_incomplete_fragment(
     sentence: Sentence,
-    max_words: int = 4,
+    max_words: int = 6,
+    max_words_ellipsis: int = 15,
 ) -> bool:
     """
     Detect incomplete/abandoned sentence fragments.
     E.g. "Evo, ja.", "A ovaj...", "Evo, znači, to znači da..."
+
+    Two paths:
+    1. Short sentence (≤max_words) with only filler words → fragment
+    2. Any sentence (≤max_words_ellipsis) ending in "..." or "…" → fragment
     """
     text = sentence.text.strip()
     words = text.split()
 
+    if text.endswith("...") or text.endswith("…"):
+        if len(words) <= max_words_ellipsis:
+            return True
+
     if len(words) > max_words:
         return False
-
-    if text.endswith("...") or text.endswith("…"):
-        return True
 
     norm = _normalise(text)
     norm_words = norm.split()
@@ -96,7 +102,6 @@ def is_incomplete_fragment(
 def detect_fragment_candidates(
     sentences: list[Sentence],
     flagged_indices: set[int],
-    max_words: int = 4,
 ) -> list[int]:
     """
     Return indices of sentences that look like incomplete fragments.
@@ -106,7 +111,7 @@ def detect_fragment_candidates(
     for i, s in enumerate(sentences):
         if i in flagged_indices:
             continue
-        if is_incomplete_fragment(s, max_words=max_words):
+        if is_incomplete_fragment(s):
             candidates.append(i)
     return candidates
 
