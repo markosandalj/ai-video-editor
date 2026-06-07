@@ -116,7 +116,7 @@ class DuplicateDetectionConfig(BaseModel):
     )
 
     lexical_definite: float = Field(
-        default=85.0,
+        default=90.0,
         ge=0.0,
         le=100.0,
         description="Lexical score (0-100) at or above which a pair is an automatic duplicate.",
@@ -129,7 +129,7 @@ class DuplicateDetectionConfig(BaseModel):
     )
 
     semantic_definite: float = Field(
-        default=0.90,
+        default=0.95,
         ge=0.0,
         le=1.0,
         description="Cosine similarity at or above which a pair is an automatic duplicate.",
@@ -142,7 +142,7 @@ class DuplicateDetectionConfig(BaseModel):
     )
 
     gemini_confidence_threshold: float = Field(
-        default=0.7,
+        default=0.8,
         ge=0.0,
         le=1.0,
         description="Minimum Gemini confidence to accept a duplicate verdict.",

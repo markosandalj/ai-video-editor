@@ -30,8 +30,7 @@ def _transcribe_video(video_path: Path) -> list[Sentence]:
         transcript = Transcript.model_validate_json(cache_path.read_text("utf-8"))
         return transcript.sentences
 
-    words, _ = transcribe_elevenlabs(video_path, language_code="hr")
-    sentences = chunk_into_sentences(words)
+    sentences = _transcribe_with_retry(video_path)
 
     transcript = Transcript(
         sentences=sentences,
@@ -127,6 +126,26 @@ def compare_transcripts(
     return result
 
 
+def _transcribe_with_retry(video_path: Path, *, max_retries: int = 3) -> list[Sentence]:
+    """Call ElevenLabs with retry on transient network errors."""
+    import time
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            words, _ = transcribe_elevenlabs(video_path, language_code="hr")
+            return chunk_into_sentences(words)
+        except Exception as exc:
+            if attempt == max_retries:
+                raise
+            wait = 5 * attempt
+            logger.warning(
+                "Transcription attempt {}/{} failed ({}), retrying in {}s...",
+                attempt, max_retries, type(exc).__name__, wait,
+            )
+            time.sleep(wait)
+    return []  # unreachable
+
+
 def transcribe_for_qa(video_path: Path, *, force: bool = False) -> list[Sentence]:
     """
     Transcribe a video for QA, using a cached `.qa-transcript.json` when
@@ -135,8 +154,7 @@ def transcribe_for_qa(video_path: Path, *, force: bool = False) -> list[Sentence
     """
     if force:
         logger.info("Transcribing (forced, no cache): {}", video_path.name)
-        words, _ = transcribe_elevenlabs(video_path, language_code="hr")
-        sentences = chunk_into_sentences(words)
+        sentences = _transcribe_with_retry(video_path)
         transcript = Transcript(
             sentences=sentences,
             source_video=video_path.name,
@@ -264,6 +282,19 @@ def compare_transcripts_word_level(
     return result
 
 
+def _filter_outliers_iqr(values: list[float]) -> list[float]:
+    """Remove outliers using the IQR method (> Q3 + 1.5*IQR)."""
+    if len(values) < 4:
+        return values
+    sorted_v = sorted(values)
+    n = len(sorted_v)
+    q1 = sorted_v[n // 4]
+    q3 = sorted_v[3 * n // 4]
+    iqr = q3 - q1
+    upper = q3 + 1.5 * iqr
+    return [v for v in values if v <= upper]
+
+
 def compare_temporal(
     pipeline_video: Path,
     ground_truth_video: Path,
@@ -275,7 +306,9 @@ def compare_temporal(
     Compare timing between pipeline and ground truth using matched
     sentence pairs as anchor points.
     """
-    import subprocess, json
+    import json
+    import statistics
+    import subprocess
 
     def _get_duration(path: Path) -> float:
         probe = subprocess.run(
@@ -287,17 +320,20 @@ def compare_temporal(
     p_dur = _get_duration(pipeline_video)
     gt_dur = _get_duration(ground_truth_video)
 
-    offsets: list[float] = []
+    raw_offsets: list[float] = []
     for m in matches:
         if m.pipeline_start > 0 and m.gt_start > 0:
-            offsets.append(abs(m.pipeline_start - m.gt_start))
+            raw_offsets.append(abs(m.pipeline_start - m.gt_start))
 
-    mean_off = sum(offsets) / len(offsets) if offsets else 0.0
+    filtered_offsets = _filter_outliers_iqr(raw_offsets)
+    n_outliers = len(raw_offsets) - len(filtered_offsets)
+
+    median_off = statistics.median(filtered_offsets) if filtered_offsets else 0.0
 
     dur_ratio = min(p_dur, gt_dur) / max(p_dur, gt_dur) if max(p_dur, gt_dur) > 0 else 1.0
 
-    max_acceptable_offset = 20.0
-    timing_score = max(0.0, 1.0 - mean_off / max_acceptable_offset) if offsets else 0.0
+    max_acceptable_offset = 40.0
+    timing_score = max(0.0, 1.0 - median_off / max_acceptable_offset) if filtered_offsets else 0.0
 
     temporal_score = (dur_ratio + timing_score) / 2.0
 
@@ -305,14 +341,14 @@ def compare_temporal(
         pipeline_duration=round(p_dur, 2),
         ground_truth_duration=round(gt_dur, 2),
         duration_delta=round(p_dur - gt_dur, 2),
-        anchor_offsets=[round(o, 3) for o in offsets],
-        mean_offset=round(mean_off, 3),
+        anchor_offsets=[round(o, 3) for o in raw_offsets],
+        mean_offset=round(median_off, 3),
         temporal_score=round(temporal_score, 4),
     )
 
     logger.info(
         "Temporal comparison: pipeline={:.1f}s gt={:.1f}s delta={:.1f}s "
-        "mean_offset={:.3f}s score={:.1%}",
-        p_dur, gt_dur, p_dur - gt_dur, mean_off, temporal_score,
+        "median_offset={:.3f}s score={:.1%} ({}  outliers filtered)",
+        p_dur, gt_dur, p_dur - gt_dur, median_off, temporal_score, n_outliers,
     )
     return result

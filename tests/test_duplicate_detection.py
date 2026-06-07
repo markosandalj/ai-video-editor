@@ -228,11 +228,11 @@ class TestDuplicateDetectionConfig:
     def test_defaults(self):
         cfg = DuplicateDetectionConfig()
         assert cfg.window_size == 5
-        assert cfg.lexical_definite == 85.0
+        assert cfg.lexical_definite == 90.0
         assert cfg.lexical_maybe == 70.0
-        assert cfg.semantic_definite == 0.90
+        assert cfg.semantic_definite == 0.95
         assert cfg.semantic_maybe == 0.75
-        assert cfg.gemini_confidence_threshold == 0.7
+        assert cfg.gemini_confidence_threshold == 0.8
 
     def test_in_settings(self):
         from ai_video_editor.config import Settings

@@ -178,24 +178,36 @@ class TestSpliceAnalysisResult:
 
 
 class TestQAReport:
-    def test_overall_score_single(self):
+    def test_overall_score_word_only(self):
         report = QAReport(
             video_name="test",
-            transcript_comparison=TranscriptComparisonResult(
-                pipeline_sentences=10, ground_truth_sentences=10, matched=8
+            word_level_comparison=WordLevelComparisonResult(
+                pipeline_words=100, ground_truth_words=100, lcs_length=80,
             ),
         )
-        assert report.overall_score == pytest.approx(report.transcript_comparison.f1)
+        assert report.overall_score == pytest.approx(report.word_level_comparison.f1)
 
-    def test_overall_score_multiple(self):
+    def test_overall_score_weighted(self):
         report = QAReport(
             video_name="test",
-            transcript_comparison=TranscriptComparisonResult(
-                pipeline_sentences=10, ground_truth_sentences=10, matched=10
+            word_level_comparison=WordLevelComparisonResult(
+                pipeline_words=100, ground_truth_words=100, lcs_length=100,
             ),
-            splice_analysis=SpliceAnalysisResult(total_splices=5, harsh_splices=0),
+            temporal_comparison=TemporalComparisonResult(temporal_score=1.0),
+            continuity=ContinuityResult(alignment_score=1.0),
         )
-        assert report.overall_score == 1.0
+        assert report.overall_score == pytest.approx(1.0)
+
+    def test_overall_score_weights_applied(self):
+        report = QAReport(
+            video_name="test",
+            word_level_comparison=WordLevelComparisonResult(
+                pipeline_words=100, ground_truth_words=100, lcs_length=100,
+            ),
+            temporal_comparison=TemporalComparisonResult(temporal_score=0.0),
+            continuity=ContinuityResult(alignment_score=0.0),
+        )
+        assert report.overall_score == pytest.approx(0.50)
 
     def test_overall_passed(self):
         report = QAReport(
@@ -253,8 +265,8 @@ class TestRegression:
 
         report1 = QAReport(
             video_name="v1",
-            transcript_comparison=TranscriptComparisonResult(
-                pipeline_sentences=10, ground_truth_sentences=10, matched=9
+            word_level_comparison=WordLevelComparisonResult(
+                pipeline_words=100, ground_truth_words=100, lcs_length=90,
             ),
         )
         entry1 = record_scores([report1], history_path)
@@ -265,8 +277,8 @@ class TestRegression:
 
         report2 = QAReport(
             video_name="v1",
-            transcript_comparison=TranscriptComparisonResult(
-                pipeline_sentences=10, ground_truth_sentences=10, matched=5
+            word_level_comparison=WordLevelComparisonResult(
+                pipeline_words=100, ground_truth_words=100, lcs_length=50,
             ),
         )
         entry2 = record_scores([report2], history_path)
@@ -279,16 +291,16 @@ class TestRegression:
 
         report1 = QAReport(
             video_name="v1",
-            transcript_comparison=TranscriptComparisonResult(
-                pipeline_sentences=10, ground_truth_sentences=10, matched=5
+            word_level_comparison=WordLevelComparisonResult(
+                pipeline_words=100, ground_truth_words=100, lcs_length=50,
             ),
         )
         record_scores([report1], history_path)
 
         report2 = QAReport(
             video_name="v1",
-            transcript_comparison=TranscriptComparisonResult(
-                pipeline_sentences=10, ground_truth_sentences=10, matched=9
+            word_level_comparison=WordLevelComparisonResult(
+                pipeline_words=100, ground_truth_words=100, lcs_length=90,
             ),
         )
         entry2 = record_scores([report2], history_path)

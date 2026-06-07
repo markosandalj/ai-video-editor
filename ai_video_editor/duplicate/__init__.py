@@ -6,6 +6,7 @@ from ai_video_editor.duplicate.gemini_verify import (
     verify_duplicates_with_gemini,
     detect_false_starts_with_gemini,
     verify_stutters_with_gemini,
+    pick_best_version_with_gemini,
     holistic_redundancy_review,
 )
 from ai_video_editor.duplicate.pipeline import detect_duplicates
@@ -23,6 +24,7 @@ __all__ = [
     "verify_duplicates_with_gemini",
     "detect_false_starts_with_gemini",
     "verify_stutters_with_gemini",
+    "pick_best_version_with_gemini",
     "detect_duplicates",
     "detect_stutters",
     "EditDecision",

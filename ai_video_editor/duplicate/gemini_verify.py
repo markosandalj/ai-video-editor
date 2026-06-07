@@ -22,6 +22,10 @@ Za svaki par navedi:
 - is_duplicate: true/false
 - confidence: 0.0-1.0 (koliko si siguran)
 - reasoning: kratko objašnjenje na hrvatskom
+- preferred_index: AKO je duplikat, navedi indeks rečenice koja je BOLJA verzija i koju treba ZADRŽATI. Kriteriji za odabir:
+  1. Čišća izvedba (manje poštapalica, manje oklijevanja, manje nedovršenih riječi)
+  2. Potpunija misao (više informativnog sadržaja)
+  3. Ako su jednake kvalitete, preferiraj KASNIJU verziju (govornik obično ispravlja/poboljšava)
 
 Parovi rečenica za analizu:
 {pairs_text}"""
@@ -52,6 +56,10 @@ class DuplicateVerdict(BaseModel):
     is_duplicate: bool
     confidence: float = Field(ge=0.0, le=1.0)
     reasoning: str
+    preferred_index: int | None = Field(
+        default=None,
+        description="Index of the sentence to KEEP (the better version). Only set when is_duplicate=true.",
+    )
 
 
 class DuplicateVerdicts(BaseModel):
@@ -118,6 +126,82 @@ def verify_duplicates_with_gemini(
         sum(1 for v in result.verdicts if v.is_duplicate),
     )
     return result.verdicts
+
+
+WHICH_TO_KEEP_PROMPT = """Ti si ekspert za analizu govornog jezika na hrvatskom. Ove rečenice su potvrđeni duplikati — govornik je rekao istu stvar dva puta. Odaberi BOLJU verziju za zadržati.
+
+Kriteriji:
+1. Čišća izvedba (manje poštapalica, oklijevanja, nedovršenih riječi)
+2. Potpunija misao (više informativnog sadržaja)
+3. Ako su jednake kvalitete, preferiraj KASNIJU verziju (govornik obično ispravlja/poboljšava)
+
+Parovi:
+{pairs_text}"""
+
+
+class KeepDecision(BaseModel):
+    """Gemini's pick for which sentence to keep in a confirmed duplicate pair."""
+    pair_id: int = Field(..., description="Zero-based index into the input pairs list")
+    keep_index: int = Field(..., description="Sentence index of the version to KEEP")
+    reasoning: str = ""
+
+
+class KeepDecisions(BaseModel):
+    """Batch of keep/cut decisions."""
+    decisions: list[KeepDecision] = Field(default_factory=list)
+
+
+def pick_best_version_with_gemini(
+    pairs: list[DuplicatePair],
+    sentences: list[Sentence],
+) -> dict[int, int]:
+    """
+    For each confirmed duplicate pair, ask Gemini which sentence is the
+    better version to keep.
+
+    Returns a dict mapping ``idx_cut`` → ``preferred_keep_index``.  If
+    Gemini's preference differs from the current ``idx_keep``, the caller
+    should swap them.
+    """
+    if not pairs:
+        return {}
+
+    lines: list[str] = []
+    for k, p in enumerate(pairs):
+        a_text = sentences[p.idx_keep].text if p.idx_keep < len(sentences) else "?"
+        b_text = sentences[p.idx_cut].text if p.idx_cut < len(sentences) else "?"
+        lines.append(
+            f"Par {k}:\n"
+            f"  Rečenica {p.idx_keep}: \"{a_text}\"\n"
+            f"  Rečenica {p.idx_cut}: \"{b_text}\""
+        )
+
+    prompt = WHICH_TO_KEEP_PROMPT.format(pairs_text="\n\n".join(lines))
+
+    llm = _get_llm()
+    structured = llm.with_structured_output(KeepDecisions)
+
+    logger.info("Gemini 'which to keep' decision: {} pairs", len(pairs))
+    result: KeepDecisions = structured.invoke(prompt)
+
+    mapping: dict[int, int] = {}
+    swaps = 0
+    for d in result.decisions:
+        if d.pair_id >= len(pairs):
+            continue
+        pair = pairs[d.pair_id]
+        valid_indices = {pair.idx_keep, pair.idx_cut}
+        if d.keep_index in valid_indices:
+            mapping[pair.idx_cut] = d.keep_index
+            if d.keep_index != pair.idx_keep:
+                swaps += 1
+                logger.info(
+                    "Gemini swapped keep/cut: pair {} — keep sentence {} instead of {} ({})",
+                    d.pair_id, d.keep_index, pair.idx_keep, d.reasoning[:60],
+                )
+
+    logger.info("Gemini keep decisions: {}/{} swapped from original", swaps, len(pairs))
+    return mapping
 
 
 def detect_false_starts_with_gemini(
@@ -314,6 +398,8 @@ Za SVAKI kandidat odgovori:
 - should_cut: false AKO fragment zapravo služi svrsi (naglasak, prijelaz, uvod)
 - confidence: 0.0-1.0
 - reasoning: kratko obrazloženje
+
+VAŽNO: Rečenice koje završavaju s "..." ili "…" su JAKI signal da je govornik prekinuo misao i započeo ispočetka. Takve rečenice gotovo uvijek treba izbaciti jer slijedi potpunija verzija iste misli.
 
 Kandidati:
 {candidates_text}"""

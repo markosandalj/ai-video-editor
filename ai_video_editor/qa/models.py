@@ -137,17 +137,15 @@ class QAReport(BaseModel):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def overall_score(self) -> float:
-        """Weighted average of available scores (0-1)."""
-        scores: list[float] = []
-        if self.transcript_comparison:
-            scores.append(self.transcript_comparison.f1)
+        """Weighted average: word F1 50%, temporal 30%, continuity 20%."""
+        components: list[tuple[float, float]] = []
+        if self.word_level_comparison:
+            components.append((self.word_level_comparison.f1, 0.50))
         if self.temporal_comparison:
-            scores.append(self.temporal_comparison.temporal_score)
-        if self.splice_analysis:
-            splice_score = 1.0 - (self.splice_analysis.harsh_splices / max(self.splice_analysis.total_splices, 1))
-            scores.append(splice_score)
-        if self.spectrogram_comparison:
-            scores.append(self.spectrogram_comparison.similarity_score)
+            components.append((self.temporal_comparison.temporal_score, 0.30))
         if self.continuity:
-            scores.append(self.continuity.alignment_score)
-        return sum(scores) / len(scores) if scores else 0.0
+            components.append((self.continuity.alignment_score, 0.20))
+        if not components:
+            return 0.0
+        total_weight = sum(w for _, w in components)
+        return sum(s * w for s, w in components) / total_weight

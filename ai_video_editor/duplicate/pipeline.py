@@ -5,6 +5,7 @@ from loguru import logger
 from ai_video_editor.config.settings import DuplicateDetectionConfig
 from ai_video_editor.duplicate.gemini_verify import (
     detect_false_starts_with_gemini,
+    pick_best_version_with_gemini,
     verify_duplicates_with_gemini,
     verify_fragments_with_gemini,
     verify_stutters_with_gemini,
@@ -21,6 +22,11 @@ from ai_video_editor.duplicate.models import (
 from ai_video_editor.duplicate.stutter import compute_stutter_cut_ranges, detect_stutters
 from ai_video_editor.duplicate.semantic import compute_semantic_similarity
 from ai_video_editor.transcription.models import Sentence
+
+
+def _default_keep_cut(idx_a: int, idx_b: int) -> tuple[int, int]:
+    """Default: keep the later sentence (higher index), cut the earlier."""
+    return (max(idx_a, idx_b), min(idx_a, idx_b))
 
 
 def _merge_score(base: SimilarityScore, other: SimilarityScore) -> SimilarityScore:
@@ -72,9 +78,10 @@ def detect_duplicates(
     for key, score in score_map.items():
         best_lex = max(score.lexical_ratio or 0, score.lexical_token_sort or 0)
         if best_lex >= cfg.lexical_definite:
+            keep, cut = _default_keep_cut(key[0], key[1])
             definite_pairs.append(DuplicatePair(
-                idx_keep=key[1],
-                idx_cut=key[0],
+                idx_keep=keep,
+                idx_cut=cut,
                 score=score,
                 tier="lexical",
             ))
@@ -111,9 +118,10 @@ def detect_duplicates(
         cosine = s.semantic_cosine or 0.0
         if cosine >= cfg.semantic_definite:
             merged = score_map[key]
+            keep, cut = _default_keep_cut(key[0], key[1])
             definite_pairs.append(DuplicatePair(
-                idx_keep=key[1],
-                idx_cut=key[0],
+                idx_keep=keep,
+                idx_cut=cut,
                 score=merged,
                 tier="semantic",
             ))
@@ -146,9 +154,14 @@ def detect_duplicates(
             merged.gemini_confidence = v.confidence
 
             if v.is_duplicate and v.confidence >= cfg.gemini_confidence_threshold:
+                if v.preferred_index is not None and v.preferred_index in key:
+                    keep = v.preferred_index
+                    cut = key[0] if key[1] == keep else key[1]
+                else:
+                    keep, cut = _default_keep_cut(key[0], key[1])
                 definite_pairs.append(DuplicatePair(
-                    idx_keep=key[1],
-                    idx_cut=key[0],
+                    idx_keep=keep,
+                    idx_cut=cut,
                     score=merged,
                     tier="gemini",
                 ))
@@ -157,7 +170,17 @@ def detect_duplicates(
     logger.info("Tier 3 (Gemini): {} definite total", len(definite_pairs))
 
     # ------------------------------------------------------------------
-    # Build flags — earlier take always cut, later take kept
+    # Gemini "which to keep" — let Gemini pick the better version
+    # ------------------------------------------------------------------
+    if definite_pairs:
+        keep_decisions = pick_best_version_with_gemini(definite_pairs, sentences)
+        for pair in definite_pairs:
+            preferred = keep_decisions.get(pair.idx_cut)
+            if preferred is not None and preferred != pair.idx_keep:
+                pair.idx_keep, pair.idx_cut = pair.idx_cut, pair.idx_keep
+
+    # ------------------------------------------------------------------
+    # Build flags
     # ------------------------------------------------------------------
     flags: list[DuplicateFlag] = []
     flagged_indices: set[int] = set()
@@ -178,8 +201,8 @@ def detect_duplicates(
     protected_indices = {p.idx_keep for p in definite_pairs}
 
     for pair in definite_pairs:
-        lo = pair.idx_cut + 1
-        hi = pair.idx_keep
+        lo = min(pair.idx_cut, pair.idx_keep) + 1
+        hi = max(pair.idx_cut, pair.idx_keep)
         if hi - lo < 1:
             continue
 
@@ -188,8 +211,10 @@ def detect_duplicates(
         if not unflagged_in_block:
             continue
 
-        before = sentences[pair.idx_cut] if pair.idx_cut >= 0 else None
-        after = sentences[pair.idx_keep] if pair.idx_keep < len(sentences) else None
+        earlier = min(pair.idx_cut, pair.idx_keep)
+        later = max(pair.idx_cut, pair.idx_keep)
+        before = sentences[earlier] if earlier >= 0 else None
+        after = sentences[later] if later < len(sentences) else None
 
         verdict = detect_false_starts_with_gemini(block, before, after)
 

@@ -76,7 +76,7 @@ def is_repeated_question(
 def is_incomplete_fragment(
     sentence: Sentence,
     max_words: int = 6,
-    max_words_ellipsis: int = 15,
+    max_words_ellipsis: int = 25,
 ) -> bool:
     """
     Detect incomplete/abandoned sentence fragments.
