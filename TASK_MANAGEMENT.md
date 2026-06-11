@@ -11,13 +11,20 @@ tasks/
   phase-2/          # Transcription & Forced Alignment             ✅
   phase-3/          # Semantic Duplicate Detection                 ✅
   phase-4/          # Video Assembly & Rendering                   ✅
-  phase-5/          # Programmatic Verification / QA
-  phase-6/          # Production Render & Quality Iteration
-  phase-7/          # Export & Interoperability (OTIO)
-  phase-8/          # Web Frontend for Educator Review
+  phase-5/          # Transcript Metadata Enrichment (clean LLM pass)
+  phase-6/          # Review: JSON Export & Web Frontend
+  phase-7/          # Programmatic QA, Quality Iteration & Production Render
+  phase-8/          # Interoperability Export (OTIO / FCP7 / EDL)
   phase-9/          # Professor Profiling (V2)
   phase-10/         # ML Model Training (V3/V4)
 ```
+
+> **Note on ordering (2026-06):** Phases were re-sequenced to match the actual build
+> order. Transcript metadata enrichment (5) was inserted between the pipeline and any
+> consumption surface, and the review export + web frontend (6) were moved ahead of the
+> QA/iteration loop (7), because the human-in-the-loop editor is now the mechanism for
+> closing the last ~10% of edit quality. Professor Profiling (9) and ML Training (10)
+> are unchanged. Phases 0–4 keep their original numbers.
 
 Each phase folder contains individual `.md` files, one per task (e.g., `01-audio-extraction.md`).
 
@@ -99,29 +106,32 @@ Phase 3 (Duplicate Detection)
 Phase 4 (Video Assembly & Rendering)
     |
     v
-Phase 5 (QA / Verification)  ←  improve edit quality first
+Phase 5 (Transcript Metadata Enrichment)  ←  clean LLM pass: per-chunk score + tags
     |
     v
-Phase 6 (Production Render & Quality Iteration)
+Phase 6 (Review: JSON Export & Web Frontend)  ←  human-in-the-loop editor
     |
-    +---> Phase 7 (OTIO Export)  ---> Phase 8 (Web Frontend)
+    v
+Phase 7 (QA, Quality Iteration & Production Render)  ←  maximize quality (automated + human signal)
+    |
+    +---> Phase 8 (Interop Export: OTIO / FCP7 / EDL)
     |
     +---> Phase 9 (Professor Profiling)
     |
     +---> Phase 10 (ML Training)
 ```
 
-**Critical path:** Phases 0 → 1 → 2 → 3 → 4 → 5 → **iteration loop** → 6 produce the best possible automated edit.
-Phases 7+ are about exporting to other tools and building UIs — only after the edit quality is maximized.
+**Critical path:** Phases 0 → 1 → 2 → 3 → 4 → 5 (enrichment) → 6 (review UI) → **iteration loop in Phase 7** produce the best possible edit with a human closing the gap.
+Phase 8+ (NLE interop, profiling, ML) come after the edit quality and review workflow are solid.
 
-## Quality Iteration Loop (between Phase 5 and Phase 6)
+## Quality Iteration Loop (within Phase 7)
 
-After Phase 5 (QA) establishes baseline scores, the project enters a **hypothesis-driven iteration loop** to maximize edit quality before moving to production settings (Phase 6).
+After Phase 7's QA tasks establish baseline scores, the project enters a **hypothesis-driven iteration loop** to maximize edit quality. The loop now also consumes the human review signal from Phase 6 (what editors actually kept/cut) and runs before locking production render settings.
 
 Each iteration is one isolated change, git-tagged for easy revert. See `.cursor/rules/iteration-workflow.mdc` for the full process and `iterations/ITERATION_LOG.md` for the running score table.
 
 ```
-Phase 5 (QA baseline)
+Phase 7 QA baseline
     |
     v
 ┌─> Run pipeline + QA ──> Analyze differences ──> Grill user
@@ -139,7 +149,7 @@ Phase 5 (QA baseline)
     (exit when user is satisfied with scores)
     |
     v
-Phase 6 (Production Render & Quality)
+Lock production render settings (phase-7/08)
 ```
 
 **Rules:**

@@ -14,7 +14,7 @@ Merge silence-based keep regions with duplicate detection results into a single,
 - Silence cuts (from Phase 1) and duplicate cuts (from 3.04) merged without conflicts.
 - Chronologically ordered and non-overlapping.
 - Serializable to JSON (Pydantic `model_dump_json`).
-- OTIO export as a separate concern (Phase 5), but the internal model should be clean enough to map 1:1 later.
+- OTIO export as a separate concern (Phase 8), but the internal model should be clean enough to map 1:1 later.
 
 ## Implementation Notes
 
@@ -30,4 +30,4 @@ Merge silence-based keep regions with duplicate detection results into a single,
 - [x] Silence cuts and duplicate cuts merged without conflicts (`build_edl`)
 - [x] Output is chronologically ordered and non-overlapping
 - [x] Serializable to JSON for export and caching (Pydantic `model_dump_json`)
-- [x] Maps cleanly to OTIO constructs (for Phase 5)
+- [x] Maps cleanly to OTIO constructs (for Phase 8)

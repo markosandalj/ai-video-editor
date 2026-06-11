@@ -1,11 +1,11 @@
 ---
-description: Quality iteration workflow for improving pipeline edit accuracy. Governs the hypothesis-driven loop between Phase 5 (QA) and Phase 6 (Production).
+description: Quality iteration workflow for improving pipeline edit accuracy. Governs the hypothesis-driven loop inside Phase 7 (QA, Quality Iteration & Production Render).
 alwaysApply: true
 ---
 
 # Quality Iteration Workflow
 
-Between Phase 5 and Phase 6, the project enters an iteration loop to maximize edit quality. This rule governs that loop.
+Within Phase 7 (Programmatic QA, Quality Iteration & Production Render), after the QA tasks establish baseline scores, the project enters an iteration loop to maximize edit quality before locking production render settings. This rule governs that loop.
 
 ## Structure
 

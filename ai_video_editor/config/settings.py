@@ -149,6 +149,44 @@ class DuplicateDetectionConfig(BaseModel):
     )
 
 
+class EnrichmentConfig(BaseModel):
+    """Transcript metadata enrichment (clean, standalone Gemini pass)."""
+
+    model_config = ConfigDict(extra="allow")
+
+    enabled: bool = Field(
+        default=True,
+        description="Run the enrichment pass during processing (override per run with --no-enrich).",
+    )
+    model: str = Field(
+        default="gemini-2.5-pro",
+        description="Gemini model for enrichment — the stronger 'pro' tier (judgment > cost).",
+    )
+    temperature: float = Field(
+        default=0.1,
+        ge=0.0,
+        le=2.0,
+        description="Low temperature for stable, repeatable scoring.",
+    )
+    batch_size: int = Field(
+        default=20,
+        gt=0,
+        description="Number of sentences sent to Gemini per enrichment call.",
+    )
+    green_threshold: float = Field(
+        default=80.0,
+        ge=0.0,
+        le=100.0,
+        description="Kept sentences with keep_confidence >= this are 'green'; below are 'yellow'.",
+    )
+    restore_threshold: float = Field(
+        default=60.0,
+        ge=0.0,
+        le=100.0,
+        description="Cut sentences with keep_confidence >= this become 'restore' suggestions; below are 'red'.",
+    )
+
+
 class RenderConfig(BaseModel):
     """Video render / assembly parameters."""
 
@@ -189,6 +227,7 @@ class Settings(BaseSettings):
     audio: AudioConfig = Field(default_factory=AudioConfig)
     transcription: TranscriptionConfig = Field(default_factory=TranscriptionConfig)
     duplicate_detection: DuplicateDetectionConfig = Field(default_factory=DuplicateDetectionConfig)
+    enrichment: EnrichmentConfig = Field(default_factory=EnrichmentConfig)
     render: RenderConfig = Field(default_factory=RenderConfig)
 
     @classmethod

@@ -1,0 +1,4 @@
+dist
+node_modules
+# Auto-generated from the OpenAPI spec (npm run gen:api)
+src/api/schema.d.ts

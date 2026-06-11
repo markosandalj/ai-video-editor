@@ -26,3 +26,6 @@ output/
 .env
 .env.local
 .env.*.local
+
+
+tmp/
