@@ -22,6 +22,7 @@ class FlagReason(str, Enum):
     FALSE_START = "false_start"
     FILLER = "filler"
     STUTTER = "stutter"
+    ASIDE = "aside"
 
 
 class DuplicatePair(BaseModel):

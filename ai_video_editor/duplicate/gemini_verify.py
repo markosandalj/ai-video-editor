@@ -18,13 +18,18 @@ PRAVILA:
 - Ako je jedna rečenica nastavak prethodne misli, to NIJE duplikat
 - Kratki frazni obrasci poput pozdrava ili uvodnih fraza ("Dobro, idemo dalje") JESU duplikati samo ako se ponavljaju uzastopno
 
+KORISTI KONTEKST I VRIJEME:
+- Uz svaki par dani su SUSJEDNE rečenice (prije/poslije) i VREMENSKI RAZMAK između dvije verzije.
+- Mali razmak (par sekundi) + lažni početak između = ponovljeni pokušaj (snimanje) → vjerojatno DUPLIKAT.
+- Velik razmak (mnogo rečenica / dugo vrijeme) = govornik se vraća na temu radi PODSJETNIKA → NIJE duplikat, ZADRŽI obje.
+
 Za svaki par navedi:
 - is_duplicate: true/false
 - confidence: 0.0-1.0 (koliko si siguran)
 - reasoning: kratko objašnjenje na hrvatskom
-- preferred_index: AKO je duplikat, navedi indeks rečenice koja je BOLJA verzija i koju treba ZADRŽATI. Kriteriji za odabir:
-  1. Čišća izvedba (manje poštapalica, manje oklijevanja, manje nedovršenih riječi)
-  2. Potpunija misao (više informativnog sadržaja)
+- preferred_index: AKO je duplikat, navedi indeks rečenice koja je BOLJA verzija i koju treba ZADRŽATI. Kriteriji za odabir (ovim redoslijedom):
+  1. Potpunija misao (više informativnog sadržaja, cjelovitije objašnjenje) — u edukacijskim lekcijama dulja verzija je obično vrjednija
+  2. Čišća izvedba (manje poštapalica, manje oklijevanja, manje nedovršenih riječi)
   3. Ako su jednake kvalitete, preferiraj KASNIJU verziju (govornik obično ispravlja/poboljšava)
 
 Parovi rečenica za analizu:
@@ -90,17 +95,46 @@ def _get_llm() -> ChatGoogleGenerativeAI:
         model="gemini-2.5-flash",
         temperature=0.0,
         api_key=_load_gemini_key(),
+        # Bound every call: a dropped connection must fail and retry, never hang.
+        timeout=120,
+        max_retries=4,
     )
+
+
+def _context_lines(
+    sentences: list[Sentence],
+    center_a: int,
+    center_b: int,
+    context_window: int,
+) -> str:
+    """Render the sentences surrounding a candidate pair, marking the pair members."""
+    if context_window <= 0:
+        return ""
+    lo = max(0, min(center_a, center_b) - context_window)
+    hi = min(len(sentences), max(center_a, center_b) + context_window + 1)
+    out: list[str] = []
+    for j in range(lo, hi):
+        mark = ""
+        if j == center_a:
+            mark = " <<< A"
+        elif j == center_b:
+            mark = " <<< B"
+        out.append(f'    [{j}] "{sentences[j].text}"{mark}')
+    return "\n".join(out)
 
 
 def verify_duplicates_with_gemini(
     pairs: list[SimilarityScore],
     sentences: list[Sentence],
+    *,
+    context_window: int = 2,
 ) -> list[DuplicateVerdict]:
     """
     Ask Gemini whether borderline sentence pairs are real duplicates.
 
     *pairs* contains ``(idx_a, idx_b)`` references into *sentences*.
+    Each pair is shown with its neighbouring sentences and the time gap between
+    the two members so the model can separate a retake from a recap.
     Returns one ``DuplicateVerdict`` per input pair.
     """
     if not pairs:
@@ -108,9 +142,15 @@ def verify_duplicates_with_gemini(
 
     lines: list[str] = []
     for k, p in enumerate(pairs):
-        a_text = sentences[p.idx_a].text
-        b_text = sentences[p.idx_b].text
-        lines.append(f"Par {k}:\n  A (rečenica {p.idx_a}): \"{a_text}\"\n  B (rečenica {p.idx_b}): \"{b_text}\"")
+        a, b = sentences[p.idx_a], sentences[p.idx_b]
+        gap = abs(b.start - a.end) if b.start >= a.end else abs(a.start - b.end)
+        block = f"Par {k} (vremenski razmak ≈ {gap:.1f}s):\n"
+        block += f'  A (rečenica {p.idx_a}): "{a.text}"\n'
+        block += f'  B (rečenica {p.idx_b}): "{b.text}"'
+        ctx = _context_lines(sentences, p.idx_a, p.idx_b, context_window)
+        if ctx:
+            block += f"\n  Kontekst:\n{ctx}"
+        lines.append(block)
 
     prompt = DUPLICATE_PROMPT.format(pairs_text="\n\n".join(lines))
 
@@ -130,7 +170,17 @@ def verify_duplicates_with_gemini(
 
 WHICH_TO_KEEP_PROMPT = """Ti si ekspert za analizu govornog jezika na hrvatskom. Ove rečenice su potvrđeni duplikati — govornik je rekao istu stvar dva puta. Odaberi BOLJU verziju za zadržati.
 
-Kriteriji:
+Kriteriji (ovim redoslijedom):
+1. Potpunija misao (više informativnog sadržaja, cjelovitije objašnjenje) — u edukacijskim lekcijama dulja, potpunija verzija je obično vrjednija
+2. Čišća izvedba (manje poštapalica, oklijevanja, nedovršenih riječi)
+3. Ako su jednake kvalitete, preferiraj KASNIJU verziju (govornik obično ispravlja/poboljšava)
+
+Parovi:
+{pairs_text}"""
+
+WHICH_TO_KEEP_PROMPT_CLEAN = """Ti si ekspert za analizu govornog jezika na hrvatskom. Ove rečenice su potvrđeni duplikati — govornik je rekao istu stvar dva puta. Odaberi BOLJU verziju za zadržati.
+
+Kriteriji (ovim redoslijedom):
 1. Čišća izvedba (manje poštapalica, oklijevanja, nedovršenih riječi)
 2. Potpunija misao (više informativnog sadržaja)
 3. Ako su jednake kvalitete, preferiraj KASNIJU verziju (govornik obično ispravlja/poboljšava)
@@ -154,6 +204,8 @@ class KeepDecisions(BaseModel):
 def pick_best_version_with_gemini(
     pairs: list[DuplicatePair],
     sentences: list[Sentence],
+    *,
+    prefer_completeness: bool = True,
 ) -> dict[int, int]:
     """
     For each confirmed duplicate pair, ask Gemini which sentence is the
@@ -176,7 +228,8 @@ def pick_best_version_with_gemini(
             f"  Rečenica {p.idx_cut}: \"{b_text}\""
         )
 
-    prompt = WHICH_TO_KEEP_PROMPT.format(pairs_text="\n\n".join(lines))
+    template = WHICH_TO_KEEP_PROMPT if prefer_completeness else WHICH_TO_KEEP_PROMPT_CLEAN
+    prompt = template.format(pairs_text="\n\n".join(lines))
 
     llm = _get_llm()
     structured = llm.with_structured_output(KeepDecisions)

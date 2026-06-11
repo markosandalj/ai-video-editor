@@ -116,6 +116,36 @@ def enrich_transcript(
     )
 
 
+def restatus_against_edl(
+    enrichment: EnrichmentResult,
+    transcript: Transcript,
+    edl: EditDecisionList,
+    config: EnrichmentConfig,
+) -> EnrichmentResult:
+    """Recompute each sentence's status against a (possibly revised) EDL.
+
+    Pure / no API: ``keep_confidence`` and tags are unchanged; only the derived
+    GREEN/YELLOW/RED/RESTORE tier moves to match the final cut/keep state. Used
+    after the arbiter rewrites the EDL so the review sidecar stays truthful.
+    """
+    sentence_by_idx = {i: s for i, s in enumerate(transcript.sentences)}
+    updated: list[SentenceEnrichment] = []
+    for item in enrichment.sentences:
+        sentence = sentence_by_idx.get(item.sentence_idx)
+        is_cut = bool(_cut_info(sentence, edl)["is_cut"]) if sentence is not None else False
+        status = derive_status(
+            item.keep_confidence,
+            is_cut,
+            green_threshold=config.green_threshold,
+            restore_threshold=config.restore_threshold,
+        )
+        word_count = len(sentence.words) if sentence is not None else 0
+        if status == EnrichmentStatus.RESTORE and word_count < RESTORE_MIN_WORDS:
+            status = EnrichmentStatus.RED
+        updated.append(item.model_copy(update={"status": status}))
+    return enrichment.model_copy(update={"sentences": updated})
+
+
 # ---------------------------------------------------------------------------
 # Mapping helpers
 # ---------------------------------------------------------------------------
@@ -217,6 +247,8 @@ def _make_gemini_scorer(config: EnrichmentConfig) -> BatchScorer:
         model=config.model,
         temperature=config.temperature,
         api_key=_load_gemini_key(),
+        timeout=180,
+        max_retries=4,
     )
     structured = llm.with_structured_output(EnrichmentBatch)
     tag_list = ", ".join(tag.value for tag in EnrichmentTag)

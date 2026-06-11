@@ -33,31 +33,6 @@ def _default_worker_count() -> int:
 DEFAULT_WORKERS = _default_worker_count()
 
 
-def _run_enrichment(p, transcript, edl, *, settings: Settings, force: bool, log) -> None:
-    """Clean, standalone metadata-enrichment pass. Never aborts the pipeline."""
-    if not settings.enrichment.enabled:
-        log.info("Enrichment disabled — skipping")
-        return
-
-    from ai_video_editor.enrich import (
-        enrich_transcript,
-        load_cached_enrichment,
-        save_enrichment,
-    )
-
-    try:
-        result = None if force else load_cached_enrichment(p)
-        if result is None:
-            result = enrich_transcript(transcript, edl, settings.enrichment)
-            save_enrichment(p, result)
-        statuses: dict[str, int] = {}
-        for s in result.sentences:
-            statuses[s.status.value] = statuses.get(s.status.value, 0) + 1
-        log.info("Enrichment: {} sentences scored ({})", len(result.sentences), statuses)
-    except Exception:
-        log.exception("Enrichment failed for {} — continuing without it", p)
-
-
 def _process_video_file(
     p: Path,
     *,
@@ -67,9 +42,8 @@ def _process_video_file(
     total: int,
 ) -> bool:
     from ai_video_editor.audio import compute_keep_regions, detect_silences, extract_audio, reduce_noise
+    from ai_video_editor.decisions import decide_edits
     from ai_video_editor.duplicate.debug import save_debug_files
-    from ai_video_editor.duplicate.edl import build_edl
-    from ai_video_editor.duplicate.pipeline import detect_duplicates
     from ai_video_editor.render import render_video
     from ai_video_editor.transcription import load_cached_transcript, save_transcript
     from ai_video_editor.transcription.pipeline import transcribe_with_elevenlabs_and_grammar
@@ -91,21 +65,18 @@ def _process_video_file(
             cached = transcribe_with_elevenlabs_and_grammar(denoised, p, settings)
             save_transcript(p, cached)
 
-        flags = detect_duplicates(cached.sentences, settings.duplicate_detection)
-        edl = build_edl(cached, keeps, flags)
+        edl, _ = decide_edits(p, cached, keeps, silences, settings, force=force, log=log)
 
         edl_path = p.with_suffix(".edl.json")
         edl_path.write_text(edl.model_dump_json(indent=2), encoding="utf-8")
-
-        _run_enrichment(p, cached, edl, settings=settings, force=force, log=log)
 
         save_debug_files(p, cached, edl)
 
         output = render_video(p, edl, Path(denoised.path), settings.render)
 
         log.info(
-            "Done: {} sentences, {} flagged, keep={:.1f}s cut={:.1f}s → {}",
-            len(cached.sentences), len(flags), edl.keep_duration, edl.cut_duration, output.name,
+            "Done: {} sentences, keep={:.1f}s cut={:.1f}s → {}",
+            len(cached.sentences), edl.keep_duration, edl.cut_duration, output.name,
         )
         return True
     except Exception:
@@ -247,9 +218,8 @@ def process(
     log.info("Processing: {}", input_path)
 
     from ai_video_editor.audio import compute_keep_regions, detect_silences, extract_audio, reduce_noise
+    from ai_video_editor.decisions import decide_edits
     from ai_video_editor.duplicate.debug import save_debug_files
-    from ai_video_editor.duplicate.edl import build_edl
-    from ai_video_editor.duplicate.pipeline import detect_duplicates
     from ai_video_editor.render import render_video
     from ai_video_editor.transcription import load_cached_transcript, save_transcript
     from ai_video_editor.transcription.pipeline import transcribe_with_elevenlabs_and_grammar
@@ -266,13 +236,10 @@ def process(
         cached = transcribe_with_elevenlabs_and_grammar(denoised, input_path, settings)
         save_transcript(input_path, cached)
 
-    flags = detect_duplicates(cached.sentences, settings.duplicate_detection)
-    edl = build_edl(cached, keeps, flags)
+    edl, _ = decide_edits(input_path, cached, keeps, silences, settings, force=force, log=log)
 
     edl_path = input_path.with_suffix(".edl.json")
     edl_path.write_text(edl.model_dump_json(indent=2), encoding="utf-8")
-
-    _run_enrichment(input_path, cached, edl, settings=settings, force=force, log=log)
 
     save_debug_files(input_path, cached, edl)
 
@@ -284,8 +251,8 @@ def process(
     )
 
     log.info(
-        "Pipeline complete: {} sentences, {} flagged, keep={:.1f}s cut={:.1f}s → {}",
-        len(cached.sentences), len(flags), edl.keep_duration, edl.cut_duration, output.name,
+        "Pipeline complete: {} sentences, keep={:.1f}s cut={:.1f}s → {}",
+        len(cached.sentences), edl.keep_duration, edl.cut_duration, output.name,
     )
     remove_video_log(stem)
 
@@ -443,6 +410,41 @@ def qa(
                 logger.warning(w)
 
     logger.info("QA complete.")
+
+
+@app.command("eval-decisions")
+def eval_decisions(
+    fixtures_dir: Path = typer.Argument(
+        "tests/fixtures",
+        exists=True,
+        file_okay=False,
+        dir_okay=True,
+        help="Directory with cached <name>-raw.transcript.json, .edl.json, and -edited.qa-transcript.json.",
+    ),
+    names: list[str] = typer.Option(
+        None,
+        "--name",
+        "-n",
+        help="Restrict to specific fixture names (repeatable). Default: all.",
+    ),
+) -> None:
+    """Compare pipeline cut/keep decisions to human ground truth, offline (no APIs)."""
+    from ai_video_editor.qa.decision_eval import (
+        discover_fixture_names,
+        evaluate_fixture,
+        format_report,
+    )
+
+    target_names = names or discover_fixture_names(fixtures_dir)
+    scores = []
+    for name in target_names:
+        score = evaluate_fixture(fixtures_dir, name)
+        if score is not None:
+            scores.append(score)
+    if not scores:
+        logger.error("No evaluable fixtures found in {}", fixtures_dir)
+        raise typer.Exit(code=1)
+    print(format_report(scores))
 
 
 @app.command("review-export")

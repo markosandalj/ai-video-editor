@@ -74,14 +74,27 @@ class TranscriptionConfig(BaseModel):
         description="ElevenLabs speech-to-text model id (e.g. scribe_v2).",
     )
     elevenlabs_tag_audio_events: bool = Field(
-        default=False,
-        description="If True, include (laughter) etc. in ElevenLabs output.",
+        default=True,
+        description=(
+            "If True, ElevenLabs tags non-speech events ((laughter), (cough), etc.). "
+            "These tags are a strong signal for production-noise asides the human cut."
+        ),
     )
     grammar_max_passes: int = Field(
         default=5,
         ge=1,
         le=20,
         description="Max iterative Gemini grammar passes after ElevenLabs.",
+    )
+    pause_split_s: float = Field(
+        default=1.5,
+        ge=0.0,
+        description=(
+            "Split a punctuation-delimited sentence wherever the gap between two "
+            "consecutive words is >= this many seconds. These pauses are where "
+            "speakers abandon a thought and restart, so splitting here gives the "
+            "cut logic a false-start-shaped unit. 0 disables pause splitting."
+        ),
     )
 
     # WhisperX — not used by CLI; kept for experiments or future use
@@ -148,6 +161,67 @@ class DuplicateDetectionConfig(BaseModel):
         description="Minimum Gemini confidence to accept a duplicate verdict.",
     )
 
+    context_window: int = Field(
+        default=2,
+        ge=0,
+        description=(
+            "Number of neighbouring sentences shown to Gemini on each side of a "
+            "candidate duplicate pair. Context lets the model tell a retake "
+            "(seconds apart, false start between) from a pedagogical recap."
+        ),
+    )
+    cluster_retakes: bool = Field(
+        default=True,
+        description=(
+            "Group connected duplicate pairs into retake clusters and keep exactly "
+            "one survivor per cluster. Prevents chain inconsistencies where a "
+            "sentence is both a keep-side and a cut-side of different pairs."
+        ),
+    )
+    prefer_completeness: bool = Field(
+        default=True,
+        description=(
+            "When choosing which duplicate to keep, prefer the more complete "
+            "(longer, more informative) version over the merely cleaner one. "
+            "Educational ground truth favours the fuller instructional take."
+        ),
+    )
+
+
+class AsideDetectionConfig(BaseModel):
+    """Detection of non-lesson asides / production noise (not duplicates)."""
+
+    model_config = ConfigDict(extra="allow")
+
+    enabled: bool = Field(
+        default=True,
+        description="Run the aside/noise detection pass.",
+    )
+    flank_silence_s: float = Field(
+        default=2.0,
+        ge=0.0,
+        description=(
+            "A short sentence touching a silence gap >= this on either side is an "
+            "aside candidate — production interruptions are bracketed by pauses."
+        ),
+    )
+    silence_adjacency_s: float = Field(
+        default=0.75,
+        ge=0.0,
+        description="How close a silence must be to a sentence boundary to count as flanking.",
+    )
+    max_words: int = Field(
+        default=12,
+        ge=1,
+        description="Only sentences with at most this many words are aside candidates.",
+    )
+    gemini_confidence_threshold: float = Field(
+        default=0.7,
+        ge=0.0,
+        le=1.0,
+        description="Minimum Gemini confidence to cut an aside candidate.",
+    )
+
 
 class EnrichmentConfig(BaseModel):
     """Transcript metadata enrichment (clean, standalone Gemini pass)."""
@@ -184,6 +258,36 @@ class EnrichmentConfig(BaseModel):
         ge=0.0,
         le=100.0,
         description="Cut sentences with keep_confidence >= this become 'restore' suggestions; below are 'red'.",
+    )
+
+    arbiter_enabled: bool = Field(
+        default=True,
+        description=(
+            "Let the independent enrichment score arbitrate the duplicate/false-start "
+            "decisions before the EDL is rendered. The enrichment pass scores every "
+            "sentence on its own and empirically beats the tiered pipeline as a "
+            "keep/cut classifier, so it is used to correct the pipeline's worst calls."
+        ),
+    )
+    arbiter_uncut_confidence: float = Field(
+        default=70.0,
+        ge=0.0,
+        le=100.0,
+        description=(
+            "Restore (un-cut) a sentence the pipeline flagged when enrichment "
+            "keep_confidence is at or above this — targets wrong duplicate cuts."
+        ),
+    )
+    arbiter_extra_cut_confidence: float = Field(
+        default=15.0,
+        ge=0.0,
+        le=100.0,
+        description=(
+            "Additionally cut a kept sentence when enrichment keep_confidence is "
+            "below this AND it carries an aside/filler/incomplete tag. Conservative "
+            "by design — most over-keeps are asides the duplicate logic can't see. "
+            "15 chosen by sweep: best precision with negligible recall loss vs 25."
+        ),
     )
 
 
@@ -227,6 +331,7 @@ class Settings(BaseSettings):
     audio: AudioConfig = Field(default_factory=AudioConfig)
     transcription: TranscriptionConfig = Field(default_factory=TranscriptionConfig)
     duplicate_detection: DuplicateDetectionConfig = Field(default_factory=DuplicateDetectionConfig)
+    aside_detection: AsideDetectionConfig = Field(default_factory=AsideDetectionConfig)
     enrichment: EnrichmentConfig = Field(default_factory=EnrichmentConfig)
     render: RenderConfig = Field(default_factory=RenderConfig)
 

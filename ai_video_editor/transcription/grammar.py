@@ -168,6 +168,8 @@ def spell_check_node(state: CorrectionState) -> CorrectionState:
         model="gemini-2.5-flash",
         temperature=0.1,
         api_key=api_key,
+        timeout=120,
+        max_retries=4,
     )
     structured_llm = llm.with_structured_output(CorrectionResult)
 

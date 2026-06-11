@@ -44,29 +44,52 @@ def _transcribe_video(video_path: Path) -> list[Sentence]:
     return sentences
 
 
-def _best_match(
-    needle: Sentence,
-    haystack: list[Sentence],
-    used: set[int],
-) -> tuple[int, float] | None:
-    """Find the best fuzzy match for *needle* in *haystack*, skipping *used* indices."""
-    best_idx = -1
-    best_score = 0.0
+def _pair_similarity(a: Sentence, b: Sentence) -> float:
+    return max(fuzz.ratio(a.text, b.text), fuzz.token_sort_ratio(a.text, b.text))
 
-    for i, candidate in enumerate(haystack):
-        if i in used:
-            continue
-        score = max(
-            fuzz.ratio(needle.text, candidate.text),
-            fuzz.token_sort_ratio(needle.text, candidate.text),
-        )
-        if score > best_score:
-            best_score = score
-            best_idx = i
 
-    if best_idx >= 0 and best_score >= MATCH_THRESHOLD:
-        return best_idx, best_score
-    return None
+def _align_monotonic(
+    pipeline_sentences: list[Sentence],
+    ground_truth_sentences: list[Sentence],
+    match_threshold: float,
+) -> list[tuple[int, int, float]]:
+    """Order-preserving alignment maximising total matched similarity.
+
+    Greedy global matching can cross-match recurring sentences (the same formula
+    said twice in a maths lecture), inflating F1 and — worse — feeding wrong
+    anchor pairs to the temporal comparison. This is the sentence-level analogue
+    of LCS: matches never cross, so anchors stay monotonic in time.
+    """
+    n, m = len(pipeline_sentences), len(ground_truth_sentences)
+    if n == 0 or m == 0:
+        return []
+
+    # dp[i][j] = best total similarity aligning pipeline[i:] with gt[j:].
+    dp = [[0.0] * (m + 1) for _ in range(n + 1)]
+    for i in range(n - 1, -1, -1):
+        for j in range(m - 1, -1, -1):
+            best = max(dp[i + 1][j], dp[i][j + 1])
+            score = _pair_similarity(pipeline_sentences[i], ground_truth_sentences[j])
+            if score >= match_threshold:
+                best = max(best, score + dp[i + 1][j + 1])
+            dp[i][j] = best
+
+    pairs: list[tuple[int, int, float]] = []
+    i = j = 0
+    while i < n and j < m:
+        score = _pair_similarity(pipeline_sentences[i], ground_truth_sentences[j])
+        take = score >= match_threshold and abs(
+            (score + dp[i + 1][j + 1]) - dp[i][j]
+        ) < 1e-6
+        if take:
+            pairs.append((i, j, score))
+            i += 1
+            j += 1
+        elif dp[i + 1][j] >= dp[i][j + 1]:
+            i += 1
+        else:
+            j += 1
+    return pairs
 
 
 def compare_transcripts(
@@ -75,37 +98,36 @@ def compare_transcripts(
     match_threshold: float = MATCH_THRESHOLD,
 ) -> TranscriptComparisonResult:
     """
-    Compare two lists of sentences via fuzzy matching.
+    Compare two lists of sentences via order-preserving fuzzy alignment.
 
     Returns precision/recall/F1 of the pipeline's output against the
     human-edited ground truth.
     """
-    used_gt: set[int] = set()
+    aligned = _align_monotonic(pipeline_sentences, ground_truth_sentences, match_threshold)
+    matched_pi = {pi for pi, _, _ in aligned}
+    matched_gi = {gi for _, gi, _ in aligned}
+
     matches: list[SentenceMatch] = []
-    pipeline_only: list[str] = []
+    for pi, gi, score in aligned:
+        ps = pipeline_sentences[pi]
+        gt_s = ground_truth_sentences[gi]
+        matches.append(SentenceMatch(
+            pipeline_text=ps.text,
+            ground_truth_text=gt_s.text,
+            similarity=round(score, 2),
+            pipeline_start=ps.start,
+            pipeline_end=ps.end,
+            gt_start=gt_s.start,
+            gt_end=gt_s.end,
+        ))
 
-    for ps in pipeline_sentences:
-        result = _best_match(ps, ground_truth_sentences, used_gt)
-        if result is not None:
-            gt_idx, score = result
-            gt_s = ground_truth_sentences[gt_idx]
-            used_gt.add(gt_idx)
-            matches.append(SentenceMatch(
-                pipeline_text=ps.text,
-                ground_truth_text=gt_s.text,
-                similarity=round(score, 2),
-                pipeline_start=ps.start,
-                pipeline_end=ps.end,
-                gt_start=gt_s.start,
-                gt_end=gt_s.end,
-            ))
-        else:
-            pipeline_only.append(ps.text)
-
+    pipeline_only = [
+        ps.text for i, ps in enumerate(pipeline_sentences) if i not in matched_pi
+    ]
     gt_only = [
         ground_truth_sentences[i].text
         for i in range(len(ground_truth_sentences))
-        if i not in used_gt
+        if i not in matched_gi
     ]
 
     result = TranscriptComparisonResult(
@@ -320,20 +342,28 @@ def compare_temporal(
     p_dur = _get_duration(pipeline_video)
     gt_dur = _get_duration(ground_truth_video)
 
-    raw_offsets: list[float] = []
-    for m in matches:
-        if m.pipeline_start > 0 and m.gt_start > 0:
-            raw_offsets.append(abs(m.pipeline_start - m.gt_start))
+    # Local-gap drift: how much the spacing between *consecutive* matched anchors
+    # diverges between pipeline and ground truth. Absolute start-offsets just
+    # accumulate every upstream cut-amount difference, which double-counts the
+    # same decision the word/duration metrics already measure and punishes
+    # keeping human-kept content twice. Local drift instead measures *where* the
+    # two timelines pull apart, not how much total material differs.
+    anchors = sorted(
+        ((m.pipeline_start, m.gt_start) for m in matches if m.pipeline_start > 0 and m.gt_start > 0),
+        key=lambda t: t[1],
+    )
+    local_drifts: list[float] = []
+    for (p0, g0), (p1, g1) in zip(anchors, anchors[1:]):
+        local_drifts.append(abs((p1 - p0) - (g1 - g0)))
 
-    filtered_offsets = _filter_outliers_iqr(raw_offsets)
-    n_outliers = len(raw_offsets) - len(filtered_offsets)
-
-    median_off = statistics.median(filtered_offsets) if filtered_offsets else 0.0
+    filtered = _filter_outliers_iqr(local_drifts)
+    n_outliers = len(local_drifts) - len(filtered)
+    median_drift = statistics.median(filtered) if filtered else 0.0
 
     dur_ratio = min(p_dur, gt_dur) / max(p_dur, gt_dur) if max(p_dur, gt_dur) > 0 else 1.0
 
-    max_acceptable_offset = 40.0
-    timing_score = max(0.0, 1.0 - median_off / max_acceptable_offset) if filtered_offsets else 0.0
+    max_acceptable_drift = 5.0
+    timing_score = max(0.0, 1.0 - median_drift / max_acceptable_drift) if filtered else dur_ratio
 
     temporal_score = (dur_ratio + timing_score) / 2.0
 
@@ -341,14 +371,14 @@ def compare_temporal(
         pipeline_duration=round(p_dur, 2),
         ground_truth_duration=round(gt_dur, 2),
         duration_delta=round(p_dur - gt_dur, 2),
-        anchor_offsets=[round(o, 3) for o in raw_offsets],
-        mean_offset=round(median_off, 3),
+        anchor_offsets=[round(d, 3) for d in local_drifts],
+        mean_offset=round(median_drift, 3),
         temporal_score=round(temporal_score, 4),
     )
 
     logger.info(
         "Temporal comparison: pipeline={:.1f}s gt={:.1f}s delta={:.1f}s "
-        "median_offset={:.3f}s score={:.1%} ({}  outliers filtered)",
-        p_dur, gt_dur, p_dur - gt_dur, median_off, temporal_score, n_outliers,
+        "median_local_drift={:.3f}s score={:.1%} ({} outliers filtered)",
+        p_dur, gt_dur, p_dur - gt_dur, median_drift, temporal_score, n_outliers,
     )
     return result

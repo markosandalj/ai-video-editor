@@ -31,7 +31,7 @@ def transcribe_with_elevenlabs_and_grammar(
         model_id=cfg.elevenlabs_model_id,
         tag_audio_events=cfg.elevenlabs_tag_audio_events,
     )
-    sentences = chunk_into_sentences(words)
+    sentences = chunk_into_sentences(words, pause_split_s=cfg.pause_split_s)
     draft = Transcript(
         sentences=sentences,
         source_video=str(video_path),

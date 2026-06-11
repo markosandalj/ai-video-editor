@@ -3,8 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from loguru import logger
-from rapidfuzz import fuzz
 
+from ai_video_editor.qa.ground_truth import _align_monotonic
 from ai_video_editor.qa.models import ContinuityResult
 from ai_video_editor.transcription.models import Sentence
 
@@ -23,31 +23,16 @@ def verify_continuity(
 
     *actual_sentences* should come from a prior ``transcribe_for_qa``
     call so the pipeline output is only transcribed once per QA run.
+
+    Uses order-preserving alignment: content is delivered in order, so a recap
+    sentence must not borrow a match from a later occurrence.
     """
-    matched = 0
-    missing: list[str] = []
-    used_actual: set[int] = set()
-
-    for expected in expected_sentences:
-        best_score = 0.0
-        best_idx = -1
-
-        for i, actual in enumerate(actual_sentences):
-            if i in used_actual:
-                continue
-            score = max(
-                fuzz.ratio(expected.text, actual.text),
-                fuzz.token_sort_ratio(expected.text, actual.text),
-            )
-            if score > best_score:
-                best_score = score
-                best_idx = i
-
-        if best_idx >= 0 and best_score >= threshold:
-            used_actual.add(best_idx)
-            matched += 1
-        else:
-            missing.append(expected.text)
+    aligned = _align_monotonic(expected_sentences, actual_sentences, threshold)
+    matched_expected = {ei for ei, _, _ in aligned}
+    matched = len(aligned)
+    missing = [
+        s.text for i, s in enumerate(expected_sentences) if i not in matched_expected
+    ]
 
     alignment = matched / len(expected_sentences) if expected_sentences else 1.0
 

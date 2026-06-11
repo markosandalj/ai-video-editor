@@ -21,6 +21,7 @@ class EditReason(str, Enum):
     SILENCE = "silence"
     DUPLICATE = "duplicate"
     FALSE_START = "false_start"
+    ASIDE = "aside"
 
 
 class EditDecision(BaseModel):
@@ -66,6 +67,7 @@ def _flag_reason_to_edit_reason(reason: FlagReason) -> EditReason:
         FlagReason.FALSE_START: EditReason.FALSE_START,
         FlagReason.FILLER: EditReason.FALSE_START,
         FlagReason.STUTTER: EditReason.FALSE_START,
+        FlagReason.ASIDE: EditReason.ASIDE,
     }[reason]
 
 

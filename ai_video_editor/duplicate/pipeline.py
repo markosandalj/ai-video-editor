@@ -29,6 +29,88 @@ def _default_keep_cut(idx_a: int, idx_b: int) -> tuple[int, int]:
     return (max(idx_a, idx_b), min(idx_a, idx_b))
 
 
+def _pair_confidence(pair: DuplicatePair) -> float:
+    """Best available confidence for the pair, on a 0-1 scale.
+
+    Lexical/semantic tiers have no model confidence, so we surface the raw
+    similarity instead of the old hardcoded 1.0 — the review UI reads this to
+    show how sure a cut is, and algorithmic cuts are *not* certain.
+    """
+    s = pair.score
+    if pair.tier == "gemini" and s.gemini_confidence is not None:
+        return s.gemini_confidence
+    if pair.tier == "semantic" and s.semantic_cosine is not None:
+        return min(1.0, max(0.0, s.semantic_cosine))
+    best_lex = max(s.lexical_ratio or 0.0, s.lexical_token_sort or 0.0)
+    return min(1.0, best_lex / 100.0)
+
+
+def _cluster_duplicate_flags(
+    definite_pairs: list[DuplicatePair],
+    sentences: list[Sentence],
+    *,
+    prefer_completeness: bool,
+) -> tuple[list[DuplicateFlag], set[int]]:
+    """Group connected duplicate pairs into retake clusters; keep one survivor each.
+
+    Returns ``(flags, survivor_indices)``. Cutting all-but-one per cluster makes
+    the keep/cut assignment internally consistent — a sentence can no longer be
+    the keep-side of one pair and the cut-side of another.
+    """
+    # Union-find over the sentence indices that appear in any confirmed pair.
+    parent: dict[int, int] = {}
+
+    def find(x: int) -> int:
+        parent.setdefault(x, x)
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    def union(a: int, b: int) -> None:
+        parent[find(a)] = find(b)
+
+    keep_votes: dict[int, int] = {}
+    confidence: dict[int, float] = {}
+    for p in definite_pairs:
+        union(p.idx_keep, p.idx_cut)
+        keep_votes[p.idx_keep] = keep_votes.get(p.idx_keep, 0) + 1
+        conf = _pair_confidence(p)
+        confidence[p.idx_cut] = max(confidence.get(p.idx_cut, 0.0), conf)
+
+    clusters: dict[int, list[int]] = {}
+    for idx in parent:
+        clusters.setdefault(find(idx), []).append(idx)
+
+    flags: list[DuplicateFlag] = []
+    survivors: set[int] = set()
+    for members in clusters.values():
+        def survivor_key(i: int) -> tuple:
+            wc = len(sentences[i].words) if 0 <= i < len(sentences) else 0
+            votes = keep_votes.get(i, 0)
+            # Highest keep-votes wins; then completeness or recency; index breaks ties.
+            return (votes, wc if prefer_completeness else 0, i)
+
+        survivor = max(members, key=survivor_key)
+        survivors.add(survivor)
+        for i in members:
+            if i == survivor:
+                continue
+            # Find a representative pair for this cut (for review traceability).
+            rel = next(
+                (p for p in definite_pairs if p.idx_cut == i or p.idx_keep == i),
+                None,
+            )
+            flags.append(DuplicateFlag(
+                idx=i,
+                reason=FlagReason.DUPLICATE,
+                confidence=confidence.get(i, 0.9),
+                related_pair=rel,
+            ))
+
+    return flags, survivors
+
+
 def _merge_score(base: SimilarityScore, other: SimilarityScore) -> SimilarityScore:
     """Merge two partial SimilarityScore objects for the same pair."""
     return SimilarityScore(
@@ -142,7 +224,9 @@ def detect_duplicates(
     borderline_scores = [score_map[k] for k in sorted(borderline_keys)]
 
     if borderline_scores:
-        verdicts = verify_duplicates_with_gemini(borderline_scores, sentences)
+        verdicts = verify_duplicates_with_gemini(
+            borderline_scores, sentences, context_window=cfg.context_window
+        )
 
         for v in verdicts:
             if v.pair_id >= len(borderline_scores):
@@ -173,32 +257,44 @@ def detect_duplicates(
     # Gemini "which to keep" — let Gemini pick the better version
     # ------------------------------------------------------------------
     if definite_pairs:
-        keep_decisions = pick_best_version_with_gemini(definite_pairs, sentences)
+        keep_decisions = pick_best_version_with_gemini(
+            definite_pairs, sentences, prefer_completeness=cfg.prefer_completeness
+        )
         for pair in definite_pairs:
             preferred = keep_decisions.get(pair.idx_cut)
             if preferred is not None and preferred != pair.idx_keep:
                 pair.idx_keep, pair.idx_cut = pair.idx_cut, pair.idx_keep
 
     # ------------------------------------------------------------------
-    # Build flags
+    # Build flags — cluster connected retakes so the keep/cut assignment is
+    # internally consistent (no sentence is both a keep-side and a cut-side).
     # ------------------------------------------------------------------
     flags: list[DuplicateFlag] = []
     flagged_indices: set[int] = set()
+    protected_indices: set[int]
 
-    for pair in definite_pairs:
-        if pair.idx_cut not in flagged_indices:
-            flags.append(DuplicateFlag(
-                idx=pair.idx_cut,
-                reason=FlagReason.DUPLICATE,
-                confidence=1.0 if pair.tier != "gemini" else (pair.score.gemini_confidence or 1.0),
-                related_pair=pair,
-            ))
-            flagged_indices.add(pair.idx_cut)
+    if definite_pairs and cfg.cluster_retakes:
+        dup_flags, protected_indices = _cluster_duplicate_flags(
+            definite_pairs, sentences, prefer_completeness=cfg.prefer_completeness
+        )
+        for f in dup_flags:
+            flags.append(f)
+            flagged_indices.add(f.idx)
+    else:
+        protected_indices = {p.idx_keep for p in definite_pairs}
+        for pair in definite_pairs:
+            if pair.idx_cut not in flagged_indices and pair.idx_cut not in protected_indices:
+                flags.append(DuplicateFlag(
+                    idx=pair.idx_cut,
+                    reason=FlagReason.DUPLICATE,
+                    confidence=_pair_confidence(pair),
+                    related_pair=pair,
+                ))
+                flagged_indices.add(pair.idx_cut)
 
     # ------------------------------------------------------------------
     # False-start detection — sentences between duplicate pairs
     # ------------------------------------------------------------------
-    protected_indices = {p.idx_keep for p in definite_pairs}
 
     for pair in definite_pairs:
         lo = min(pair.idx_cut, pair.idx_keep) + 1

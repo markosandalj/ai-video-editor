@@ -16,7 +16,8 @@ from ai_video_editor.enrich.models import (
     derive_status,
     reconcile_word_salience,
 )
-from ai_video_editor.enrich.runner import enrich_transcript
+from ai_video_editor.enrich.arbiter import apply_enrichment_arbiter
+from ai_video_editor.enrich.runner import enrich_transcript, restatus_against_edl
 
 __all__ = [
     "DEFAULT_GREEN_THRESHOLD",
@@ -29,6 +30,8 @@ __all__ = [
     "derive_status",
     "reconcile_word_salience",
     "enrich_transcript",
+    "apply_enrichment_arbiter",
+    "restatus_against_edl",
     "enrichment_cache_path_for",
     "load_cached_enrichment",
     "save_enrichment",
