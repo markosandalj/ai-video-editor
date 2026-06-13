@@ -140,6 +140,29 @@ def verify_duplicates_with_gemini(
     if not pairs:
         return []
 
+    # Keep prompts small enough for Gemini to reliably answer at scale. The
+    # expanded fixture set can produce 100+ borderline pairs for a single long
+    # lecture; one giant structured-output request regularly hits 504 deadlines.
+    max_pairs_per_call = 40
+    if len(pairs) > max_pairs_per_call:
+        logger.info(
+            "Gemini duplicate verification: batching {} pairs into chunks of {}",
+            len(pairs),
+            max_pairs_per_call,
+        )
+        verdicts: list[DuplicateVerdict] = []
+        for start in range(0, len(pairs), max_pairs_per_call):
+            chunk = pairs[start : start + max_pairs_per_call]
+            chunk_verdicts = verify_duplicates_with_gemini(
+                chunk,
+                sentences,
+                context_window=context_window,
+            )
+            for verdict in chunk_verdicts:
+                verdict.pair_id += start
+            verdicts.extend(chunk_verdicts)
+        return verdicts
+
     lines: list[str] = []
     for k, p in enumerate(pairs):
         a, b = sentences[p.idx_a], sentences[p.idx_b]
