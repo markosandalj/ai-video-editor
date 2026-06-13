@@ -15,6 +15,7 @@ from ai_video_editor.enrich import (
     reconcile_word_salience,
     save_enrichment,
 )
+from ai_video_editor.enrich.arbiter import _is_artifact, apply_enrichment_arbiter
 from ai_video_editor.enrich.runner import SentenceEnrichmentLLM
 from ai_video_editor.review import build_review_payload
 from ai_video_editor.transcription.models import Sentence, Transcript, Word
@@ -201,3 +202,53 @@ def test_build_review_payload_without_enrichment_is_backward_compatible() -> Non
     assert s0.status == "" and s0.keep_confidence == 100.0
     # Kept words fall back to the old hardcoded score.
     assert s0.words[0].keep_score == 1.0
+
+
+# ---------------------------------------------------------------------------
+# Arbiter artifact-cut (iter-016)
+# ---------------------------------------------------------------------------
+
+def test_is_artifact_detects_punct_only_and_tiny_interjections() -> None:
+    assert _is_artifact(_sentence(".", 0.0, 0.1), max_words=2)
+    assert _is_artifact(_sentence("...", 0.0, 0.1), max_words=2)
+    assert _is_artifact(_sentence("Ne.", 0.0, 0.3), max_words=2)  # 1 word
+    assert _is_artifact(_sentence("Pa dobro.", 0.0, 0.5), max_words=2)  # 2 words
+    # Real content (Croatian letters are word chars) is not an artifact.
+    assert not _is_artifact(
+        _sentence("Ovo je prava rečenica o gradivu.", 0.0, 2.0), max_words=2
+    )
+
+
+def _enr(idx: int, conf: float, status: EnrichmentStatus) -> SentenceEnrichment:
+    return SentenceEnrichment(sentence_idx=idx, keep_confidence=conf, status=status)
+
+
+def test_arbiter_artifact_cut_targets_junk_and_guards_short_answers() -> None:
+    transcript = Transcript(
+        sentences=[
+            _sentence("Ovo je prava rečenica o gradivu.", 0.0, 2.0),  # real content
+            _sentence(".", 2.0, 2.2),  # punctuation-only junk
+            _sentence("Da.", 2.5, 2.9),  # 1-word, low confidence → cut
+            _sentence("Točno.", 3.0, 3.4),  # 1-word, high confidence → guarded
+        ],
+        source_video="lesson.mp4",
+        language="hr",
+        model_size="test",
+    )
+    enrichment = EnrichmentResult(
+        source_video="lesson.mp4",
+        sentences=[
+            _enr(0, 95.0, EnrichmentStatus.GREEN),
+            _enr(1, 0.0, EnrichmentStatus.YELLOW),
+            _enr(2, 10.0, EnrichmentStatus.YELLOW),
+            _enr(3, 90.0, EnrichmentStatus.GREEN),
+        ],
+    )
+
+    revised = apply_enrichment_arbiter([], transcript, enrichment, EnrichmentConfig())
+    cut_idx = {f.idx for f in revised}
+
+    assert cut_idx == {1, 2}  # junk + low-confidence interjection
+    assert 0 not in cut_idx  # real content untouched
+    assert 3 not in cut_idx  # high-confidence short answer guarded
+    assert all(f.note.startswith("Arbiter artifact-cut") for f in revised)

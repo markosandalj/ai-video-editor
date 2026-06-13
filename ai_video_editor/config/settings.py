@@ -289,6 +289,26 @@ class EnrichmentConfig(BaseModel):
             "15 chosen by sweep: best precision with negligible recall loss vs 25."
         ),
     )
+    arbiter_artifact_max_words: int = Field(
+        default=2,
+        ge=0,
+        description=(
+            "A still-kept sentence is treated as a transcription artifact when it "
+            "is punctuation-only OR has at most this many words. Targets junk "
+            "frames the duplicate logic keeps because they aren't duplicates "
+            "('.', '...', stray one-word interjections)."
+        ),
+    )
+    arbiter_artifact_confidence: float = Field(
+        default=25.0,
+        ge=0.0,
+        le=100.0,
+        description=(
+            "Cut an artifact sentence (see arbiter_artifact_max_words) only when "
+            "enrichment keep_confidence is below this — guards genuine short "
+            "answers. 98-video sweep: +13 recovered cuts, 0 new false positives."
+        ),
+    )
 
 
 class RenderConfig(BaseModel):

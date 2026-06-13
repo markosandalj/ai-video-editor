@@ -18,12 +18,29 @@ hurt precision.
 """
 from __future__ import annotations
 
+import re
+
 from loguru import logger
 
 from ai_video_editor.config.settings import EnrichmentConfig
 from ai_video_editor.duplicate.models import DuplicateFlag, FlagReason
 from ai_video_editor.enrich.models import EnrichmentResult, EnrichmentTag
-from ai_video_editor.transcription.models import Transcript
+from ai_video_editor.transcription.models import Sentence, Transcript
+
+# Punctuation/whitespace only (Unicode letters, incl. č/ć/ž/š/đ, are \w).
+_PUNCT_ONLY = re.compile(r"^[\W_]*$", re.UNICODE)
+
+
+def _is_artifact(sentence: Sentence, max_words: int) -> bool:
+    """A transcription junk frame: punctuation-only text or a tiny interjection.
+
+    These ('.', '...', a stray one-word 'Ne.'/'Aaaaj.') are kept by the
+    duplicate-anchored logic because they aren't duplicates or asides, yet they
+    are never part of an edited lesson.
+    """
+    if _PUNCT_ONLY.match(sentence.text.strip()):
+        return True
+    return len(sentence.words) <= max_words
 
 # Only these tags justify an extra cut on top of a low keep_confidence.
 # REPETITION_RESIDUE is deliberately excluded: a 18-video threshold sweep showed
@@ -73,38 +90,56 @@ def apply_enrichment_arbiter(
         kept_flags.append(f)
 
     # 2. Add cuts for confidently-unwanted, tagged sentences still kept.
+    #    Two independent triggers: (a) a low-confidence aside/filler/incomplete
+    #    tag, and (b) a transcription artifact (junk frame) the duplicate logic
+    #    can't represent. Both stay tightly confidence-gated to protect precision.
     flagged_full_cut = {f.idx for f in kept_flags if not f.word_trims}
     extra = 0
+    artifacts = 0
     for idx in range(n):
         if idx in flagged_full_cut:
             continue
         e = by_idx.get(idx)
         if e is None:
             continue
-        if e.keep_confidence >= config.arbiter_extra_cut_confidence:
+
+        tagged_cut = (
+            e.keep_confidence < config.arbiter_extra_cut_confidence
+            and bool(_EXTRA_CUT_TAGS & set(e.tags))
+        )
+        is_artifact = (
+            e.keep_confidence < config.arbiter_artifact_confidence
+            and _is_artifact(transcript.sentences[idx], config.arbiter_artifact_max_words)
+        )
+        if not (tagged_cut or is_artifact):
             continue
-        if not (_EXTRA_CUT_TAGS & set(e.tags)):
-            continue
+
         reason = (
             FlagReason.ASIDE
             if EnrichmentTag.OFF_TOPIC_ASIDE in e.tags
             else FlagReason.FILLER
         )
+        note = "Arbiter artifact-cut" if (is_artifact and not tagged_cut) else "Arbiter cut"
         kept_flags.append(DuplicateFlag(
             idx=idx,
             reason=reason,
             confidence=round(1.0 - e.keep_confidence / 100.0, 3),
-            note=f"Arbiter cut: {e.rationale[:80]}",
+            note=f"{note}: {e.rationale[:80]}",
         ))
-        extra += 1
+        if tagged_cut:
+            extra += 1
+        else:
+            artifacts += 1
         logger.info(
-            "Arbiter extra-cut: sentence {} (keep_confidence={:.0f}, tags={}) — {}",
-            idx, e.keep_confidence, [t.value for t in e.tags], e.rationale[:60],
+            "Arbiter {}: sentence {} (keep_confidence={:.0f}, tags={}) — {}",
+            "extra-cut" if tagged_cut else "artifact-cut",
+            idx, e.keep_confidence, [t.value for t in e.tags],
+            transcript.sentences[idx].text[:60],
         )
 
     kept_flags.sort(key=lambda f: f.idx)
     logger.info(
-        "Arbiter: {} un-cut, {} extra-cut → {} flags (was {})",
-        uncut, extra, len(kept_flags), len(flags),
+        "Arbiter: {} un-cut, {} extra-cut, {} artifact-cut → {} flags (was {})",
+        uncut, extra, artifacts, len(kept_flags), len(flags),
     )
     return kept_flags
