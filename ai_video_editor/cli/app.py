@@ -41,7 +41,13 @@ def _process_video_file(
     position: int,
     total: int,
 ) -> bool:
-    from ai_video_editor.audio import compute_keep_regions, detect_silences, extract_audio, reduce_noise
+    from ai_video_editor.audio import (
+        build_disruptions,
+        compute_keep_regions,
+        detect_silences,
+        extract_audio,
+        reduce_noise,
+    )
     from ai_video_editor.decisions import decide_edits
     from ai_video_editor.duplicate.debug import save_debug_files
     from ai_video_editor.render import render_video
@@ -65,7 +71,10 @@ def _process_video_file(
             cached = transcribe_with_elevenlabs_and_grammar(denoised, p, settings)
             save_transcript(p, cached)
 
-        edl, _ = decide_edits(p, cached, keeps, silences, settings, force=force, log=log)
+        disruptions = build_disruptions(Path(meta.path), cached, settings.disruption)
+        edl, _ = decide_edits(
+            p, cached, keeps, silences, settings, force=force, log=log, disruptions=disruptions
+        )
 
         edl_path = p.with_suffix(".edl.json")
         edl_path.write_text(edl.model_dump_json(indent=2), encoding="utf-8")
@@ -217,7 +226,13 @@ def process(
     log = logger.bind(video=stem)
     log.info("Processing: {}", input_path)
 
-    from ai_video_editor.audio import compute_keep_regions, detect_silences, extract_audio, reduce_noise
+    from ai_video_editor.audio import (
+        build_disruptions,
+        compute_keep_regions,
+        detect_silences,
+        extract_audio,
+        reduce_noise,
+    )
     from ai_video_editor.decisions import decide_edits
     from ai_video_editor.duplicate.debug import save_debug_files
     from ai_video_editor.render import render_video
@@ -236,7 +251,10 @@ def process(
         cached = transcribe_with_elevenlabs_and_grammar(denoised, input_path, settings)
         save_transcript(input_path, cached)
 
-    edl, _ = decide_edits(input_path, cached, keeps, silences, settings, force=force, log=log)
+    disruptions = build_disruptions(Path(meta.path), cached, settings.disruption)
+    edl, _ = decide_edits(
+        input_path, cached, keeps, silences, settings, force=force, log=log, disruptions=disruptions
+    )
 
     edl_path = input_path.with_suffix(".edl.json")
     edl_path.write_text(edl.model_dump_json(indent=2), encoding="utf-8")

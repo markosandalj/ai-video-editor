@@ -25,7 +25,7 @@ def transcribe_with_elevenlabs_and_grammar(
     cfg = settings.transcription
     audio_path = Path(denoised.path)
 
-    words, _ = transcribe_elevenlabs(
+    words, _, events = transcribe_elevenlabs(
         audio_path,
         language_code=cfg.language,
         model_id=cfg.elevenlabs_model_id,
@@ -37,6 +37,7 @@ def transcribe_with_elevenlabs_and_grammar(
         source_video=str(video_path),
         language=cfg.language,
         model_size=f"elevenlabs-{cfg.elevenlabs_model_id}",
+        events=events,
     )
 
     corrected, report = correct_grammar(draft, max_passes=cfg.grammar_max_passes)
@@ -46,4 +47,8 @@ def transcribe_with_elevenlabs_and_grammar(
         report.converged,
         report.total_corrections,
     )
+    # The grammar pass only rewrites sentence text; carry the audio events
+    # through untouched so the edit layer can use them.
+    if not corrected.events and events:
+        corrected = corrected.model_copy(update={"events": events})
     return corrected

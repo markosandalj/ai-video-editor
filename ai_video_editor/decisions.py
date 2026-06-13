@@ -14,10 +14,11 @@ from pathlib import Path
 
 from loguru import logger
 
-from ai_video_editor.audio.models import KeepRegion, SilenceRegion
+from ai_video_editor.audio.models import DisruptionRegion, KeepRegion, SilenceRegion
 from ai_video_editor.config.settings import Settings
 from ai_video_editor.duplicate.aside import detect_asides
 from ai_video_editor.duplicate.edl import EditDecisionList, build_edl
+from ai_video_editor.duplicate.false_start_audio import detect_audio_false_starts
 from ai_video_editor.duplicate.models import DuplicateFlag
 from ai_video_editor.duplicate.pipeline import detect_duplicates
 from ai_video_editor.enrich import (
@@ -34,15 +35,21 @@ from ai_video_editor.transcription.models import Transcript
 def detect_all_flags(
     transcript: Transcript,
     silences: list[SilenceRegion],
+    disruptions: list[DisruptionRegion],
     settings: Settings,
 ) -> list[DuplicateFlag]:
-    """Duplicate/false-start/stutter/fragment flags plus aside flags."""
+    """Duplicate/false-start/stutter/fragment flags, aside flags, and audio-driven
+    (cough/noise) false starts."""
     flags = detect_duplicates(transcript.sentences, settings.duplicate_detection)
     flagged = {f.idx for f in flags if not f.word_trims}
     aside_flags = detect_asides(
         transcript.sentences, silences, flagged, settings.aside_detection
     )
-    return flags + aside_flags
+    flagged |= {f.idx for f in aside_flags if not f.word_trims}
+    audio_fs_flags = detect_audio_false_starts(
+        transcript.sentences, disruptions, flagged, settings.false_start_audio
+    )
+    return flags + aside_flags + audio_fs_flags
 
 
 def decide_edits(
@@ -54,9 +61,10 @@ def decide_edits(
     *,
     force: bool,
     log,
+    disruptions: list[DisruptionRegion] | None = None,
 ) -> tuple[EditDecisionList, EnrichmentResult | None]:
     """Produce the final EDL and (when enabled) the enrichment sidecar."""
-    flags = detect_all_flags(transcript, silences, settings)
+    flags = detect_all_flags(transcript, silences, disruptions or [], settings)
     edl = build_edl(transcript, keeps, flags)
 
     enrichment: EnrichmentResult | None = None

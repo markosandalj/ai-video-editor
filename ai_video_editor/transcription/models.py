@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from pydantic import BaseModel, computed_field
+from pydantic import BaseModel, Field, computed_field
 
 
 class Word(BaseModel):
@@ -28,12 +28,25 @@ class Sentence(BaseModel):
         return self.end - self.start
 
 
+class AudioEvent(BaseModel):
+    """A non-speech event the STT engine tagged (e.g. ``(cough)``, ``(laughter)``).
+
+    Kept as a separate stream rather than inlined into sentence text so it never
+    pollutes the transcript, the grammar pass, QA, or the diff view — but is still
+    available to the edit-decision layer as an acoustic cue."""
+
+    text: str
+    start: float
+    end: float
+
+
 class Transcript(BaseModel):
     sentences: list[Sentence]
     source_video: str
     language: str
     model_size: str
     created_at: str = ""
+    events: list[AudioEvent] = Field(default_factory=list)
 
     def model_post_init(self, __context: object) -> None:
         if not self.created_at:
