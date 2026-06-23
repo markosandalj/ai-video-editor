@@ -36,7 +36,6 @@ type StatusKey = 'green' | 'yellow' | 'red' | 'restore'
 
 type StatusMeta = {
   label: string
-  stripe: string
   dot: string
   text: string
   // Background tint used to make attention items pop in "Attention only" mode.
@@ -46,28 +45,24 @@ type StatusMeta = {
 const STATUS_META: Record<StatusKey, StatusMeta> = {
   green: {
     label: 'Confident',
-    stripe: 'border-l-status-green/30',
     dot: 'bg-status-green',
     text: 'text-status-green',
     emphasis: '',
   },
   yellow: {
     label: 'Needs review',
-    stripe: 'border-l-status-yellow',
     dot: 'bg-status-yellow',
     text: 'text-status-yellow',
     emphasis: 'bg-status-yellow/12',
   },
   red: {
-    label: 'Likely wrong',
-    stripe: 'border-l-status-red',
+    label: 'Confirmed cut',
     dot: 'bg-status-red',
     text: 'text-status-red',
     emphasis: 'bg-status-red/12',
   },
   restore: {
     label: 'Restore?',
-    stripe: 'border-l-status-restore',
     dot: 'bg-status-restore',
     text: 'text-status-restore',
     emphasis: 'bg-status-restore/12',
@@ -155,7 +150,7 @@ function Editor({ videoId, videos, message, onSelect }: EditorProps) {
     [payload],
   )
 
-  // Map every word index back to its sentence so we can surface enrichment context.
+  // Map every word index back to its sentence for playback highlighting.
   const sentenceByWord = useMemo(() => {
     const map = new Map<number, ReviewSentence>()
     if (payload) {
@@ -180,12 +175,6 @@ function Editor({ videoId, videos, message, onSelect }: EditorProps) {
     })
     return R.sortBy(targets, (target) => target.start)
   }, [payload])
-
-  const detailSentence = useMemo(() => {
-    const idx = activeIdx ?? focusIdx ?? anchor
-    if (idx === null) return null
-    return sentenceByWord.get(idx) ?? null
-  }, [activeIdx, focusIdx, anchor, sentenceByWord])
 
   const selectionRange = useMemo<[number, number] | null>(() => {
     if (anchor === null || focusIdx === null) return null
@@ -461,8 +450,6 @@ function Editor({ videoId, videos, message, onSelect }: EditorProps) {
                 onActive={handleActive}
               />
 
-              <SentenceDetail sentence={detailSentence} />
-
               <div className="grid grid-cols-2 gap-2">
                 <Toggle
                   variant="outline"
@@ -545,9 +532,6 @@ function Editor({ videoId, videos, message, onSelect }: EditorProps) {
                     <i className="inline-block size-2 rounded-full bg-status-yellow" /> review
                   </span>
                   <span className="flex items-center gap-1">
-                    <i className="inline-block size-2 rounded-full bg-status-red" /> wrong
-                  </span>
-                  <span className="flex items-center gap-1">
                     <i className="inline-block size-2 rounded-full bg-status-restore" /> restore
                   </span>
                 </span>
@@ -556,83 +540,88 @@ function Editor({ videoId, videos, message, onSelect }: EditorProps) {
           }
           main={
             <ScrollArea className="min-h-0 h-full">
-              <div className="px-6 py-6 pb-28 text-lg leading-loose">
+              <article
+                aria-label="Transcript editor"
+                className="mx-4 my-4 min-h-[calc(100%-2rem)] max-w-4xl rounded-xl border bg-card px-5 py-6 text-lg leading-8 shadow-sm sm:mx-6 sm:my-6 sm:min-h-[calc(100%-3rem)] sm:px-8 sm:py-8"
+              >
                 {payload.sentences.map((sentence) => {
-                const key = statusKey(sentence.status)
-                const meta = STATUS_META[key]
-                const isAttention = isAttentionStatus(key)
+                  const key = statusKey(sentence.status)
+                  const meta = STATUS_META[key]
+                  const isAttention = isAttentionStatus(key)
                   const containsActive =
                     activeIdx !== null && sentenceByWord.get(activeIdx)?.idx === sentence.idx
                   const dimmed = focusAttention.value && !isAttention && !containsActive
                   const emphasized = focusAttention.value && isAttention
-                  return (
-                    <div
+                  const paragraph = (
+                    <p
                       key={sentence.idx}
+                      data-review-status={isAttention ? key : undefined}
+                      tabIndex={isAttention ? 0 : undefined}
                       className={cn(
-                        'mb-1 flex gap-2 rounded-r border-l-4 pl-2 transition-all',
-                        meta.stripe,
+                        'relative mb-5 rounded-md transition-all last:mb-0',
+                        isAttention &&
+                          'focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring',
                         dimmed && 'opacity-25',
-                        emphasized && meta.emphasis,
+                        emphasized && cn('-mx-2 px-2', meta.emphasis),
                       )}
                     >
-                      <div className="flex shrink-0 items-start gap-1 pt-2">
+                      {isAttention && (
                         <span
                           className={cn(
-                            'mt-1.5 inline-block size-2 shrink-0 rounded-full',
+                            'absolute top-[0.7em] -left-3.5 size-2 rounded-full',
                             meta.dot,
                           )}
-                          title={`${meta.label} · ${Math.round(sentence.keep_confidence)}% keep`}
+                          aria-hidden="true"
                         />
-                        <Button
-                          variant="ghost"
-                          size="xs"
-                          className="font-mono text-xs text-muted-foreground tabular-nums"
-                          onClick={() => seekTo(sentence.start, false)}
-                        >
-                          {formatTimestamp(sentence.start)}
-                        </Button>
-                      </div>
-                      <p className="flex-1">
-                        {key === 'restore' && (
-                          <span className="mr-1 inline-flex items-center rounded bg-status-restore/15 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-status-restore">
-                            restore?
-                          </span>
-                        )}
-                        {(sentence.words ?? []).map((word) => (
-                          <Word
-                            key={word.idx}
-                            word={word}
-                            isCut={cutSet.has(word.idx)}
-                            isSelected={
-                              selectionRange !== null &&
-                              word.idx >= selectionRange[0] &&
-                              word.idx <= selectionRange[1]
-                            }
-                            isPlaying={word.idx === activeIdx}
-                            registerRef={wordRefs.current}
-                            onPointerDown={(event) => {
-                              if (event.shiftKey && anchor !== null) {
-                                setFocusIdx(word.idx)
-                                return
-                              }
-                              setAnchor(word.idx)
+                      )}
+                      {(sentence.words ?? []).map((word) => (
+                        <Word
+                          key={word.idx}
+                          word={word}
+                          isCut={cutSet.has(word.idx)}
+                          isSelected={
+                            selectionRange !== null &&
+                            word.idx >= selectionRange[0] &&
+                            word.idx <= selectionRange[1]
+                          }
+                          isPlaying={word.idx === activeIdx}
+                          registerRef={wordRefs.current}
+                          onPointerDown={(event) => {
+                            if (event.shiftKey && anchor !== null) {
                               setFocusIdx(word.idx)
-                              seekTo(word.start)
-                            }}
-                            onPointerEnter={(event) => {
-                              if (event.buttons === 1 && anchor !== null) setFocusIdx(word.idx)
-                            }}
-                            onDoubleClick={(event) => {
-                              event.preventDefault()
-                              toggleWord(word.idx)
-                            }}
-                          />
-                        ))}
-                      </p>
-                    </div>
+                              return
+                            }
+                            setAnchor(word.idx)
+                            setFocusIdx(word.idx)
+                            seekTo(word.start)
+                          }}
+                          onPointerEnter={(event) => {
+                            if (event.buttons === 1 && anchor !== null) setFocusIdx(word.idx)
+                          }}
+                          onDoubleClick={(event) => {
+                            event.preventDefault()
+                            toggleWord(word.idx)
+                          }}
+                        />
+                      ))}
+                    </p>
+                  )
+                  if (!isAttention) return paragraph
+                  return (
+                    <Tooltip key={sentence.idx}>
+                      <TooltipTrigger asChild>{paragraph}</TooltipTrigger>
+                      <TooltipContent
+                        side="top"
+                        align="start"
+                        sideOffset={6}
+                        className="w-80 max-w-[min(20rem,calc(100vw-2rem))] px-3 py-2 text-left text-pretty"
+                      >
+                        <SentenceReviewNote sentence={sentence} />
+                      </TooltipContent>
+                    </Tooltip>
                   )
                 })}
-              </div>
+              </article>
             </ScrollArea>
           }
         />
@@ -649,37 +638,33 @@ function Editor({ videoId, videos, message, onSelect }: EditorProps) {
   )
 }
 
-function SentenceDetail({ sentence }: { sentence: ReviewSentence | null }) {
-  if (!sentence) {
-    return (
-      <div className="rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
-        Play or click a sentence to see its AI review notes.
-      </div>
-    )
-  }
+function SentenceReviewNote({ sentence }: { sentence: ReviewSentence }) {
   const key = statusKey(sentence.status)
   const meta = STATUS_META[key]
   const tags = sentence.tags ?? []
   return (
-    <div className="rounded-lg border bg-card p-3 text-xs">
+    <div className="text-xs text-background">
       <div className="mb-1.5 flex items-center gap-2">
         <span className={cn('inline-block size-2 rounded-full', meta.dot)} />
         <span className={cn('font-semibold', meta.text)}>{meta.label}</span>
-        <span className="ml-auto tabular-nums text-muted-foreground">
+        <span className="ml-auto tabular-nums text-background/70">
           {Math.round(sentence.keep_confidence)}% keep
         </span>
       </div>
       {sentence.rationale ? (
-        <p className="leading-relaxed text-muted-foreground">{sentence.rationale}</p>
+        <p className="leading-relaxed text-background/90">{sentence.rationale}</p>
       ) : (
-        <p className="text-muted-foreground/70">No rationale.</p>
+        <p className="text-background/60">No rationale.</p>
       )}
       {tags.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1">
           {tags.map((tag) => (
-            <Badge key={tag} variant="secondary" className="px-1.5 py-0 text-[10px] font-normal">
+            <span
+              key={tag}
+              className="rounded bg-background/15 px-1.5 py-0.5 text-[10px] font-normal text-background/80"
+            >
               {tag.replace(/_/g, ' ')}
-            </Badge>
+            </span>
           ))}
         </div>
       )}
@@ -719,7 +704,7 @@ function Word({
         else registerRef.delete(word.idx)
       }}
       className={cn(
-        'cursor-pointer rounded px-0.5 transition-colors select-none hover:bg-muted',
+        'cursor-text rounded px-0.5 transition-colors select-none hover:bg-muted',
         isCut ? 'text-muted-foreground line-through decoration-cut opacity-40' : 'text-foreground',
         suggestKeep && 'border-b-2 border-dotted border-changed no-underline',
         trimCandidate &&
