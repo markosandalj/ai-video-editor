@@ -2,6 +2,7 @@ import '@videojs/react/video/skin.css'
 
 import { type MouseEvent, type PointerEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { useHotkeys, type UseHotkeyDefinition } from '@tanstack/react-hotkeys'
+import { Agentation } from 'agentation'
 import { Video, VideoSkin } from '@videojs/react/video'
 import {
   Check,
@@ -23,7 +24,9 @@ import {
 import * as R from 'remeda'
 import { useBoolean, useEventCallback } from 'usehooks-ts'
 
+import { DiffView } from '@/DiffView'
 import { ResizableSplit } from '@/components/resizable-split'
+import { ViewSwitch, type AppView } from '@/components/view-switch'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -107,6 +110,12 @@ const KEYBOARD_SHORTCUT_GROUPS = [
     ],
   },
 ]
+// How far ahead of a cut word's audio we want to have already seeked away. The
+// actual trigger is pulled into the silent gap after the previous kept word (see
+// cutSpans), so this only bounds how much of a long pause we preserve.
+const PREVIEW_SKIP_ENTRY_MARGIN_SECONDS = 0.15
+const PREVIEW_SKIP_END_EPSILON_SECONDS = 0.05
+const PREVIEW_SKIP_POSTROLL_SECONDS = 0.12
 
 type StatusKey = 'green' | 'yellow' | 'red' | 'restore'
 
@@ -284,16 +293,51 @@ function metadataTokensForSentence(sentence: ReviewSentence) {
   return tokens
 }
 
+// A cut span the playhead has reached. `trigger` already sits inside the silent
+// gap before the cut audio, so no extra lookahead is needed here.
+function activeCutSpan(
+  cutSpans: Array<[number, number]>,
+  currentTime: number,
+): [number, number] | null {
+  return (
+    cutSpans.find(
+      ([trigger, end]) =>
+        currentTime >= trigger && currentTime < end - PREVIEW_SKIP_END_EPSILON_SECONDS,
+    ) ?? null
+  )
+}
+
+function previewSkipTarget(end: number, duration: number): number {
+  const padded = end + PREVIEW_SKIP_POSTROLL_SECONDS
+  return duration > 0 ? Math.min(padded, duration) : padded
+}
+
+type SeekableMedia = {
+  currentTime: number
+}
+
+function isSeekableMedia(media: unknown): media is SeekableMedia {
+  return (
+    typeof media === 'object' &&
+    media !== null &&
+    'currentTime' in media &&
+    typeof (media as { currentTime?: unknown }).currentTime === 'number'
+  )
+}
+
 type EditorProps = {
   videoId: string
   videos: VideoSummary[]
   message: string
   onSelect: (id: string) => void
+  view: AppView
+  onViewChange: (view: AppView) => void
 }
 
 export default function App() {
   const videosQuery = useVideos()
   const [selectedId, setSelectedId] = useState('')
+  const [view, setView] = useState<AppView>('editor')
 
   useEffect(() => {
     const list = videosQuery.data
@@ -309,18 +353,34 @@ export default function App() {
         : 'No processed videos found.'
 
   return (
-    <Player.Provider key={selectedId || 'empty'}>
-      <Editor
-        videoId={selectedId}
-        videos={videosQuery.data ?? []}
-        message={message}
-        onSelect={setSelectedId}
-      />
-    </Player.Provider>
+    <>
+      <Player.Provider key={`${view}:${selectedId || 'empty'}`}>
+        {view === 'diff' ? (
+          <DiffView
+            videoId={selectedId}
+            videos={videosQuery.data ?? []}
+            message={message}
+            onSelect={setSelectedId}
+            view={view}
+            onViewChange={setView}
+          />
+        ) : (
+          <Editor
+            videoId={selectedId}
+            videos={videosQuery.data ?? []}
+            message={message}
+            onSelect={setSelectedId}
+            view={view}
+            onViewChange={setView}
+          />
+        )}
+      </Player.Provider>
+      {import.meta.env.DEV && <Agentation />}
+    </>
   )
 }
 
-function Editor({ videoId, videos, message, onSelect }: EditorProps) {
+function Editor({ videoId, videos, message, onSelect, view, onViewChange }: EditorProps) {
   const player = Player.usePlayer()
   const paused = Player.usePlayer((state) => state.paused)
   const wordRefs = useRef(new Map<number, HTMLSpanElement>())
@@ -546,25 +606,39 @@ function Editor({ videoId, videos, message, onSelect }: EditorProps) {
     }
   }, [activeSearchResultIndex, searchResults.length])
 
-  // Contiguous runs of currently-cut words → time spans skipped during preview.
+  // Contiguous runs of currently-cut words → [trigger, end] spans skipped during
+  // preview. `trigger` is the seek-away point: pulled into the silent gap right
+  // after the previous kept word so the cut word's audio never starts, but never
+  // earlier than that kept word's end (so we don't clip kept audio). For a long
+  // pause before the cut we keep most of it and only seek `ENTRY_MARGIN` early.
   const cutSpans = useMemo(() => {
     const spans: Array<[number, number]> = []
     let start: number | null = null
     let end = 0
+    let prevKeptEnd = 0
+    let entryGuard = 0
     for (const word of words) {
       if (cutSet.has(word.idx)) {
         if (start === null) {
           start = word.start
           end = word.end
+          entryGuard = prevKeptEnd
         } else {
           end = Math.max(end, word.end)
         }
-      } else if (start !== null) {
-        spans.push([start, end])
-        start = null
+      } else {
+        if (start !== null) {
+          const trigger = Math.max(entryGuard, start - PREVIEW_SKIP_ENTRY_MARGIN_SECONDS)
+          spans.push([trigger, end])
+          start = null
+        }
+        prevKeptEnd = Math.max(prevKeptEnd, word.end)
       }
     }
-    if (start !== null) spans.push([start, end])
+    if (start !== null) {
+      const trigger = Math.max(entryGuard, start - PREVIEW_SKIP_ENTRY_MARGIN_SECONDS)
+      spans.push([trigger, end])
+    }
     return spans
   }, [words, cutSet])
 
@@ -1074,6 +1148,7 @@ function Editor({ videoId, videos, message, onSelect }: EditorProps) {
     <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
       <header className="flex shrink-0 flex-wrap items-center gap-3 border-b bg-card px-4 py-2.5">
         <span className="text-sm font-extrabold tracking-tight">AI Video Editor</span>
+        <ViewSwitch view={view} onChange={onViewChange} />
 
         <Select value={videoId} onValueChange={onSelect}>
           <SelectTrigger size="sm" className="w-[260px]">
@@ -1794,9 +1869,44 @@ function PlaybackSync({
   onAuditionEnd,
 }: PlaybackSyncProps) {
   const player = Player.usePlayer()
+  const media = Player.useMedia()
   const currentTime = Player.usePlayer((state) => state.currentTime)
+  const duration = Player.usePlayer((state) => state.duration)
   const paused = Player.usePlayer((state) => state.paused)
   const lastActive = useRef<number | null>(null)
+
+  // Frame-accurate skip: poll the media element's own clock every frame and jump
+  // the playhead synchronously by writing `currentTime` directly. `player.seek()`
+  // goes through an async pipeline, so audio keeps flowing until it lands — which
+  // let the first cut word leak. A direct assignment takes effect immediately.
+  useEffect(() => {
+    if (!previewEdit || paused || !isSeekableMedia(media)) return
+
+    let frame = 0
+    let pendingTarget: number | null = null
+    const skipBeforeCutAudio = () => {
+      const now = media.currentTime
+      // Once the playhead has reached the seek target, the jump landed.
+      if (pendingTarget !== null && now >= pendingTarget - PREVIEW_SKIP_END_EPSILON_SECONDS) {
+        pendingTarget = null
+      }
+      const span = activeCutSpan(cutSpans, now)
+      if (span) {
+        const target = previewSkipTarget(span[1], duration)
+        // Avoid re-issuing the same jump on every frame while the seek settles.
+        if (pendingTarget === null || target > pendingTarget) {
+          pendingTarget = target
+          media.currentTime = target
+        }
+      } else {
+        pendingTarget = null
+      }
+      frame = requestAnimationFrame(skipBeforeCutAudio)
+    }
+
+    frame = requestAnimationFrame(skipBeforeCutAudio)
+    return () => cancelAnimationFrame(frame)
+  }, [media, duration, paused, previewEdit, cutSpans])
 
   useEffect(() => {
     if (auditionRange && !paused && currentTime >= auditionRange.end - 0.03) {
@@ -1810,11 +1920,11 @@ function PlaybackSync({
     }
 
     if (previewEdit && !paused) {
-      for (const [start, end] of cutSpans) {
-        if (currentTime >= start - 0.02 && currentTime < end - 0.05) {
-          void player.seek(end)
-          return
-        }
+      const span = activeCutSpan(cutSpans, currentTime)
+      if (span) {
+        const [, end] = span
+        void player.seek(previewSkipTarget(end, duration))
+        return
       }
     }
 
@@ -1832,6 +1942,7 @@ function PlaybackSync({
     }
   }, [
     currentTime,
+    duration,
     paused,
     previewEdit,
     cutSpans,

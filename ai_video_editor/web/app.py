@@ -20,6 +20,7 @@ from ai_video_editor.review import (
     review_edl_path_for,
     save_reviewed_edl,
 )
+from ai_video_editor.web.diff import DiffPayload, build_diff_payload
 
 
 class RenderResponse(BaseModel):
@@ -51,6 +52,15 @@ def create_app(
         video_path = _video_by_id(root, video_id)
         try:
             return load_review_payload(video_path)
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @app.get("/api/videos/{video_id}/diff", response_model=DiffPayload)
+    def get_diff(video_id: str) -> DiffPayload:
+        """Dev-only: raw transcript with pipeline vs human-edit cuts overlaid."""
+        video_path = _video_by_id(root, video_id)
+        try:
+            return build_diff_payload(video_path)
         except FileNotFoundError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 

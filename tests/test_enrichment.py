@@ -4,6 +4,7 @@ from pathlib import Path
 
 from ai_video_editor.config.settings import EnrichmentConfig
 from ai_video_editor.duplicate.edl import EditAction, EditDecision, EditDecisionList, EditReason
+from ai_video_editor.duplicate.models import DuplicateFlag, FlagReason
 from ai_video_editor.enrich import (
     EnrichmentResult,
     EnrichmentStatus,
@@ -252,3 +253,34 @@ def test_arbiter_artifact_cut_targets_junk_and_guards_short_answers() -> None:
     assert 0 not in cut_idx  # real content untouched
     assert 3 not in cut_idx  # high-confidence short answer guarded
     assert all(f.note.startswith("Arbiter artifact-cut") for f in revised)
+
+
+def test_arbiter_does_not_uncut_audio_false_start_evidence() -> None:
+    transcript = Transcript(
+        sentences=[
+            _sentence("Prije.", 0.0, 1.0),
+            _sentence("I dobro.", 7.0, 8.0),
+            _sentence("Pa dobro ovako.", 8.5, 10.0),
+        ],
+        source_video="lesson.mp4",
+        language="hr",
+        model_size="test",
+    )
+    enrichment = EnrichmentResult(
+        source_video="lesson.mp4",
+        sentences=[
+            _enr(0, 95.0, EnrichmentStatus.GREEN),
+            _enr(1, 95.0, EnrichmentStatus.GREEN),
+            _enr(2, 95.0, EnrichmentStatus.GREEN),
+        ],
+    )
+    audio_flag = DuplicateFlag(
+        idx=1,
+        reason=FlagReason.FALSE_START,
+        confidence=0.85,
+        note="Audio false start: stranded 2-word phrase after a -32dB disruption",
+    )
+
+    revised = apply_enrichment_arbiter([audio_flag], transcript, enrichment, EnrichmentConfig())
+
+    assert revised == [audio_flag]

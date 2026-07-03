@@ -33,6 +33,8 @@
         "@types/react": "^19.2.14",
         "@types/react-dom": "^19.2.3",
         "@vitejs/plugin-react": "^6.0.1",
+        "agentation": "^3.0.2",
+        "code-inspector-plugin": "^1.6.2",
         "openapi-typescript": "^7.13.0",
         "oxfmt": "^0.54.0",
         "oxlint": "^1.69.0",

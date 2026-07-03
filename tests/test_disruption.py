@@ -157,6 +157,47 @@ def test_stt_event_counts_as_disruption() -> None:
     assert "(cough)" in flags[0].note
 
 
+def test_detect_all_flags_upgrades_existing_text_flag_with_audio_evidence(monkeypatch) -> None:
+    from ai_video_editor import decisions
+    from ai_video_editor.config.settings import Settings
+    from ai_video_editor.duplicate.models import DuplicateFlag, FlagReason
+
+    sentences = [
+        _phrase("Prva recenica.", 0.0, 5.0),
+        _phrase("I dobro.", 11.0, 12.0),
+        _phrase("Treca recenica.", 12.5, 16.0),
+    ]
+    transcript = Transcript(
+        sentences=sentences,
+        source_video="lesson.mp4",
+        language="hr",
+        model_size="test",
+    )
+    disr = [DisruptionRegion(start=8.0, end=8.5, peak_db=-30.0, floor_db=-72.0)]
+
+    monkeypatch.setattr(
+        decisions,
+        "detect_duplicates",
+        lambda _sentences, _cfg: [
+            DuplicateFlag(
+                idx=1,
+                reason=FlagReason.DUPLICATE,
+                confidence=0.8,
+                note="ordinary text-derived duplicate",
+            )
+        ],
+    )
+    monkeypatch.setattr(decisions, "detect_asides", lambda *_args, **_kwargs: [])
+
+    flags = decisions.detect_all_flags(transcript, [], disr, Settings())
+
+    assert len(flags) == 1
+    assert flags[0].idx == 1
+    assert flags[0].reason == FlagReason.FALSE_START
+    assert flags[0].note.startswith("Audio false start:")
+    assert "Text flag:" in flags[0].note
+
+
 def test_stt_parser_captures_audio_events_separately() -> None:
     from ai_video_editor.transcription.elevenlabs_stt import _parse_stt_tokens
 

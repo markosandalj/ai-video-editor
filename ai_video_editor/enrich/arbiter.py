@@ -55,6 +55,16 @@ _EXTRA_CUT_TAGS = {
 }
 
 
+def _is_audio_evidence_flag(flag: DuplicateFlag) -> bool:
+    """True for cut flags backed by acoustic evidence.
+
+    The enrichment pass is text-only, so it can confidently keep a short phrase
+    that *reads* like a natural transition ("I dobro.") while missing the cough
+    and long pause that tell a human editor it was a flubbed restart.
+    """
+    return flag.note.startswith("Audio false start:")
+
+
 def apply_enrichment_arbiter(
     flags: list[DuplicateFlag],
     transcript: Transcript,
@@ -77,6 +87,9 @@ def apply_enrichment_arbiter(
     uncut = 0
     for f in flags:
         if f.word_trims:
+            kept_flags.append(f)
+            continue
+        if _is_audio_evidence_flag(f):
             kept_flags.append(f)
             continue
         e = by_idx.get(f.idx)

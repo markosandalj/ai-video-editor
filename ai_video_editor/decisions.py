@@ -19,7 +19,7 @@ from ai_video_editor.config.settings import Settings
 from ai_video_editor.duplicate.aside import detect_asides
 from ai_video_editor.duplicate.edl import EditDecisionList, build_edl
 from ai_video_editor.duplicate.false_start_audio import detect_audio_false_starts
-from ai_video_editor.duplicate.models import DuplicateFlag
+from ai_video_editor.duplicate.models import DuplicateFlag, FlagReason
 from ai_video_editor.duplicate.pipeline import detect_duplicates
 from ai_video_editor.enrich import (
     EnrichmentResult,
@@ -42,14 +42,38 @@ def detect_all_flags(
     (cough/noise) false starts."""
     flags = detect_duplicates(transcript.sentences, settings.duplicate_detection)
     flagged = {f.idx for f in flags if not f.word_trims}
+
+    # Audio evidence can overlap a text-derived flag. In that case it should
+    # *upgrade* the existing full-sentence flag rather than being skipped: the
+    # text-only enrichment arbiter may restore a short phrase that reads like a
+    # natural transition, but the cough/noise in the pause is independent evidence
+    # that it was a flubbed restart.
+    audio_fs_flags = detect_audio_false_starts(
+        transcript.sentences, disruptions, set(), settings.false_start_audio
+    )
+    audio_by_idx = {f.idx: f for f in audio_fs_flags}
+    upgraded: list[DuplicateFlag] = []
+    for f in flags:
+        audio_f = audio_by_idx.get(f.idx)
+        if audio_f is not None and not f.word_trims:
+            upgraded.append(f.model_copy(update={
+                "reason": FlagReason.FALSE_START,
+                "confidence": max(f.confidence, audio_f.confidence),
+                "note": audio_f.note if not f.note else f"{audio_f.note} | Text flag: {f.note}",
+            }))
+        else:
+            upgraded.append(f)
+    flags = upgraded
+
+    standalone_audio_flags = [f for f in audio_fs_flags if f.idx not in flagged]
+    flags.extend(standalone_audio_flags)
+    flagged |= {f.idx for f in standalone_audio_flags if not f.word_trims}
+
     aside_flags = detect_asides(
         transcript.sentences, silences, flagged, settings.aside_detection
     )
     flagged |= {f.idx for f in aside_flags if not f.word_trims}
-    audio_fs_flags = detect_audio_false_starts(
-        transcript.sentences, disruptions, flagged, settings.false_start_audio
-    )
-    return flags + aside_flags + audio_fs_flags
+    return flags + aside_flags
 
 
 def decide_edits(
