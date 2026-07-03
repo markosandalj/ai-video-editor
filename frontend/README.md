@@ -59,9 +59,14 @@ For frontend hot reload against the backend, run the backend on port 8000 and
 
 ## Keyboard shortcuts
 
-Click a word to seek · shift-click or drag to select a range · `⌫` cut · `⏎`
-keep · double-click toggles · `Space` play/pause · `N` next AI cut · `Esc`
-clear selection.
+Click a word to place the cursor · click the active word to play · `←`/`→`
+move by word · `⇧←`/`⇧→` expand selection · shift-click or drag to select a
+range · `⌫`/`Delete` cut · `⏎` keep · `S` select sentence · `⇧S` select chunk ·
+`X` cut current word/selection · `R` restore AI-cut words · `⌘S` save · `⌘Z`
+undo · `⇧⌘Z`/`⌘Y`/`Ctrl+Y` redo · `L` audition the current sentence/selection ·
+`⇧L` loop audition · double-click toggles · `Space` play/pause · `N` next AI
+cut · `A` next attention item · search `Enter` opens result · search `Esc`
+clears filters · `Esc` clear selection.
 
 ## Adding shadcn components
 
