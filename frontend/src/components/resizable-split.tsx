@@ -1,11 +1,11 @@
-import { type PointerEvent, type ReactNode, useRef } from 'react'
+import { type CSSProperties, type PointerEvent, type ReactNode, useRef } from 'react'
 import { useEventListener, useLocalStorage, useMediaQuery } from 'usehooks-ts'
 
 import { cn } from '@/lib/utils'
 
-export const SIDEBAR_DEFAULT_WIDTH = 440
+const SIDEBAR_DEFAULT_WIDTH = '50%'
 const SIDEBAR_MIN_WIDTH = 300
-const SIDEBAR_MAX_WIDTH = 640
+const SIDEBAR_MAX_FRACTION = 0.75
 
 type ResizableSplitProps = {
   sidebar: ReactNode
@@ -16,12 +16,18 @@ type ResizableSplitProps = {
 export function ResizableSplit({
   sidebar,
   main,
-  storageKey = 'review-sidebar-width',
+  storageKey = 'review-sidebar-width-v2',
 }: ResizableSplitProps) {
   const isDesktop = useMediaQuery('(min-width: 768px)')
-  const [width, setWidth] = useLocalStorage(storageKey, SIDEBAR_DEFAULT_WIDTH)
+  const [width, setWidth] = useLocalStorage<number | null>(storageKey, null)
   const containerRef = useRef<HTMLDivElement>(null)
   const dragging = useRef(false)
+
+  const sidebarStyle: CSSProperties | undefined = isDesktop
+    ? { width: width ?? SIDEBAR_DEFAULT_WIDTH }
+    : undefined
+  const containerWidth = containerRef.current?.getBoundingClientRect().width ?? null
+  const sidebarPercent = width && containerWidth ? Math.round((width / containerWidth) * 100) : 50
 
   const stopDragging = () => {
     if (!dragging.current) return
@@ -40,8 +46,8 @@ export function ResizableSplit({
 
   useEventListener('pointermove', (event) => {
     if (!dragging.current || !containerRef.current) return
-    const { left, width: containerWidth } = containerRef.current.getBoundingClientRect()
-    const max = Math.min(SIDEBAR_MAX_WIDTH, containerWidth * 0.55)
+    const { left, width: currentContainerWidth } = containerRef.current.getBoundingClientRect()
+    const max = currentContainerWidth * SIDEBAR_MAX_FRACTION
     setWidth(Math.round(Math.min(max, Math.max(SIDEBAR_MIN_WIDTH, event.clientX - left))))
   })
 
@@ -52,7 +58,7 @@ export function ResizableSplit({
     <div ref={containerRef} className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
       <div
         className="flex min-h-0 shrink-0 flex-col overflow-y-auto border-b md:border-b-0 md:border-r"
-        style={isDesktop ? { width } : undefined}
+        style={sidebarStyle}
       >
         {sidebar}
       </div>
@@ -61,9 +67,9 @@ export function ResizableSplit({
         role="separator"
         aria-orientation="vertical"
         aria-label="Resize sidebar"
-        aria-valuenow={width}
-        aria-valuemin={SIDEBAR_MIN_WIDTH}
-        aria-valuemax={SIDEBAR_MAX_WIDTH}
+        aria-valuenow={sidebarPercent}
+        aria-valuemin={0}
+        aria-valuemax={SIDEBAR_MAX_FRACTION * 100}
         className={cn(
           'hidden shrink-0 touch-none md:block',
           'w-1.5 cursor-col-resize bg-border/50 transition-colors',

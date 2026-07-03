@@ -154,7 +154,7 @@ def _transcribe_with_retry(video_path: Path, *, max_retries: int = 3) -> list[Se
 
     for attempt in range(1, max_retries + 1):
         try:
-            words, _ = transcribe_elevenlabs(video_path, language_code="hr")
+            words, _, _ = transcribe_elevenlabs(video_path, language_code="hr")
             return chunk_into_sentences(words)
         except Exception as exc:
             if attempt == max_retries:

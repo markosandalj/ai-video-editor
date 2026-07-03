@@ -223,6 +223,109 @@ class AsideDetectionConfig(BaseModel):
     )
 
 
+class DisruptionConfig(BaseModel):
+    """Acoustic disruption detection — loud non-speech bursts (coughs, mic bumps)
+    inside pauses. These bursts are computed from the denoised WAV and feed the
+    audio-driven false-start rule."""
+
+    model_config = ConfigDict(extra="allow")
+
+    enabled: bool = Field(
+        default=True,
+        description="Run acoustic disruption detection over the denoised audio.",
+    )
+    frame_ms: float = Field(
+        default=25.0, gt=0.0, description="RMS analysis frame length in milliseconds."
+    )
+    hop_ms: float = Field(
+        default=10.0, gt=0.0, description="RMS analysis hop length in milliseconds."
+    )
+    noise_floor_pct: float = Field(
+        default=10.0,
+        ge=0.0,
+        le=100.0,
+        description="Percentile of per-frame dB used as the per-file noise floor estimate.",
+    )
+    threshold_db: float = Field(
+        default=22.0,
+        gt=0.0,
+        description=(
+            "A burst must rise at least this many dB above the noise floor to count "
+            "as a disruption. Coughs in these lessons sit 25-40 dB above the floor. "
+            "98-video sweep: 22 (vs 15/18) cut false positives ~5x while keeping the "
+            "real cough recoveries — marginal noise no longer qualifies."
+        ),
+    )
+    speech_pad_s: float = Field(
+        default=0.15,
+        ge=0.0,
+        description="Pad transcribed words by this much when masking out speech frames.",
+    )
+    min_burst_s: float = Field(
+        default=0.05,
+        ge=0.0,
+        description="Ignore bursts shorter than this (clicks/sample noise).",
+    )
+    max_burst_s: float = Field(
+        default=1.5,
+        gt=0.0,
+        description="Ignore bursts longer than this (sustained sound, not a transient).",
+    )
+
+
+class FalseStartAudioConfig(BaseModel):
+    """Audio-driven false-start rule: cut a short, stranded phrase that sits right
+    after an acoustic disruption (cough/noise) in a long pause and is followed by
+    a prompt restart. This catches flubbed takes the transcript looks innocent for
+    (e.g. a hesitant 'I dobro.' after the speaker coughs, before redoing the line)."""
+
+    model_config = ConfigDict(extra="allow")
+
+    enabled: bool = Field(
+        default=True,
+        description="Run the audio-driven false-start pass.",
+    )
+    max_words: int = Field(
+        default=3,
+        ge=1,
+        description=(
+            "Only short phrases (<= this many words) are candidates. 98-video sweep: "
+            "3 (vs 4) roughly halves false positives — 4-word hits are mostly real "
+            "content ('Što nam znači reschedule?'), 1-3-word hits are fillers."
+        ),
+    )
+    min_gap_before_s: float = Field(
+        default=4.0,
+        ge=0.0,
+        description=(
+            "Require at least this long a pause before the phrase — flubbed restarts "
+            "follow a noticeable hesitation, not a fluent hand-off."
+        ),
+    )
+    max_gap_after_s: float = Field(
+        default=3.5,
+        ge=0.0,
+        description=(
+            "Require the speaker to resume within this long after the phrase — the "
+            "real take follows promptly. Guards against cutting a genuine closing line."
+        ),
+    )
+    require_disruption: bool = Field(
+        default=True,
+        description=(
+            "Require an acoustic disruption (cough/noise) inside the preceding pause. "
+            "The disruption is the distinctive cue; turning this off falls back to a "
+            "long-pause-only heuristic (higher recall, lower precision)."
+        ),
+    )
+    confidence: float = Field(
+        default=0.85,
+        ge=0.0,
+        le=1.0,
+        description="Confidence assigned to an audio-driven false-start flag.",
+    )
+
+
 class EnrichmentConfig(BaseModel):
     """Transcript metadata enrichment (clean, standalone Gemini pass)."""
 
@@ -289,6 +392,26 @@ class EnrichmentConfig(BaseModel):
             "15 chosen by sweep: best precision with negligible recall loss vs 25."
         ),
     )
+    arbiter_artifact_max_words: int = Field(
+        default=2,
+        ge=0,
+        description=(
+            "A still-kept sentence is treated as a transcription artifact when it "
+            "is punctuation-only OR has at most this many words. Targets junk "
+            "frames the duplicate logic keeps because they aren't duplicates "
+            "('.', '...', stray one-word interjections)."
+        ),
+    )
+    arbiter_artifact_confidence: float = Field(
+        default=25.0,
+        ge=0.0,
+        le=100.0,
+        description=(
+            "Cut an artifact sentence (see arbiter_artifact_max_words) only when "
+            "enrichment keep_confidence is below this — guards genuine short "
+            "answers. 98-video sweep: +13 recovered cuts, 0 new false positives."
+        ),
+    )
 
 
 class RenderConfig(BaseModel):
@@ -332,6 +455,8 @@ class Settings(BaseSettings):
     transcription: TranscriptionConfig = Field(default_factory=TranscriptionConfig)
     duplicate_detection: DuplicateDetectionConfig = Field(default_factory=DuplicateDetectionConfig)
     aside_detection: AsideDetectionConfig = Field(default_factory=AsideDetectionConfig)
+    disruption: DisruptionConfig = Field(default_factory=DisruptionConfig)
+    false_start_audio: FalseStartAudioConfig = Field(default_factory=FalseStartAudioConfig)
     enrichment: EnrichmentConfig = Field(default_factory=EnrichmentConfig)
     render: RenderConfig = Field(default_factory=RenderConfig)
 
