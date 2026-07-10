@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from difflib import SequenceMatcher
 from pathlib import Path
 
 from loguru import logger
@@ -16,6 +17,11 @@ from ai_video_editor.transcription.elevenlabs_stt import transcribe_elevenlabs
 from ai_video_editor.transcription.models import Sentence, Transcript
 
 MATCH_THRESHOLD = 65.0
+_WORD_STRIP = ".,;:!?\"'()-–—…"
+
+
+def _normalise_word(text: str) -> str:
+    return text.lower().strip(_WORD_STRIP)
 
 
 def _transcript_cache_path(video_path: Path) -> Path:
@@ -269,11 +275,8 @@ def compare_transcripts_word_level(
     and derives precision/recall/F1 based on word coverage.  Immune to
     sentence-boundary differences.
     """
-    def _normalise(text: str) -> str:
-        return text.lower().strip(".,;:!?\"'()-–—…")
-
-    p_words = [_normalise(w.text) for s in pipeline_sentences for w in s.words]
-    gt_words = [_normalise(w.text) for s in ground_truth_sentences for w in s.words]
+    p_words = [_normalise_word(w.text) for s in pipeline_sentences for w in s.words]
+    gt_words = [_normalise_word(w.text) for s in ground_truth_sentences for w in s.words]
 
     p_words = [w for w in p_words if w]
     gt_words = [w for w in gt_words if w]
@@ -302,6 +305,50 @@ def compare_transcripts_word_level(
         lcs_len, len(p_words), len(gt_words), len(extra), len(missing),
     )
     return result
+
+
+def derive_word_coverage(
+    raw_sentences: list[Sentence],
+    gt_sentences: list[Sentence],
+) -> list[float]:
+    """Return per-raw-sentence word coverage against the human-edited transcript.
+
+    The human edit is re-transcribed, so sentence boundaries are not stable: a
+    raw sentence can be split across two GT sentences, or multiple raw sentences
+    can be merged into one GT sentence. This aligns the full word stream instead
+    and attributes each matched raw word back to its source sentence.
+    """
+    raw_words: list[str] = []
+    raw_owners: list[int] = []
+    totals = [0] * len(raw_sentences)
+
+    for sentence_idx, sentence in enumerate(raw_sentences):
+        for word in sentence.words:
+            normalised = _normalise_word(word.text)
+            if not normalised:
+                continue
+            totals[sentence_idx] += 1
+            raw_words.append(normalised)
+            raw_owners.append(sentence_idx)
+
+    gt_words = [
+        normalised
+        for sentence in gt_sentences
+        for word in sentence.words
+        if (normalised := _normalise_word(word.text))
+    ]
+
+    matched = [0] * len(raw_sentences)
+    if raw_words and gt_words:
+        matcher = SequenceMatcher(None, raw_words, gt_words, autojunk=False)
+        for block in matcher.get_matching_blocks():
+            for offset in range(block.size):
+                matched[raw_owners[block.a + offset]] += 1
+
+    return [
+        matched[i] / totals[i] if totals[i] else 0.0
+        for i in range(len(raw_sentences))
+    ]
 
 
 def _filter_outliers_iqr(values: list[float]) -> list[float]:

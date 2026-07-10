@@ -95,6 +95,43 @@ def _process_video_file(
         remove_video_log(stem)
 
 
+def _eval_cut_decisions(raw_path: Path, edl, gt_sentences, *, name: str, issues: list):
+    """Score the EDL's cut/keep calls against the human edit; append QA issues."""
+    from ai_video_editor.qa.decision_eval import evaluate_decisions, to_cut_decision_result
+    from ai_video_editor.qa.models import QAIssue, Severity
+    from ai_video_editor.transcription.models import Transcript
+
+    raw_transcript_path = raw_path.with_suffix(".transcript.json")
+    if not raw_transcript_path.exists():
+        logger.warning(
+            "No raw transcript sidecar ({}) — skipping cut-decision eval",
+            raw_transcript_path.name,
+        )
+        return None
+
+    raw_transcript = Transcript.model_validate_json(raw_transcript_path.read_text("utf-8"))
+    ds = evaluate_decisions(raw_transcript.sentences, edl, gt_sentences, name=name)
+    cd = to_cut_decision_result(ds)
+
+    if cd.needed_cuts and cd.true_cuts == 0:
+        issues.append(QAIssue(
+            check="cut_decisions", severity=Severity.ERROR,
+            message=f"Missed all {cd.needed_cuts} cuts the human made",
+        ))
+    elif cd.missed_cuts:
+        issues.append(QAIssue(
+            check="cut_decisions", severity=Severity.WARNING,
+            message=f"Missed {cd.missed_cuts}/{cd.needed_cuts} cuts the human made",
+        ))
+    if cd.overcuts:
+        issues.append(QAIssue(
+            check="cut_decisions", severity=Severity.WARNING,
+            message=f"{cd.overcuts} overcut(s) — removed content the human kept",
+            details={"by_mechanism": cd.wrong_cut_by_reason},
+        ))
+    return cd
+
+
 def _run_qa_pair(pair: tuple[str, Path, Path], *, root: Path):
     from ai_video_editor.duplicate.edl import EditDecisionList
     from ai_video_editor.qa.continuity import verify_continuity
@@ -149,6 +186,11 @@ def _run_qa_pair(pair: tuple[str, Path, Path], *, root: Path):
 
     if edl_path.exists():
         edl = EditDecisionList.model_validate_json(edl_path.read_text("utf-8"))
+
+        report.cut_decisions = _eval_cut_decisions(
+            raw_path, edl, gt_sentences, name=name, issues=issues
+        )
+
         sa = analyze_splices(pipeline_video, edl)
         report.splice_analysis = sa
         if sa.harsh_splices > 0:
@@ -445,24 +487,122 @@ def eval_decisions(
         "-n",
         help="Restrict to specific fixture names (repeatable). Default: all.",
     ),
+    method: str = typer.Option(
+        "words",
+        "--method",
+        help="Human verdict derivation: words (default) or sentences (legacy).",
+    ),
+    compare_methods: bool = typer.Option(
+        False,
+        "--compare-methods",
+        help="Print aggregate legacy sentence scoring vs word-coverage scoring.",
+    ),
 ) -> None:
     """Compare pipeline cut/keep decisions to human ground truth, offline (no APIs)."""
     from ai_video_editor.qa.decision_eval import (
+        aggregate,
         discover_fixture_names,
         evaluate_fixture,
         format_report,
     )
 
     target_names = names or discover_fixture_names(fixtures_dir)
+
+    if compare_methods:
+        by_method = {}
+        for verdict_method in ("sentences", "words"):
+            scores = []
+            for name in target_names:
+                score = evaluate_fixture(fixtures_dir, name, method=verdict_method)
+                if score is not None:
+                    scores.append(score)
+            by_method[verdict_method] = aggregate(scores)
+
+        old = by_method["sentences"]
+        new = by_method["words"]
+        print("Decision-eval method comparison (aggregate)")
+        print("")
+        print(f"{'method':<10} {'cutP':>6} {'cutR':>6} {'cutF1':>6} {'acc':>6} {'TP':>5} {'FP':>5} {'FN':>5} {'swap':>5}")
+        print("-" * 65)
+        for label, score in (("sentences", old), ("words", new)):
+            print(
+                f"{label:<10} {score.cut_precision:>6.3f} {score.cut_recall:>6.3f} "
+                f"{score.cut_f1:>6.3f} {score.accuracy:>6.3f} "
+                f"{score.tp:>5} {score.fp:>5} {score.fn:>5} {score.take_disagreements:>5}"
+            )
+        print("-" * 65)
+        print(
+            f"{'delta':<10} {new.cut_precision - old.cut_precision:>+6.3f} "
+            f"{new.cut_recall - old.cut_recall:>+6.3f} "
+            f"{new.cut_f1 - old.cut_f1:>+6.3f} "
+            f"{new.accuracy - old.accuracy:>+6.3f} "
+            f"{new.tp - old.tp:>+5} {new.fp - old.fp:>+5} "
+            f"{new.fn - old.fn:>+5} {new.take_disagreements - old.take_disagreements:>+5}"
+        )
+        return
+
+    if method not in {"words", "sentences"}:
+        raise typer.BadParameter("method must be 'words' or 'sentences'")
+
     scores = []
     for name in target_names:
-        score = evaluate_fixture(fixtures_dir, name)
+        score = evaluate_fixture(fixtures_dir, name, method=method)
         if score is not None:
             scores.append(score)
     if not scores:
         logger.error("No evaluable fixtures found in {}", fixtures_dir)
         raise typer.Exit(code=1)
     print(format_report(scores))
+
+
+@app.command("dump-alignments")
+def dump_alignments(
+    fixtures_dir: Path = typer.Argument(
+        "tests/fixtures",
+        exists=True,
+        file_okay=False,
+        dir_okay=True,
+        help="Directory with cached <name>-raw.transcript.json, .edl.json, and -edited.qa-transcript.json.",
+    ),
+    output_dir: Path = typer.Option(
+        Path("output/alignments"),
+        "--output-dir",
+        "-o",
+        file_okay=False,
+        dir_okay=True,
+        help="Where to write <name>.alignment.json / .alignment.txt decision diffs.",
+    ),
+    names: list[str] = typer.Option(
+        None,
+        "--name",
+        "-n",
+        help="Restrict to specific fixture names (repeatable). Default: all.",
+    ),
+) -> None:
+    """Write per-sentence decision diffs (pipeline vs human edit), offline (no APIs)."""
+    from ai_video_editor.duplicate.edl import EditDecisionList
+    from ai_video_editor.qa.alignment import dump_alignment
+    from ai_video_editor.qa.decision_eval import discover_fixture_names
+    from ai_video_editor.transcription.models import Transcript
+
+    target_names = names or discover_fixture_names(fixtures_dir)
+    dumped = 0
+    for name in target_names:
+        raw_t = fixtures_dir / f"{name}-raw.transcript.json"
+        edl_p = fixtures_dir / f"{name}-raw.edl.json"
+        gt_t = fixtures_dir / f"{name}-edited.qa-transcript.json"
+        if not (raw_t.exists() and edl_p.exists() and gt_t.exists()):
+            logger.warning("Skipping {} — missing sidecars", name)
+            continue
+        raw = Transcript.model_validate_json(raw_t.read_text("utf-8")).sentences
+        edl = EditDecisionList.model_validate_json(edl_p.read_text("utf-8"))
+        gt = Transcript.model_validate_json(gt_t.read_text("utf-8")).sentences
+        dump_alignment(name, raw, edl, gt, output_dir)
+        dumped += 1
+    if not dumped:
+        logger.error("No evaluable fixtures found in {}", fixtures_dir)
+        raise typer.Exit(code=1)
+    logger.info("Wrote {} decision diffs to {}", dumped, output_dir)
 
 
 @app.command("review-export")

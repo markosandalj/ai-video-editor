@@ -7,9 +7,15 @@ from pathlib import Path
 
 import pytest
 
-from ai_video_editor.qa.ground_truth import compare_transcripts, compare_transcripts_word_level
+from ai_video_editor.duplicate.edl import EditAction, EditDecision, EditDecisionList, EditReason
+from ai_video_editor.qa.ground_truth import (
+    compare_transcripts,
+    compare_transcripts_word_level,
+    derive_word_coverage,
+)
 from ai_video_editor.qa.models import (
     ContinuityResult,
+    CutDecisionResult,
     QAIssue,
     QAReport,
     SentenceMatch,
@@ -34,6 +40,22 @@ from ai_video_editor.transcription.models import Sentence, Word
 def _make_sentence(text: str, start: float = 0.0, end: float = 1.0) -> Sentence:
     words = [Word(text=w, start=start, end=end) for w in text.split()]
     return Sentence(words=words, text=text, start=start, end=end)
+
+
+def _make_edl(sentences: list[Sentence], cut_indices: set[int]) -> EditDecisionList:
+    decisions = []
+    for i, sentence in enumerate(sentences):
+        is_cut = i in cut_indices
+        decisions.append(EditDecision(
+            start=sentence.start,
+            end=sentence.end,
+            action=EditAction.CUT if is_cut else EditAction.KEEP,
+            reason=EditReason.FALSE_START if is_cut else EditReason.SPEECH,
+        ))
+    return EditDecisionList(
+        decisions=decisions,
+        total_duration=sentences[-1].end if sentences else 0.0,
+    )
 
 
 class TestTranscriptComparison:
@@ -149,6 +171,159 @@ class TestWordLevelComparison:
         assert r.recall == pytest.approx(75 / 80)
 
 
+class TestWordCoverageDecisionEval:
+    def test_split_ground_truth_sentence_is_kept(self):
+        from ai_video_editor.qa.decision_eval import evaluate_decisions
+
+        raw = [_make_sentence("Hello world how are you", 0.0, 5.0)]
+        gt = [
+            _make_sentence("Hello world", 0.0, 2.0),
+            _make_sentence("how are you", 2.0, 5.0),
+        ]
+        edl = _make_edl(raw, set())
+
+        assert derive_word_coverage(raw, gt) == [1.0]
+        score = evaluate_decisions(raw, edl, gt)
+
+        assert score.tn == 1
+        assert score.fn == 0
+
+    def test_merged_ground_truth_sentence_keeps_both_raw_sentences(self):
+        from ai_video_editor.qa.decision_eval import evaluate_decisions
+
+        raw = [
+            _make_sentence("Hello world", 0.0, 2.0),
+            _make_sentence("how are you", 2.0, 5.0),
+        ]
+        gt = [_make_sentence("Hello world how are you", 0.0, 5.0)]
+        edl = _make_edl(raw, set())
+
+        assert derive_word_coverage(raw, gt) == [1.0, 1.0]
+        score = evaluate_decisions(raw, edl, gt)
+
+        assert score.tn == 2
+        assert score.fn == 0
+
+    def test_retake_credit_mismatch_counts_as_take_disagreement(self):
+        from ai_video_editor.qa.decision_eval import evaluate_decisions
+
+        raw = [
+            _make_sentence("This is the clean explanation", 0.0, 2.0),
+            _make_sentence("This is the clean explanation", 2.0, 4.0),
+        ]
+        gt = [_make_sentence("This is the clean explanation", 0.0, 2.0)]
+        # Pipeline kept exactly one copy, but the word aligner credited the GT
+        # copy to the other take.
+        edl = _make_edl(raw, {0})
+
+        assert derive_word_coverage(raw, gt) == [1.0, 0.0]
+        score = evaluate_decisions(raw, edl, gt)
+
+        assert score.tp == 1
+        assert score.tn == 1
+        assert score.fp == 0
+        assert score.fn == 0
+        assert score.take_disagreements == 1
+
+    def test_real_miss_remains_false_negative(self):
+        from ai_video_editor.qa.decision_eval import evaluate_decisions
+
+        raw = [
+            _make_sentence("Important lesson content", 0.0, 2.0),
+            _make_sentence("throwaway false start", 2.0, 4.0),
+        ]
+        gt = [_make_sentence("Important lesson content", 0.0, 2.0)]
+        edl = _make_edl(raw, set())
+
+        score = evaluate_decisions(raw, edl, gt)
+
+        assert score.fn == 1
+        assert score.fp == 0
+        assert score.take_disagreements == 0
+
+    def test_real_overcut_remains_false_positive(self):
+        from ai_video_editor.qa.decision_eval import evaluate_decisions
+
+        raw = [_make_sentence("Important lesson content", 0.0, 2.0)]
+        gt = [_make_sentence("Important lesson content", 0.0, 2.0)]
+        edl = _make_edl(raw, {0})
+
+        score = evaluate_decisions(raw, edl, gt)
+
+        assert score.fp == 1
+        assert score.fn == 0
+        assert score.take_disagreements == 0
+
+    def test_exact_half_word_coverage_is_kept(self):
+        from ai_video_editor.qa.decision_eval import evaluate_decisions
+
+        raw = [_make_sentence("one two three four", 0.0, 4.0)]
+        gt = [_make_sentence("one two", 0.0, 2.0)]
+        edl = _make_edl(raw, set())
+
+        assert derive_word_coverage(raw, gt) == [0.5]
+        score = evaluate_decisions(raw, edl, gt)
+
+        assert score.tn == 1
+        assert score.fn == 0
+
+
+class TestCutDecisionResult:
+    def test_no_cuts_needed_none_made_is_perfect(self):
+        """A video that needs no cuts and gets none is a perfect edit."""
+        r = CutDecisionResult(true_keeps=200)
+        assert r.cut_precision == 1.0
+        assert r.cut_recall == 1.0
+        assert r.cut_f1 == 1.0
+        assert r.miss_rate == 0.0
+
+    def test_missing_all_needed_cuts_scores_zero(self):
+        """Two needed cuts, both missed: 100% miss rate even with 99% word overlap."""
+        r = CutDecisionResult(missed_cuts=2, true_keeps=198)
+        assert r.needed_cuts == 2
+        assert r.cut_recall == 0.0
+        assert r.cut_f1 == 0.0
+        assert r.miss_rate == 1.0
+
+    def test_pure_overcut_scores_zero(self):
+        """No cuts needed but pipeline cut anyway: every cut was wrong."""
+        r = CutDecisionResult(overcuts=3, true_keeps=197)
+        assert r.cut_precision == 0.0
+        assert r.cut_recall == 1.0
+        assert r.cut_f1 == 0.0
+        assert r.overcut_rate == 1.0
+
+    def test_mixed_decisions(self):
+        r = CutDecisionResult(true_cuts=3, missed_cuts=1, overcuts=1, true_keeps=95)
+        assert r.needed_cuts == 4
+        assert r.made_cuts == 4
+        assert r.cut_precision == pytest.approx(0.75)
+        assert r.cut_recall == pytest.approx(0.75)
+        assert r.cut_f1 == pytest.approx(0.75)
+        assert r.miss_rate == pytest.approx(0.25)
+        assert r.overcut_rate == pytest.approx(0.25)
+
+    def test_conversion_from_decision_score(self):
+        from ai_video_editor.qa.decision_eval import DecisionScore, to_cut_decision_result
+
+        score = DecisionScore(name="v1", tp=3, fp=1, fn=2, tn=94)
+        score.wrong_cut_by_reason["duplicate"] = 1
+        r = to_cut_decision_result(score)
+        assert r.true_cuts == 3
+        assert r.overcuts == 1
+        assert r.missed_cuts == 2
+        assert r.true_keeps == 94
+        assert r.wrong_cut_by_reason == {"duplicate": 1}
+
+    def test_decision_score_no_cuts_needed_none_made_is_perfect(self):
+        from ai_video_editor.qa.decision_eval import DecisionScore
+
+        score = DecisionScore(name="v1", tn=10)
+        assert score.cut_precision == 1.0
+        assert score.cut_recall == 1.0
+        assert score.cut_f1 == 1.0
+
+
 class TestTemporalComparisonResult:
     def test_fields(self):
         r = TemporalComparisonResult(
@@ -208,6 +383,31 @@ class TestQAReport:
             continuity=ContinuityResult(alignment_score=0.0),
         )
         assert report.overall_score == pytest.approx(0.50)
+
+    def test_missed_cuts_sink_overall_score_despite_word_overlap(self):
+        """The base-rate trap: ~95% word overlap must not mask missing every cut."""
+        report = QAReport(
+            video_name="test",
+            word_level_comparison=WordLevelComparisonResult(
+                pipeline_words=200, ground_truth_words=190, lcs_length=185,
+            ),
+            cut_decisions=CutDecisionResult(missed_cuts=2, true_keeps=198),
+        )
+        assert report.word_level_comparison.f1 > 0.9
+        # cut F1 (0.0, weight .40) + word F1 (weight .30), renormalised
+        assert report.overall_score < 0.5
+
+    def test_overall_score_includes_cut_decisions(self):
+        report = QAReport(
+            video_name="test",
+            word_level_comparison=WordLevelComparisonResult(
+                pipeline_words=100, ground_truth_words=100, lcs_length=100,
+            ),
+            cut_decisions=CutDecisionResult(true_cuts=3, true_keeps=97),
+            temporal_comparison=TemporalComparisonResult(temporal_score=1.0),
+            continuity=ContinuityResult(alignment_score=1.0),
+        )
+        assert report.overall_score == pytest.approx(1.0)
 
     def test_overall_passed(self):
         report = QAReport(

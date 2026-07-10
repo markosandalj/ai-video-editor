@@ -85,6 +85,65 @@ class WordLevelComparisonResult(BaseModel):
         return 2 * p * r / (p + r) if (p + r) > 0 else 0.0
 
 
+class CutDecisionResult(BaseModel):
+    """Sentence-level cut/keep decisions vs the human edit (positive class = CUT).
+
+    Word-overlap metrics normalise by total content, so on a video that needs
+    only a couple of cuts, missing every one of them still scores ~95%. These
+    counts are normalised by the number of *edit decisions* instead: miss all
+    needed cuts and ``cut_recall`` is 0, no matter how much text overlaps.
+    """
+    true_cuts: int = 0    # pipeline cut, human cut
+    overcuts: int = 0     # pipeline cut, human kept
+    missed_cuts: int = 0  # pipeline kept, human cut
+    true_keeps: int = 0   # pipeline kept, human kept
+    take_disagreements: int = 0  # both kept one copy, but not the same take
+    wrong_cut_by_reason: dict[str, int] = Field(default_factory=dict)
+    right_cut_by_reason: dict[str, int] = Field(default_factory=dict)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def needed_cuts(self) -> int:
+        """Cuts the human made."""
+        return self.true_cuts + self.missed_cuts
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def made_cuts(self) -> int:
+        """Cuts the pipeline made."""
+        return self.true_cuts + self.overcuts
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def cut_recall(self) -> float:
+        """Of the cuts the human made, how many we also made. 1.0 when none were needed."""
+        return self.true_cuts / self.needed_cuts if self.needed_cuts else 1.0
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def cut_precision(self) -> float:
+        """Of the cuts we made, how many the human also made. 1.0 when we made none."""
+        return self.true_cuts / self.made_cuts if self.made_cuts else 1.0
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def cut_f1(self) -> float:
+        p, r = self.cut_precision, self.cut_recall
+        return 2 * p * r / (p + r) if (p + r) > 0 else 0.0
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def miss_rate(self) -> float:
+        """Share of needed cuts we failed to make. 0.0 when none were needed."""
+        return self.missed_cuts / self.needed_cuts if self.needed_cuts else 0.0
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def overcut_rate(self) -> float:
+        """Share of our cuts that removed content the human kept."""
+        return self.overcuts / self.made_cuts if self.made_cuts else 0.0
+
+
 class TemporalComparisonResult(BaseModel):
     """Result of comparing timing between pipeline and ground truth."""
     pipeline_duration: float = 0.0
@@ -123,6 +182,7 @@ class QAReport(BaseModel):
     created_at: str = ""
     transcript_comparison: TranscriptComparisonResult | None = None
     word_level_comparison: WordLevelComparisonResult | None = None
+    cut_decisions: CutDecisionResult | None = None
     temporal_comparison: TemporalComparisonResult | None = None
     splice_analysis: SpliceAnalysisResult | None = None
     spectrogram_comparison: SpectrogramComparisonResult | None = None
@@ -137,14 +197,21 @@ class QAReport(BaseModel):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def overall_score(self) -> float:
-        """Weighted average: word F1 50%, temporal 30%, continuity 20%."""
+        """Weighted average: cut F1 40%, word F1 30%, temporal 20%, continuity 10%.
+
+        Cut F1 carries the largest weight because it is the only component
+        normalised by edit decisions rather than total content — without it, a
+        video needing two cuts where both are missed still scores ~95%.
+        """
         components: list[tuple[float, float]] = []
+        if self.cut_decisions:
+            components.append((self.cut_decisions.cut_f1, 0.40))
         if self.word_level_comparison:
-            components.append((self.word_level_comparison.f1, 0.50))
+            components.append((self.word_level_comparison.f1, 0.30))
         if self.temporal_comparison:
-            components.append((self.temporal_comparison.temporal_score, 0.30))
+            components.append((self.temporal_comparison.temporal_score, 0.20))
         if self.continuity:
-            components.append((self.continuity.alignment_score, 0.20))
+            components.append((self.continuity.alignment_score, 0.10))
         if not components:
             return 0.0
         total_weight = sum(w for _, w in components)

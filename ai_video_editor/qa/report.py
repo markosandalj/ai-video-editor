@@ -35,6 +35,21 @@ th {{ background: #f5f5f5; }}
 def _build_sections(report: QAReport) -> str:
     parts: list[str] = []
 
+    if report.cut_decisions:
+        cd = report.cut_decisions
+        parts.append(f"""<div class="section"><h2>Cut Decisions vs Human</h2>
+<table><tr><th>Metric</th><th>Value</th></tr>
+<tr><td>Needed cuts (human)</td><td>{cd.needed_cuts}</td></tr>
+<tr><td>Made cuts (pipeline)</td><td>{cd.made_cuts}</td></tr>
+<tr><td>Correct cuts</td><td>{cd.true_cuts}</td></tr>
+<tr><td>Missed cuts</td><td>{cd.missed_cuts}</td></tr>
+<tr><td>Overcuts (human kept)</td><td>{cd.overcuts}</td></tr>
+<tr><td>Take disagreements</td><td>{cd.take_disagreements}</td></tr>
+<tr><td>Cut precision</td><td>{cd.cut_precision:.1%}</td></tr>
+<tr><td>Cut recall</td><td>{cd.cut_recall:.1%}</td></tr>
+<tr><td>Cut F1</td><td>{cd.cut_f1:.1%}</td></tr>
+</table></div>""")
+
     if report.transcript_comparison:
         tc = report.transcript_comparison
         parts.append(f"""<div class="section"><h2>Transcript Comparison</h2>
@@ -151,6 +166,15 @@ def print_summary(report: QAReport) -> None:
     logger.info("=" * 60)
     logger.info("QA REPORT: {}", report.video_name)
     logger.info("=" * 60)
+
+    if report.cut_decisions:
+        cd = report.cut_decisions
+        logger.info(
+            "  Cut decisions: P={:.1%} R={:.1%} F1={:.1%} "
+            "(missed {}/{}, overcut {}, take disagreements {})",
+            cd.cut_precision, cd.cut_recall, cd.cut_f1,
+            cd.missed_cuts, cd.needed_cuts, cd.overcuts, cd.take_disagreements,
+        )
 
     if report.transcript_comparison:
         tc = report.transcript_comparison
