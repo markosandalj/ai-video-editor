@@ -1,15 +1,15 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import os
 import re
-from pathlib import Path
 from typing import Annotated, TypedDict
 
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.graph import END, StateGraph
 from loguru import logger
 from pydantic import BaseModel, Field
 
+from ai_video_editor.observability import configure_observability
 from ai_video_editor.transcription.models import Sentence, Transcript, Word
 
 MIN_WORD_LENGTH = 3
@@ -60,10 +60,22 @@ class CorrectionResult(BaseModel):
 
 class GrammarReport(BaseModel):
     """Summary of all grammar correction passes."""
+    schema_version: str = "grammar-report.v1"
+    source_video: str = ""
+    model: str = "gemini-2.5-flash"
+    max_passes: int = 0
     passes: int = 0
+    total_suggestions: int = 0
     total_corrections: int = 0
     converged: bool = False
     corrections_log: list[dict] = Field(default_factory=list)
+    pass_logs: list[dict] = Field(default_factory=list)
+    skipped_words: list[str] = Field(default_factory=list)
+    created_at: str = ""
+
+    def model_post_init(self, __context: object) -> None:
+        if not self.created_at:
+            self.created_at = datetime.now(timezone.utc).isoformat()
 
 
 # ---------------------------------------------------------------------------
@@ -87,8 +99,7 @@ class CorrectionState(TypedDict):
 # ---------------------------------------------------------------------------
 
 def _load_gemini_key() -> str:
-    from dotenv import load_dotenv
-    load_dotenv(Path.cwd() / ".env")
+    configure_observability()
 
     key = os.environ.get("GEMINI_API_KEY")
     if not key:
@@ -118,12 +129,21 @@ def _apply_corrections(
 
         pattern = r"\b" + re.escape(correction.wrong) + r"\b"
         count = 0
+        occurrences: list[dict] = []
 
         new_sentences = []
-        for sentence in sentences:
+        for sentence_index, sentence in enumerate(sentences):
             new_text, n = re.subn(pattern, correction.correct, sentence.text)
             if n > 0:
                 count += n
+                occurrences.append({
+                    "sentence_index": sentence_index,
+                    "start": sentence.start,
+                    "end": sentence.end,
+                    "before": sentence.text,
+                    "after": new_text,
+                    "replacements": n,
+                })
                 new_words = []
                 for w in sentence.words:
                     w_new_text, w_n = re.subn(pattern, correction.correct, w.text)
@@ -152,6 +172,7 @@ def _apply_corrections(
                 "wrong": correction.wrong,
                 "correct": correction.correct,
                 "replacements": count,
+                "occurrences": occurrences,
             })
 
     return sentences, total_replacements, log_entries
@@ -164,6 +185,9 @@ def _apply_corrections(
 def spell_check_node(state: CorrectionState) -> CorrectionState:
     """Send transcript to Gemini, get structured corrections back."""
     api_key = _load_gemini_key()
+
+    from langchain_google_genai import ChatGoogleGenerativeAI
+
     llm = ChatGoogleGenerativeAI(
         model="gemini-2.5-flash",
         temperature=0.1,
@@ -201,15 +225,23 @@ def spell_check_node(state: CorrectionState) -> CorrectionState:
     )
 
     result: CorrectionResult = structured_llm.invoke(prompt)
+    suggestions = len(result.corrections)
+    report.total_suggestions += suggestions
 
     logger.info(
         "[Grammar Pass {}/{}] Gemini returned {} corrections",
-        pass_num, max_passes, len(result.corrections),
+        pass_num, max_passes, suggestions,
     )
 
     if not result.corrections:
         report.passes = pass_num
         report.converged = True
+        report.pass_logs.append({
+            "pass": pass_num,
+            "mode": "lenient" if use_lenient else "strict",
+            "suggestions": suggestions,
+            "replacements": 0,
+        })
         logger.info("Grammar correction converged after {} pass(es)", pass_num)
         return {
             "sentences": sentences,
@@ -224,6 +256,12 @@ def spell_check_node(state: CorrectionState) -> CorrectionState:
     )
     report.total_corrections += replacements
     report.corrections_log.extend(entries)
+    report.pass_logs.append({
+        "pass": pass_num,
+        "mode": "lenient" if use_lenient else "strict",
+        "suggestions": suggestions,
+        "replacements": replacements,
+    })
 
     logger.info(
         "[Grammar Pass {}/{}] Applied {} replacements",
@@ -313,10 +351,11 @@ def correct_grammar(
         "skipped_words": set(),
         "pass_num": 1,
         "max_passes": max_passes,
-        "report": GrammarReport(),
+        "report": GrammarReport(source_video=transcript.source_video, max_passes=max_passes),
     }
 
     final_state = workflow.invoke(initial_state)
 
+    final_state["report"].skipped_words = sorted(final_state["skipped_words"])
     corrected = transcript.model_copy(update={"sentences": final_state["sentences"]})
     return corrected, final_state["report"]

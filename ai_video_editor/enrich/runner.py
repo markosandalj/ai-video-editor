@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-import os
-from pathlib import Path
 from typing import Callable, NamedTuple
 
 from loguru import logger
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from ai_video_editor.config.settings import EnrichmentConfig
 from ai_video_editor.duplicate.edl import EditAction, EditDecisionList
@@ -17,10 +15,17 @@ from ai_video_editor.enrich.models import (
     derive_status,
     reconcile_word_salience,
 )
+from ai_video_editor.llm import (
+    LangChainModelConfig,
+    build_chat_model,
+    default_annotation_model_config,
+)
 from ai_video_editor.transcription.models import Sentence, Transcript
 
 
 ENRICH_PROMPT = """Ti si iskusni video editor koji montira edukacijske lekcije na hrvatskom jeziku, snimljene neformalnim govornim stilom. Za SVAKU rečenicu NEOVISNO procijeni pripada li u finalnu montažu. Rečenice su dane redoslijedom kako su izgovorene, pa koristi susjedne rečenice da prepoznaš ponavljanja.
+
+ODGOVOR: Vrati isključivo validan json koji odgovara zadanoj structured-output shemi. Ne koristi Markdown, code blockove ni dodatni tekst.
 
 KAKO LJUDSKI EDITOR ODLUČUJE:
 - ZADRŽAVA: svaki jedinstven sadržaj (korak, definiciju, formulu, međurezultat, odgovor) I prirodan govorni tok — kratke potvrde i prijelaze ("Okej", "Dobro", "Evo", "Pa evo", "Znači", "Dakle", "Jel tako?"). Prirodne poštapalice koje zvuče normalno OSTAJU u videu.
@@ -49,10 +54,15 @@ class SentenceEnrichmentLLM(BaseModel):
     """Raw per-sentence output from Gemini (status is derived afterward)."""
 
     sentence_idx: int
-    keep_confidence: float = Field(ge=0.0, le=100.0)
+    keep_confidence: float
     tags: list[str] = Field(default_factory=list)
     rationale: str = ""
     word_salience: list[float] = Field(default_factory=list)
+
+    @field_validator("keep_confidence", mode="after")
+    @classmethod
+    def _clamp_keep_confidence(cls, value: float) -> float:
+        return max(0.0, min(100.0, value))
 
 
 class EnrichmentBatch(BaseModel):
@@ -78,6 +88,7 @@ def enrich_transcript(
     edl: EditDecisionList,
     config: EnrichmentConfig,
     *,
+    llm_config: LangChainModelConfig | None = None,
     scorer: BatchScorer | None = None,
 ) -> EnrichmentResult:
     """Score and tag every transcript sentence in a dedicated LLM pass.
@@ -91,7 +102,7 @@ def enrich_transcript(
     ]
 
     if scorer is None:
-        scorer = _make_gemini_scorer(config)
+        scorer = _make_gemini_scorer(config, llm_config=llm_config)
 
     enrichments: list[SentenceEnrichment] = []
     for batch in _batched(contexts, config.batch_size):
@@ -240,16 +251,16 @@ def _batched(items: list[SentenceContext], size: int) -> list[list[SentenceConte
 # Gemini scorer
 # ---------------------------------------------------------------------------
 
-def _make_gemini_scorer(config: EnrichmentConfig) -> BatchScorer:
-    from langchain_google_genai import ChatGoogleGenerativeAI
-
-    llm = ChatGoogleGenerativeAI(
+def _make_gemini_scorer(
+    config: EnrichmentConfig,
+    *,
+    llm_config: LangChainModelConfig | None = None,
+) -> BatchScorer:
+    resolved = llm_config or config.llm or default_annotation_model_config(
         model=config.model,
         temperature=config.temperature,
-        api_key=_load_gemini_key(),
-        timeout=180,
-        max_retries=4,
     )
+    llm = build_chat_model(resolved)
     structured = llm.with_structured_output(EnrichmentBatch)
     tag_list = ", ".join(tag.value for tag in EnrichmentTag)
 
@@ -276,13 +287,3 @@ def _format_batch(batch: list[SentenceContext]) -> str:
             f'  tekst: "{ctx.sentence.text}"'
         )
     return "\n\n".join(blocks)
-
-
-def _load_gemini_key() -> str:
-    from dotenv import load_dotenv
-
-    load_dotenv(Path.cwd() / ".env")
-    key = os.environ.get("GEMINI_API_KEY")
-    if not key:
-        raise RuntimeError("GEMINI_API_KEY not found. Add it to your .env file.")
-    return key

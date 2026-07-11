@@ -9,6 +9,7 @@ from ai_video_editor.config.settings import Settings
 from ai_video_editor.transcription.chunking import chunk_into_sentences
 from ai_video_editor.transcription.elevenlabs_stt import transcribe_elevenlabs
 from ai_video_editor.transcription.grammar import correct_grammar
+from ai_video_editor.transcription.grammar_report import save_grammar_report
 from ai_video_editor.transcription.models import Transcript
 
 
@@ -41,10 +42,12 @@ def transcribe_with_elevenlabs_and_grammar(
     )
 
     corrected, report = correct_grammar(draft, max_passes=cfg.grammar_max_passes)
+    save_grammar_report(video_path, report)
     logger.info(
-        "Grammar correction: passes={} converged={} total_replacements={}",
+        "Grammar correction: passes={} converged={} total_suggestions={} total_replacements={}",
         report.passes,
         report.converged,
+        report.total_suggestions,
         report.total_corrections,
     )
     # The grammar pass only rewrites sentence text; carry the audio events

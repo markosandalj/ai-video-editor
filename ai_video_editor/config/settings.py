@@ -7,6 +7,8 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 
+from ai_video_editor.llm import LangChainModelConfig, default_cutting_model_config
+
 
 LogLevel = Literal["TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR"]
 
@@ -161,6 +163,45 @@ class DuplicateDetectionConfig(BaseModel):
         description="Minimum Gemini confidence to accept a duplicate verdict.",
     )
 
+    definite_min_words: int = Field(
+        default=4,
+        ge=0,
+        description=(
+            "Definite lexical/semantic pairs whose shorter sentence has fewer "
+            "words than this are demoted to Gemini review instead of auto-cut. "
+            "Short recurring interjections ('Dobro.', 'Ok.') score 100 lexical "
+            "similarity but are discourse markers, not retakes — on the fixture "
+            "corpus the human kept both copies in 9 of 10 such pairs."
+        ),
+    )
+
+    take_selection: Literal["last", "gemini"] = Field(
+        default="last",
+        description=(
+            "Which take to keep when a duplicate is confirmed. "
+            "'last' (default): always keep the later take, deterministically — the "
+            "LLM 'which to keep' pass is skipped, Gemini's preferred_index on "
+            "borderline pairs is ignored, and each retake cluster keeps its "
+            "highest-index member. A predictable rule professors can record for "
+            "(flub, pause, redo clean) beats a marginally more accurate but "
+            "unpredictable one, and the non-destructive review UI makes the rare "
+            "wrong cut a cheap restore. 'gemini': let the model arbitrate the keep "
+            "side (honours llm_keep_review and prefer_completeness) — higher "
+            "historical accuracy on pre-existing footage at the cost of determinism."
+        ),
+    )
+    llm_keep_review: bool = Field(
+        default=False,
+        description=(
+            "Re-ask Gemini which side of every confirmed duplicate pair to keep "
+            "(the pick_best_version pass). Only consulted when take_selection="
+            "'gemini'. On the fixture corpus the human kept the later take in 71% "
+            "of near-identical pairs and 82% of paraphrase pairs, so the "
+            "deterministic keep-later default beats a completeness-first LLM "
+            "re-litigation and removes a nondeterminism source."
+        ),
+    )
+
     context_window: int = Field(
         default=2,
         ge=0,
@@ -179,11 +220,14 @@ class DuplicateDetectionConfig(BaseModel):
         ),
     )
     prefer_completeness: bool = Field(
-        default=True,
+        default=False,
         description=(
             "When choosing which duplicate to keep, prefer the more complete "
-            "(longer, more informative) version over the merely cleaner one. "
-            "Educational ground truth favours the fuller instructional take."
+            "(longer) version over the later one. Only consulted when "
+            "take_selection='gemini'; ignored under 'last'. Off by default: on the "
+            "fixture corpus sentence length carried no signal (keep-longer was "
+            "right 11/23 on near-identical pairs, 61% on paraphrase pairs) while "
+            "keep-later was right 71%/82%."
         ),
     )
 
@@ -345,6 +389,13 @@ class EnrichmentConfig(BaseModel):
         le=2.0,
         description="Low temperature for stable, repeatable scoring.",
     )
+    llm: LangChainModelConfig | None = Field(
+        default=None,
+        description=(
+            "Optional generic LangChain chat-model config for enrichment. "
+            "When omitted, the legacy Gemini model/temperature fields are used."
+        ),
+    )
     batch_size: int = Field(
         default=20,
         gt=0,
@@ -457,6 +508,7 @@ class Settings(BaseSettings):
     aside_detection: AsideDetectionConfig = Field(default_factory=AsideDetectionConfig)
     disruption: DisruptionConfig = Field(default_factory=DisruptionConfig)
     false_start_audio: FalseStartAudioConfig = Field(default_factory=FalseStartAudioConfig)
+    cutting_llm: LangChainModelConfig = Field(default_factory=default_cutting_model_config)
     enrichment: EnrichmentConfig = Field(default_factory=EnrichmentConfig)
     render: RenderConfig = Field(default_factory=RenderConfig)
 

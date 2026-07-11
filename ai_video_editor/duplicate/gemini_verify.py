@@ -1,16 +1,24 @@
 from __future__ import annotations
 
-import os
-from pathlib import Path
-
-from langchain_google_genai import ChatGoogleGenerativeAI
 from loguru import logger
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from ai_video_editor.duplicate.models import SimilarityScore
+from ai_video_editor.llm import (
+    LangChainModelConfig,
+    build_chat_model,
+    default_cutting_model_config,
+)
 from ai_video_editor.transcription.models import Sentence
 
+
+def _clamp_unit_interval(value: float) -> float:
+    return max(0.0, min(1.0, value))
+
+
 DUPLICATE_PROMPT = """Jesi li ekspert za analizu govornog jezika na hrvatskom. Tvoj zadatak je odlučiti jesu li parovi rečenica iz video lekcije **ponavljanja** (govornik je rekao istu stvar dva puta, jednom pogrešno pa zatim ispravno).
+
+ODGOVOR: Vrati isključivo validan json koji odgovara zadanoj structured-output shemi. Ne koristi Markdown, code blockove ni dodatni tekst.
 
 PRAVILA:
 - "Duplikat" znači da je govornik ponovio istu misao — NE da su rečenice slične po temi
@@ -27,15 +35,16 @@ Za svaki par navedi:
 - is_duplicate: true/false
 - confidence: 0.0-1.0 (koliko si siguran)
 - reasoning: kratko objašnjenje na hrvatskom
-- preferred_index: AKO je duplikat, navedi indeks rečenice koja je BOLJA verzija i koju treba ZADRŽATI. Kriteriji za odabir (ovim redoslijedom):
-  1. Potpunija misao (više informativnog sadržaja, cjelovitije objašnjenje) — u edukacijskim lekcijama dulja verzija je obično vrjednija
-  2. Čišća izvedba (manje poštapalica, manje oklijevanja, manje nedovršenih riječi)
-  3. Ako su jednake kvalitete, preferiraj KASNIJU verziju (govornik obično ispravlja/poboljšava)
+- preferred_index: AKO je duplikat, navedi indeks rečenice koju treba ZADRŽATI. Pravilo odabira:
+  1. Zadano zadrži KASNIJU verziju (veći indeks) — govornik ponavlja upravo zato da ispravi ili poboljša raniju izvedbu
+  2. Odaberi RANIJU verziju SAMO ako je kasnija OČITO lošija: prekinuta, nedovršena, s više poštapalica ili s manje sadržaja
 
 Parovi rečenica za analizu:
 {pairs_text}"""
 
 FALSE_START_PROMPT = """Analiziraj sljedeći blok rečenica iz video lekcije na hrvatskom. Ove rečenice se nalaze IZMEĐU dva ponavljanja — govornik je rekao istu stvar prije i poslije ovog bloka.
+
+ODGOVOR: Vrati isključivo validan json koji odgovara zadanoj structured-output shemi. Ne koristi Markdown, code blockove ni dodatni tekst.
 
 Tvoj zadatak: odluči koje od ovih rečenica su **lažni počeci, nedovršene misli ili filler** koji se mogu izbaciti, a koje su **stvarni sadržaj** koji treba zadržati.
 
@@ -59,12 +68,17 @@ class DuplicateVerdict(BaseModel):
     """Gemini's judgment on a single sentence pair."""
     pair_id: int = Field(..., description="Zero-based index into the input pairs list")
     is_duplicate: bool
-    confidence: float = Field(ge=0.0, le=1.0)
+    confidence: float
     reasoning: str
     preferred_index: int | None = Field(
         default=None,
         description="Index of the sentence to KEEP (the better version). Only set when is_duplicate=true.",
     )
+
+    @field_validator("confidence", mode="after")
+    @classmethod
+    def _clamp_confidence(cls, value: float) -> float:
+        return _clamp_unit_interval(value)
 
 
 class DuplicateVerdicts(BaseModel):
@@ -81,24 +95,8 @@ class FalseStartVerdict(BaseModel):
     reasoning: str = ""
 
 
-def _load_gemini_key() -> str:
-    from dotenv import load_dotenv
-    load_dotenv(Path.cwd() / ".env")
-    key = os.environ.get("GEMINI_API_KEY")
-    if not key:
-        raise RuntimeError("GEMINI_API_KEY not found. Add it to your .env file.")
-    return key
-
-
-def _get_llm() -> ChatGoogleGenerativeAI:
-    return ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",
-        temperature=0.0,
-        api_key=_load_gemini_key(),
-        # Bound every call: a dropped connection must fail and retry, never hang.
-        timeout=120,
-        max_retries=4,
-    )
+def _get_llm(llm_config: LangChainModelConfig | None = None):
+    return build_chat_model(llm_config or default_cutting_model_config())
 
 
 def _context_lines(
@@ -128,6 +126,7 @@ def verify_duplicates_with_gemini(
     sentences: list[Sentence],
     *,
     context_window: int = 2,
+    llm_config: LangChainModelConfig | None = None,
 ) -> list[DuplicateVerdict]:
     """
     Ask Gemini whether borderline sentence pairs are real duplicates.
@@ -157,6 +156,7 @@ def verify_duplicates_with_gemini(
                 chunk,
                 sentences,
                 context_window=context_window,
+                llm_config=llm_config,
             )
             for verdict in chunk_verdicts:
                 verdict.pair_id += start
@@ -177,7 +177,7 @@ def verify_duplicates_with_gemini(
 
     prompt = DUPLICATE_PROMPT.format(pairs_text="\n\n".join(lines))
 
-    llm = _get_llm()
+    llm = _get_llm(llm_config)
     structured = llm.with_structured_output(DuplicateVerdicts)
 
     logger.info("Gemini duplicate verification: {} pairs", len(pairs))
@@ -193,6 +193,8 @@ def verify_duplicates_with_gemini(
 
 WHICH_TO_KEEP_PROMPT = """Ti si ekspert za analizu govornog jezika na hrvatskom. Ove rečenice su potvrđeni duplikati — govornik je rekao istu stvar dva puta. Odaberi BOLJU verziju za zadržati.
 
+ODGOVOR: Vrati isključivo validan json koji odgovara zadanoj structured-output shemi. Ne koristi Markdown, code blockove ni dodatni tekst.
+
 Kriteriji (ovim redoslijedom):
 1. Potpunija misao (više informativnog sadržaja, cjelovitije objašnjenje) — u edukacijskim lekcijama dulja, potpunija verzija je obično vrjednija
 2. Čišća izvedba (manje poštapalica, oklijevanja, nedovršenih riječi)
@@ -202,6 +204,8 @@ Parovi:
 {pairs_text}"""
 
 WHICH_TO_KEEP_PROMPT_CLEAN = """Ti si ekspert za analizu govornog jezika na hrvatskom. Ove rečenice su potvrđeni duplikati — govornik je rekao istu stvar dva puta. Odaberi BOLJU verziju za zadržati.
+
+ODGOVOR: Vrati isključivo validan json koji odgovara zadanoj structured-output shemi. Ne koristi Markdown, code blockove ni dodatni tekst.
 
 Kriteriji (ovim redoslijedom):
 1. Čišća izvedba (manje poštapalica, oklijevanja, nedovršenih riječi)
@@ -229,6 +233,7 @@ def pick_best_version_with_gemini(
     sentences: list[Sentence],
     *,
     prefer_completeness: bool = True,
+    llm_config: LangChainModelConfig | None = None,
 ) -> dict[int, int]:
     """
     For each confirmed duplicate pair, ask Gemini which sentence is the
@@ -254,7 +259,7 @@ def pick_best_version_with_gemini(
     template = WHICH_TO_KEEP_PROMPT if prefer_completeness else WHICH_TO_KEEP_PROMPT_CLEAN
     prompt = template.format(pairs_text="\n\n".join(lines))
 
-    llm = _get_llm()
+    llm = _get_llm(llm_config)
     structured = llm.with_structured_output(KeepDecisions)
 
     logger.info("Gemini 'which to keep' decision: {} pairs", len(pairs))
@@ -284,6 +289,8 @@ def detect_false_starts_with_gemini(
     block_sentences: list[Sentence],
     before_sentence: Sentence | None,
     after_sentence: Sentence | None,
+    *,
+    llm_config: LangChainModelConfig | None = None,
 ) -> FalseStartVerdict:
     """
     Given a block of sentences between a confirmed duplicate pair, ask Gemini
@@ -304,7 +311,7 @@ def detect_false_starts_with_gemini(
         after=after,
     )
 
-    llm = _get_llm()
+    llm = _get_llm(llm_config)
     structured = llm.with_structured_output(FalseStartVerdict)
 
     logger.info("Gemini false-start detection: {} sentences in block", len(block_sentences))
@@ -319,6 +326,8 @@ def detect_false_starts_with_gemini(
 
 
 STUTTER_PROMPT = """Analiziraj sljedeću rečenicu iz video lekcije na hrvatskom. Rečenica sadrži ponovljene riječi/fraze koje ukazuju na mucanje ili lažni početak.
+
+ODGOVOR: Vrati isključivo validan json koji odgovara zadanoj structured-output shemi. Ne koristi Markdown, code blockove ni dodatni tekst.
 
 Tvoj zadatak: prepoznaj koje RIJEČI su dio mucanja (ponovljeni/nedovršeni dio) i koje treba IZBACITI, a koje su dio čistog izlaganja i treba ih ZADRŽATI.
 
@@ -345,13 +354,20 @@ class StutterVerdict(BaseModel):
         default_factory=list,
         description="0-based indices of words to remove (the stuttered/repeated portion)",
     )
-    confidence: float = Field(ge=0.0, le=1.0)
+    confidence: float
     reasoning: str = ""
+
+    @field_validator("confidence", mode="after")
+    @classmethod
+    def _clamp_confidence(cls, value: float) -> float:
+        return _clamp_unit_interval(value)
 
 
 def verify_stutters_with_gemini(
     sentences: list[Sentence],
     stutter_indices: list[int],
+    *,
+    llm_config: LangChainModelConfig | None = None,
 ) -> list[tuple[int, StutterVerdict]]:
     """
     Send each stuttered sentence to Gemini for word-level trim guidance.
@@ -361,7 +377,7 @@ def verify_stutters_with_gemini(
     if not stutter_indices:
         return []
 
-    llm = _get_llm()
+    llm = _get_llm(llm_config)
     structured = llm.with_structured_output(StutterVerdict)
     results: list[tuple[int, StutterVerdict]] = []
 
@@ -399,6 +415,8 @@ def verify_stutters_with_gemini(
 
 HOLISTIC_PROMPT = """Ti si profesionalni video editor za edukacijske video lekcije na hrvatskom jeziku. Pregledaj sljedeći transkript i označi rečenice koje su **nepotrebne** i mogu se izbaciti bez gubitka sadržaja.
 
+ODGOVOR: Vrati isključivo validan json koji odgovara zadanoj structured-output shemi. Ne koristi Markdown, code blockove ni dodatni tekst.
+
 PRAVILA:
 - "Nepotrebna" znači da rečenica NE dodaje nikakvu novu informaciju koju kontekst već ne pokriva
 - Kratke nedovršene rečenice poput "Evo, ja." ili "A ovaj..." su kandidati AKO ih slijedi potpunija verzija
@@ -415,8 +433,13 @@ Transkript (s indeksima originalnih rečenica):
 class RedundancyFlag(BaseModel):
     """A single sentence flagged as redundant by Gemini."""
     sentence_index: int = Field(..., description="Original sentence index from the transcript")
-    confidence: float = Field(ge=0.0, le=1.0)
+    confidence: float
     reasoning: str = ""
+
+    @field_validator("confidence", mode="after")
+    @classmethod
+    def _clamp_confidence(cls, value: float) -> float:
+        return _clamp_unit_interval(value)
 
 
 class RedundancyReview(BaseModel):
@@ -426,6 +449,8 @@ class RedundancyReview(BaseModel):
 
 def holistic_redundancy_review(
     kept_sentences: list[tuple[int, Sentence]],
+    *,
+    llm_config: LangChainModelConfig | None = None,
 ) -> list[RedundancyFlag]:
     """
     Send the full kept transcript to Gemini for a holistic redundancy review.
@@ -445,7 +470,7 @@ def holistic_redundancy_review(
 
     prompt = HOLISTIC_PROMPT.format(transcript_indexed=transcript_indexed)
 
-    llm = _get_llm()
+    llm = _get_llm(llm_config)
     structured = llm.with_structured_output(RedundancyReview)
 
     logger.info("Holistic redundancy review: {} sentences", len(kept_sentences))
@@ -469,6 +494,8 @@ def holistic_redundancy_review(
 
 FRAGMENT_PROMPT = """Ti si profesionalni video editor. Pregledaj sljedeće kandidate za nepotpune fragmente u kontekstu okolnih rečenica.
 
+ODGOVOR: Vrati isključivo validan json koji odgovara zadanoj structured-output shemi. Ne koristi Markdown, code blockove ni dodatni tekst.
+
 Za SVAKI kandidat odgovori:
 - should_cut: true AKO je fragment nepotpun/nedovršen i potpunija verzija postoji u okolnim rečenicama
 - should_cut: false AKO fragment zapravo služi svrsi (naglasak, prijelaz, uvod)
@@ -485,8 +512,13 @@ class FragmentVerdict(BaseModel):
     """Gemini's judgment on a single fragment candidate."""
     sentence_index: int
     should_cut: bool = False
-    confidence: float = Field(ge=0.0, le=1.0, default=0.5)
+    confidence: float = 0.5
     reasoning: str = ""
+
+    @field_validator("confidence", mode="after")
+    @classmethod
+    def _clamp_confidence(cls, value: float) -> float:
+        return _clamp_unit_interval(value)
 
 
 class FragmentReview(BaseModel):
@@ -498,6 +530,8 @@ def verify_fragments_with_gemini(
     candidate_indices: list[int],
     sentences: list[Sentence],
     context_window: int = 3,
+    *,
+    llm_config: LangChainModelConfig | None = None,
 ) -> list[FragmentVerdict]:
     """
     Send fragment candidates with surrounding context to Gemini for confirmation.
@@ -518,7 +552,7 @@ def verify_fragments_with_gemini(
     candidates_text = "\n\n---\n\n".join(parts)
     prompt = FRAGMENT_PROMPT.format(candidates_text=candidates_text)
 
-    llm = _get_llm()
+    llm = _get_llm(llm_config)
     structured = llm.with_structured_output(FragmentReview)
 
     logger.info("Fragment verification: {} candidates", len(candidate_indices))

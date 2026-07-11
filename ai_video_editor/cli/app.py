@@ -605,6 +605,49 @@ def dump_alignments(
     logger.info("Wrote {} decision diffs to {}", dumped, output_dir)
 
 
+@app.command("eval-models")
+def eval_models(
+    manifest: Path = typer.Argument(
+        ...,
+        exists=True,
+        readable=True,
+        help="JSON or TOML experiment manifest defining models and runs.",
+    ),
+    fixtures_dir: Path = typer.Option(
+        Path("tests/fixtures"),
+        "--fixtures-dir",
+        file_okay=False,
+        dir_okay=True,
+        help="Directory with cached transcript, EDL, enrichment, and ground-truth sidecars.",
+    ),
+    output_dir: Path = typer.Option(
+        Path("output/experiments"),
+        "--output-dir",
+        file_okay=False,
+        dir_okay=True,
+        help="Directory for results.json, report.md, and debug artifacts.",
+    ),
+    names: list[str] = typer.Option(
+        None,
+        "--name",
+        "-n",
+        help="Restrict to specific fixture names (repeatable). Default: manifest fixtures or all cached fixtures.",
+    ),
+) -> None:
+    """Evaluate cutting or annotation LLMs independently from cached fixture sidecars."""
+    from ai_video_editor.experiments import run_experiments
+
+    results = run_experiments(
+        manifest,
+        fixtures_dir=fixtures_dir,
+        output_dir=output_dir,
+        names=names,
+    )
+    logger.info("Model evaluation complete: {}", output_dir)
+    print(f"results: {results.output_dir / 'results.json'}")
+    print(f"report:  {results.output_dir / 'report.md'}")
+
+
 @app.command("review-export")
 def review_export(
     input_path: Path = typer.Argument(..., exists=True, readable=True, help="Raw source video to export for review."),

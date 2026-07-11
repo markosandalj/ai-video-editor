@@ -233,8 +233,95 @@ class TestDuplicateDetectionConfig:
         assert cfg.semantic_definite == 0.95
         assert cfg.semantic_maybe == 0.75
         assert cfg.gemini_confidence_threshold == 0.8
+        assert cfg.definite_min_words == 4
+        assert cfg.take_selection == "last"
+        assert cfg.llm_keep_review is False
+        assert cfg.prefer_completeness is False
 
     def test_in_settings(self):
         from ai_video_editor.config import Settings
         s = Settings()
         assert s.duplicate_detection.window_size == 5
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Full detection pipeline (Gemini calls mocked)
+# ──────────────────────────────────────────────────────────────────────
+
+class TestDetectDuplicatesPipeline:
+    @pytest.fixture(autouse=True)
+    def _mock_gemini(self, monkeypatch):
+        import ai_video_editor.duplicate.pipeline as pl
+
+        self.gemini_pairs: list = []
+        self.pick_best_called = False
+
+        def fake_verify(pairs, sentences, **kwargs):
+            self.gemini_pairs.extend(pairs)
+            return []
+
+        def fake_pick_best(pairs, sentences, **kwargs):
+            self.pick_best_called = True
+            return {}
+
+        monkeypatch.setattr(pl, "verify_duplicates_with_gemini", fake_verify)
+        monkeypatch.setattr(pl, "pick_best_version_with_gemini", fake_pick_best)
+        monkeypatch.setattr(pl, "detect_false_starts_with_gemini",
+                            lambda *a, **k: _empty_false_start())
+        monkeypatch.setattr(pl, "verify_stutters_with_gemini", lambda *a, **k: [])
+        monkeypatch.setattr(pl, "verify_fragments_with_gemini", lambda *a, **k: [])
+
+    def test_definite_pair_cuts_earlier_keeps_later(self, simple_duplicate_pair):
+        from ai_video_editor.duplicate.pipeline import detect_duplicates
+
+        flags = detect_duplicates(simple_duplicate_pair)
+        assert [f.idx for f in flags if f.reason == FlagReason.DUPLICATE] == [0]
+
+    def test_short_definite_pair_demoted_to_gemini(self):
+        from ai_video_editor.duplicate.pipeline import detect_duplicates
+
+        sentences = [
+            _make_sentence("Dobro.", 0.0, 0.5),
+            _make_sentence("Sada rješavamo prvi zadatak iz gradiva.", 1.0, 3.0),
+            _make_sentence("Dobro.", 10.0, 10.5),
+        ]
+        flags = detect_duplicates(sentences)
+        # The identical short pair must not be auto-cut by tier 1/2 …
+        assert [f.idx for f in flags if f.reason == FlagReason.DUPLICATE] == []
+        # … but it must reach Gemini for a context-aware verdict.
+        assert any({p.idx_a, p.idx_b} == {0, 2} for p in self.gemini_pairs)
+
+    def test_llm_keep_review_off_by_default(self, simple_duplicate_pair):
+        from ai_video_editor.duplicate.pipeline import detect_duplicates
+
+        detect_duplicates(simple_duplicate_pair)
+        assert self.pick_best_called is False
+
+    def test_llm_keep_review_opt_in(self, simple_duplicate_pair):
+        from ai_video_editor.duplicate.pipeline import detect_duplicates
+
+        # The pick-best pass only runs when Gemini is the arbiter *and* the
+        # re-review is opted into.
+        cfg = DuplicateDetectionConfig(take_selection="gemini", llm_keep_review=True)
+        detect_duplicates(simple_duplicate_pair, cfg)
+        assert self.pick_best_called is True
+
+    def test_last_take_selection_overrides_llm_keep_review(self, simple_duplicate_pair):
+        from ai_video_editor.duplicate.pipeline import detect_duplicates
+
+        # take_selection='last' is the master switch: even with llm_keep_review
+        # opted in, the deterministic keep-later rule wins and Gemini is never
+        # asked which side to keep.
+        cfg = DuplicateDetectionConfig(take_selection="last", llm_keep_review=True)
+        detect_duplicates(simple_duplicate_pair, cfg)
+        assert self.pick_best_called is False
+
+
+def _make_sentence(text: str, start: float, end: float) -> Sentence:
+    words = [Word(text=w, start=start, end=end) for w in text.split()]
+    return Sentence(words=words, text=text, start=start, end=end)
+
+
+def _empty_false_start():
+    from ai_video_editor.duplicate.gemini_verify import FalseStartVerdict
+    return FalseStartVerdict(filler_indices=[], reasoning="")

@@ -12,16 +12,19 @@ event tag. Candidates are confirmed by Gemini asking a single, focused question:
 """
 from __future__ import annotations
 
-import os
 import re
-from pathlib import Path
 
 from loguru import logger
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from ai_video_editor.audio.models import SilenceRegion
 from ai_video_editor.config.settings import AsideDetectionConfig
 from ai_video_editor.duplicate.models import DuplicateFlag, FlagReason
+from ai_video_editor.llm import (
+    LangChainModelConfig,
+    build_chat_model,
+    default_cutting_model_config,
+)
 from ai_video_editor.transcription.models import Sentence
 
 # ElevenLabs tags non-speech events in parentheses, e.g. "(cough)", "(laughter)".
@@ -76,6 +79,8 @@ def detect_aside_candidates(
 
 ASIDE_PROMPT = """Ti si profesionalni video editor za edukacijske lekcije na hrvatskom. Pregledaj sljedeće kandidate u kontekstu okolnih rečenica.
 
+ODGOVOR: Vrati isključivo validan json koji odgovara zadanoj structured-output shemi. Ne koristi Markdown, code blockove ni dodatni tekst.
+
 Tvoj zadatak: za SVAKI kandidat odluči je li dio LEKCIJE ili je usputni komentar / smetnja koju treba izbaciti.
 
 IZBACI (is_aside=true) ako je kandidat:
@@ -96,22 +101,17 @@ Kandidati (svaki s kontekstom; kandidat označen s <<<):
 class AsideVerdict(BaseModel):
     sentence_index: int
     is_aside: bool = False
-    confidence: float = Field(ge=0.0, le=1.0, default=0.5)
+    confidence: float = 0.5
     reasoning: str = ""
+
+    @field_validator("confidence", mode="after")
+    @classmethod
+    def _clamp_confidence(cls, value: float) -> float:
+        return max(0.0, min(1.0, value))
 
 
 class AsideReview(BaseModel):
     verdicts: list[AsideVerdict] = Field(default_factory=list)
-
-
-def _load_gemini_key() -> str:
-    from dotenv import load_dotenv
-
-    load_dotenv(Path.cwd() / ".env")
-    key = os.environ.get("GEMINI_API_KEY")
-    if not key:
-        raise RuntimeError("GEMINI_API_KEY not found. Add it to your .env file.")
-    return key
 
 
 def verify_asides_with_gemini(
@@ -119,11 +119,10 @@ def verify_asides_with_gemini(
     sentences: list[Sentence],
     *,
     context_window: int = 3,
+    llm_config: LangChainModelConfig | None = None,
 ) -> list[AsideVerdict]:
     if not candidate_indices:
         return []
-
-    from langchain_google_genai import ChatGoogleGenerativeAI
 
     parts: list[str] = []
     for idx in candidate_indices:
@@ -137,13 +136,7 @@ def verify_asides_with_gemini(
 
     prompt = ASIDE_PROMPT.format(candidates_text="\n\n---\n\n".join(parts))
 
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",
-        temperature=0.0,
-        api_key=_load_gemini_key(),
-        timeout=120,
-        max_retries=4,
-    )
+    llm = build_chat_model(llm_config or default_cutting_model_config())
     structured = llm.with_structured_output(AsideReview)
 
     logger.info("Gemini aside verification: {} candidates", len(candidate_indices))
@@ -167,6 +160,8 @@ def detect_asides(
     silences: list[SilenceRegion],
     flagged_indices: set[int],
     cfg: AsideDetectionConfig,
+    *,
+    llm_config: LangChainModelConfig | None = None,
 ) -> list[DuplicateFlag]:
     """Full aside-detection pass: candidate generation + Gemini confirmation."""
     if not cfg.enabled:
@@ -176,7 +171,11 @@ def detect_asides(
     if not candidates:
         return []
 
-    verdicts = verify_asides_with_gemini(candidates, sentences)
+    verdicts = verify_asides_with_gemini(
+        candidates,
+        sentences,
+        llm_config=llm_config,
+    )
     flags: list[DuplicateFlag] = []
     for v in verdicts:
         if (

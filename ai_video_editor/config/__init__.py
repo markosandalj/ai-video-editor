@@ -7,11 +7,13 @@ from ai_video_editor.config.settings import (
     TranscriptionConfig,
     get_settings,
 )
+from ai_video_editor.llm import LangChainModelConfig
 
 __all__ = [
     "AudioConfig",
     "DuplicateDetectionConfig",
     "GeneralConfig",
+    "LangChainModelConfig",
     "RenderConfig",
     "Settings",
     "TranscriptionConfig",

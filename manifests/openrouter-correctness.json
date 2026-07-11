@@ -1,0 +1,1398 @@
+{
+  "models": {
+    "openai-gpt-5-5-pro": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "openai/gpt-5.5-pro",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "openai-gpt-5-5": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "openai/gpt-5.5",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "openai-gpt-5-4-pro": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "openai/gpt-5.4-pro",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "openai-gpt-5-4": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "openai/gpt-5.4",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "openai-gpt-5-4-mini": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "openai/gpt-5.4-mini",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "openai-gpt-5-4-nano": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "openai/gpt-5.4-nano",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "anthropic-claude-sonnet-5": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "anthropic/claude-sonnet-5",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "anthropic-claude-opus-4-8": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "anthropic/claude-opus-4.8",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "anthropic-claude-fable-5": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "anthropic/claude-fable-5",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "anthropic-claude-sonnet-4-6": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "anthropic/claude-sonnet-4.6",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "anthropic-claude-haiku-4-5": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "anthropic/claude-haiku-4.5",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "google-gemini-3-1-pro-preview": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "google/gemini-3.1-pro-preview",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "google-gemini-2-5-pro": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "google/gemini-2.5-pro",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "google-gemini-3-5-flash": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "google/gemini-3.5-flash",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "google-gemini-3-flash-preview": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "google/gemini-3-flash-preview",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "google-gemini-3-1-flash-lite": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "google/gemini-3.1-flash-lite",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "google-gemini-2-5-flash": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "google/gemini-2.5-flash",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "x-ai-grok-4-3": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "x-ai/grok-4.3",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "x-ai-grok-4-20": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "x-ai/grok-4.20",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "x-ai-grok-4-20-multi-agent": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "x-ai/grok-4.20-multi-agent",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "x-ai-grok-build-0-1": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "x-ai/grok-build-0.1",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "deepseek-v4-pro": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "deepseek/deepseek-v4-pro",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "deepseek-v3-2": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "deepseek/deepseek-v3.2",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "deepseek-v4-flash": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "deepseek/deepseek-v4-flash",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "qwen3-7-max": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "qwen/qwen3.7-max",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "qwen3-max": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "qwen/qwen3-max",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "qwen3-7-plus": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "qwen/qwen3.7-plus",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "qwen3-6-plus": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "qwen/qwen3.6-plus",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "qwen3-6-flash": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "qwen/qwen3.6-flash",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "qwen3-6-35b-a3b": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "qwen/qwen3.6-35b-a3b",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "mistral-medium-3-5": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "mistralai/mistral-medium-3-5",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "mistral-large-2512": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "mistralai/mistral-large-2512",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "mistral-medium-3-1": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "mistralai/mistral-medium-3.1",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "mistral-small-2603": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "mistralai/mistral-small-2603",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "ministral-14b-2512": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "mistralai/ministral-14b-2512",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "meta-llama-4-maverick": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "meta-llama/llama-4-maverick",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "meta-llama-4-scout": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "meta-llama/llama-4-scout",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "meta-llama-3-3-70b": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "meta-llama/llama-3.3-70b-instruct",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "moonshot-kimi-k2-thinking": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "moonshotai/kimi-k2-thinking",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "moonshot-kimi-k2-6": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "moonshotai/kimi-k2.6",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "moonshot-kimi-k2-5": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "moonshotai/kimi-k2.5",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "glm-5-2": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "z-ai/glm-5.2",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "glm-5": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "z-ai/glm-5",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "glm-5-turbo": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "z-ai/glm-5-turbo",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "glm-4-7-flash": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "z-ai/glm-4.7-flash",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "nvidia-nemotron-3-ultra": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "nvidia/nemotron-3-ultra-550b-a55b",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "nvidia-nemotron-3-super": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    },
+    "nvidia-nemotron-3-nano": {
+      "class_path": "langchain_openai.ChatOpenAI",
+      "model": "nvidia/nemotron-3-nano-30b-a3b",
+      "temperature": 0.0,
+      "api_key_env": "OPENROUTER_API_KEY",
+      "provider_kwargs": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "timeout": 180,
+        "max_retries": 3,
+        "max_tokens": 8192,
+        "extra_body": {
+          "reasoning": {
+            "effort": "low",
+            "exclude": true
+          },
+          "reasoning_effort": "low"
+        }
+      }
+    }
+  },
+  "runs": [
+    {
+      "id": "cutting-openai-gpt-5-5-pro",
+      "part": "cutting",
+      "model": "openai-gpt-5-5-pro"
+    },
+    {
+      "id": "annotations-openai-gpt-5-5-pro",
+      "part": "annotations",
+      "model": "openai-gpt-5-5-pro"
+    },
+    {
+      "id": "cutting-openai-gpt-5-5",
+      "part": "cutting",
+      "model": "openai-gpt-5-5"
+    },
+    {
+      "id": "annotations-openai-gpt-5-5",
+      "part": "annotations",
+      "model": "openai-gpt-5-5"
+    },
+    {
+      "id": "cutting-openai-gpt-5-4-pro",
+      "part": "cutting",
+      "model": "openai-gpt-5-4-pro"
+    },
+    {
+      "id": "annotations-openai-gpt-5-4-pro",
+      "part": "annotations",
+      "model": "openai-gpt-5-4-pro"
+    },
+    {
+      "id": "cutting-openai-gpt-5-4",
+      "part": "cutting",
+      "model": "openai-gpt-5-4"
+    },
+    {
+      "id": "annotations-openai-gpt-5-4",
+      "part": "annotations",
+      "model": "openai-gpt-5-4"
+    },
+    {
+      "id": "cutting-openai-gpt-5-4-mini",
+      "part": "cutting",
+      "model": "openai-gpt-5-4-mini"
+    },
+    {
+      "id": "annotations-openai-gpt-5-4-mini",
+      "part": "annotations",
+      "model": "openai-gpt-5-4-mini"
+    },
+    {
+      "id": "cutting-openai-gpt-5-4-nano",
+      "part": "cutting",
+      "model": "openai-gpt-5-4-nano"
+    },
+    {
+      "id": "annotations-openai-gpt-5-4-nano",
+      "part": "annotations",
+      "model": "openai-gpt-5-4-nano"
+    },
+    {
+      "id": "cutting-anthropic-claude-sonnet-5",
+      "part": "cutting",
+      "model": "anthropic-claude-sonnet-5"
+    },
+    {
+      "id": "annotations-anthropic-claude-sonnet-5",
+      "part": "annotations",
+      "model": "anthropic-claude-sonnet-5"
+    },
+    {
+      "id": "cutting-anthropic-claude-opus-4-8",
+      "part": "cutting",
+      "model": "anthropic-claude-opus-4-8"
+    },
+    {
+      "id": "annotations-anthropic-claude-opus-4-8",
+      "part": "annotations",
+      "model": "anthropic-claude-opus-4-8"
+    },
+    {
+      "id": "cutting-anthropic-claude-fable-5",
+      "part": "cutting",
+      "model": "anthropic-claude-fable-5"
+    },
+    {
+      "id": "annotations-anthropic-claude-fable-5",
+      "part": "annotations",
+      "model": "anthropic-claude-fable-5"
+    },
+    {
+      "id": "cutting-anthropic-claude-sonnet-4-6",
+      "part": "cutting",
+      "model": "anthropic-claude-sonnet-4-6"
+    },
+    {
+      "id": "annotations-anthropic-claude-sonnet-4-6",
+      "part": "annotations",
+      "model": "anthropic-claude-sonnet-4-6"
+    },
+    {
+      "id": "cutting-anthropic-claude-haiku-4-5",
+      "part": "cutting",
+      "model": "anthropic-claude-haiku-4-5"
+    },
+    {
+      "id": "annotations-anthropic-claude-haiku-4-5",
+      "part": "annotations",
+      "model": "anthropic-claude-haiku-4-5"
+    },
+    {
+      "id": "cutting-google-gemini-3-1-pro-preview",
+      "part": "cutting",
+      "model": "google-gemini-3-1-pro-preview"
+    },
+    {
+      "id": "annotations-google-gemini-3-1-pro-preview",
+      "part": "annotations",
+      "model": "google-gemini-3-1-pro-preview"
+    },
+    {
+      "id": "cutting-google-gemini-2-5-pro",
+      "part": "cutting",
+      "model": "google-gemini-2-5-pro"
+    },
+    {
+      "id": "annotations-google-gemini-2-5-pro",
+      "part": "annotations",
+      "model": "google-gemini-2-5-pro"
+    },
+    {
+      "id": "cutting-google-gemini-3-5-flash",
+      "part": "cutting",
+      "model": "google-gemini-3-5-flash"
+    },
+    {
+      "id": "annotations-google-gemini-3-5-flash",
+      "part": "annotations",
+      "model": "google-gemini-3-5-flash"
+    },
+    {
+      "id": "cutting-google-gemini-3-flash-preview",
+      "part": "cutting",
+      "model": "google-gemini-3-flash-preview"
+    },
+    {
+      "id": "annotations-google-gemini-3-flash-preview",
+      "part": "annotations",
+      "model": "google-gemini-3-flash-preview"
+    },
+    {
+      "id": "cutting-google-gemini-3-1-flash-lite",
+      "part": "cutting",
+      "model": "google-gemini-3-1-flash-lite"
+    },
+    {
+      "id": "annotations-google-gemini-3-1-flash-lite",
+      "part": "annotations",
+      "model": "google-gemini-3-1-flash-lite"
+    },
+    {
+      "id": "cutting-google-gemini-2-5-flash",
+      "part": "cutting",
+      "model": "google-gemini-2-5-flash"
+    },
+    {
+      "id": "annotations-google-gemini-2-5-flash",
+      "part": "annotations",
+      "model": "google-gemini-2-5-flash"
+    },
+    {
+      "id": "cutting-x-ai-grok-4-3",
+      "part": "cutting",
+      "model": "x-ai-grok-4-3"
+    },
+    {
+      "id": "annotations-x-ai-grok-4-3",
+      "part": "annotations",
+      "model": "x-ai-grok-4-3"
+    },
+    {
+      "id": "cutting-x-ai-grok-4-20",
+      "part": "cutting",
+      "model": "x-ai-grok-4-20"
+    },
+    {
+      "id": "annotations-x-ai-grok-4-20",
+      "part": "annotations",
+      "model": "x-ai-grok-4-20"
+    },
+    {
+      "id": "cutting-x-ai-grok-4-20-multi-agent",
+      "part": "cutting",
+      "model": "x-ai-grok-4-20-multi-agent"
+    },
+    {
+      "id": "annotations-x-ai-grok-4-20-multi-agent",
+      "part": "annotations",
+      "model": "x-ai-grok-4-20-multi-agent"
+    },
+    {
+      "id": "cutting-x-ai-grok-build-0-1",
+      "part": "cutting",
+      "model": "x-ai-grok-build-0-1"
+    },
+    {
+      "id": "annotations-x-ai-grok-build-0-1",
+      "part": "annotations",
+      "model": "x-ai-grok-build-0-1"
+    },
+    {
+      "id": "cutting-deepseek-v4-pro",
+      "part": "cutting",
+      "model": "deepseek-v4-pro"
+    },
+    {
+      "id": "annotations-deepseek-v4-pro",
+      "part": "annotations",
+      "model": "deepseek-v4-pro"
+    },
+    {
+      "id": "cutting-deepseek-v3-2",
+      "part": "cutting",
+      "model": "deepseek-v3-2"
+    },
+    {
+      "id": "annotations-deepseek-v3-2",
+      "part": "annotations",
+      "model": "deepseek-v3-2"
+    },
+    {
+      "id": "cutting-deepseek-v4-flash",
+      "part": "cutting",
+      "model": "deepseek-v4-flash"
+    },
+    {
+      "id": "annotations-deepseek-v4-flash",
+      "part": "annotations",
+      "model": "deepseek-v4-flash"
+    },
+    {
+      "id": "cutting-qwen3-7-max",
+      "part": "cutting",
+      "model": "qwen3-7-max"
+    },
+    {
+      "id": "annotations-qwen3-7-max",
+      "part": "annotations",
+      "model": "qwen3-7-max"
+    },
+    {
+      "id": "cutting-qwen3-max",
+      "part": "cutting",
+      "model": "qwen3-max"
+    },
+    {
+      "id": "annotations-qwen3-max",
+      "part": "annotations",
+      "model": "qwen3-max"
+    },
+    {
+      "id": "cutting-qwen3-7-plus",
+      "part": "cutting",
+      "model": "qwen3-7-plus"
+    },
+    {
+      "id": "annotations-qwen3-7-plus",
+      "part": "annotations",
+      "model": "qwen3-7-plus"
+    },
+    {
+      "id": "cutting-qwen3-6-plus",
+      "part": "cutting",
+      "model": "qwen3-6-plus"
+    },
+    {
+      "id": "annotations-qwen3-6-plus",
+      "part": "annotations",
+      "model": "qwen3-6-plus"
+    },
+    {
+      "id": "cutting-qwen3-6-flash",
+      "part": "cutting",
+      "model": "qwen3-6-flash"
+    },
+    {
+      "id": "annotations-qwen3-6-flash",
+      "part": "annotations",
+      "model": "qwen3-6-flash"
+    },
+    {
+      "id": "cutting-qwen3-6-35b-a3b",
+      "part": "cutting",
+      "model": "qwen3-6-35b-a3b"
+    },
+    {
+      "id": "annotations-qwen3-6-35b-a3b",
+      "part": "annotations",
+      "model": "qwen3-6-35b-a3b"
+    },
+    {
+      "id": "cutting-mistral-medium-3-5",
+      "part": "cutting",
+      "model": "mistral-medium-3-5"
+    },
+    {
+      "id": "annotations-mistral-medium-3-5",
+      "part": "annotations",
+      "model": "mistral-medium-3-5"
+    },
+    {
+      "id": "cutting-mistral-large-2512",
+      "part": "cutting",
+      "model": "mistral-large-2512"
+    },
+    {
+      "id": "annotations-mistral-large-2512",
+      "part": "annotations",
+      "model": "mistral-large-2512"
+    },
+    {
+      "id": "cutting-mistral-medium-3-1",
+      "part": "cutting",
+      "model": "mistral-medium-3-1"
+    },
+    {
+      "id": "annotations-mistral-medium-3-1",
+      "part": "annotations",
+      "model": "mistral-medium-3-1"
+    },
+    {
+      "id": "cutting-mistral-small-2603",
+      "part": "cutting",
+      "model": "mistral-small-2603"
+    },
+    {
+      "id": "annotations-mistral-small-2603",
+      "part": "annotations",
+      "model": "mistral-small-2603"
+    },
+    {
+      "id": "cutting-ministral-14b-2512",
+      "part": "cutting",
+      "model": "ministral-14b-2512"
+    },
+    {
+      "id": "annotations-ministral-14b-2512",
+      "part": "annotations",
+      "model": "ministral-14b-2512"
+    },
+    {
+      "id": "cutting-meta-llama-4-maverick",
+      "part": "cutting",
+      "model": "meta-llama-4-maverick"
+    },
+    {
+      "id": "annotations-meta-llama-4-maverick",
+      "part": "annotations",
+      "model": "meta-llama-4-maverick"
+    },
+    {
+      "id": "cutting-meta-llama-4-scout",
+      "part": "cutting",
+      "model": "meta-llama-4-scout"
+    },
+    {
+      "id": "annotations-meta-llama-4-scout",
+      "part": "annotations",
+      "model": "meta-llama-4-scout"
+    },
+    {
+      "id": "cutting-meta-llama-3-3-70b",
+      "part": "cutting",
+      "model": "meta-llama-3-3-70b"
+    },
+    {
+      "id": "annotations-meta-llama-3-3-70b",
+      "part": "annotations",
+      "model": "meta-llama-3-3-70b"
+    },
+    {
+      "id": "cutting-moonshot-kimi-k2-thinking",
+      "part": "cutting",
+      "model": "moonshot-kimi-k2-thinking"
+    },
+    {
+      "id": "annotations-moonshot-kimi-k2-thinking",
+      "part": "annotations",
+      "model": "moonshot-kimi-k2-thinking"
+    },
+    {
+      "id": "cutting-moonshot-kimi-k2-6",
+      "part": "cutting",
+      "model": "moonshot-kimi-k2-6"
+    },
+    {
+      "id": "annotations-moonshot-kimi-k2-6",
+      "part": "annotations",
+      "model": "moonshot-kimi-k2-6"
+    },
+    {
+      "id": "cutting-moonshot-kimi-k2-5",
+      "part": "cutting",
+      "model": "moonshot-kimi-k2-5"
+    },
+    {
+      "id": "annotations-moonshot-kimi-k2-5",
+      "part": "annotations",
+      "model": "moonshot-kimi-k2-5"
+    },
+    {
+      "id": "cutting-glm-5-2",
+      "part": "cutting",
+      "model": "glm-5-2"
+    },
+    {
+      "id": "annotations-glm-5-2",
+      "part": "annotations",
+      "model": "glm-5-2"
+    },
+    {
+      "id": "cutting-glm-5",
+      "part": "cutting",
+      "model": "glm-5"
+    },
+    {
+      "id": "annotations-glm-5",
+      "part": "annotations",
+      "model": "glm-5"
+    },
+    {
+      "id": "cutting-glm-5-turbo",
+      "part": "cutting",
+      "model": "glm-5-turbo"
+    },
+    {
+      "id": "annotations-glm-5-turbo",
+      "part": "annotations",
+      "model": "glm-5-turbo"
+    },
+    {
+      "id": "cutting-glm-4-7-flash",
+      "part": "cutting",
+      "model": "glm-4-7-flash"
+    },
+    {
+      "id": "annotations-glm-4-7-flash",
+      "part": "annotations",
+      "model": "glm-4-7-flash"
+    },
+    {
+      "id": "cutting-nvidia-nemotron-3-ultra",
+      "part": "cutting",
+      "model": "nvidia-nemotron-3-ultra"
+    },
+    {
+      "id": "annotations-nvidia-nemotron-3-ultra",
+      "part": "annotations",
+      "model": "nvidia-nemotron-3-ultra"
+    },
+    {
+      "id": "cutting-nvidia-nemotron-3-super",
+      "part": "cutting",
+      "model": "nvidia-nemotron-3-super"
+    },
+    {
+      "id": "annotations-nvidia-nemotron-3-super",
+      "part": "annotations",
+      "model": "nvidia-nemotron-3-super"
+    },
+    {
+      "id": "cutting-nvidia-nemotron-3-nano",
+      "part": "cutting",
+      "model": "nvidia-nemotron-3-nano"
+    },
+    {
+      "id": "annotations-nvidia-nemotron-3-nano",
+      "part": "annotations",
+      "model": "nvidia-nemotron-3-nano"
+    }
+  ]
+}

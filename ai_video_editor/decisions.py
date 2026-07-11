@@ -29,6 +29,7 @@ from ai_video_editor.enrich import (
     restatus_against_edl,
     save_enrichment,
 )
+from ai_video_editor.llm import LangChainModelConfig
 from ai_video_editor.transcription.models import Transcript
 
 
@@ -37,10 +38,17 @@ def detect_all_flags(
     silences: list[SilenceRegion],
     disruptions: list[DisruptionRegion],
     settings: Settings,
+    *,
+    cutting_llm_config: LangChainModelConfig | None = None,
 ) -> list[DuplicateFlag]:
     """Duplicate/false-start/stutter/fragment flags, aside flags, and audio-driven
     (cough/noise) false starts."""
-    flags = detect_duplicates(transcript.sentences, settings.duplicate_detection)
+    llm_config = cutting_llm_config or settings.cutting_llm
+    flags = detect_duplicates(
+        transcript.sentences,
+        settings.duplicate_detection,
+        llm_config=llm_config,
+    )
     flagged = {f.idx for f in flags if not f.word_trims}
 
     # Audio evidence can overlap a text-derived flag. In that case it should
@@ -70,7 +78,11 @@ def detect_all_flags(
     flagged |= {f.idx for f in standalone_audio_flags if not f.word_trims}
 
     aside_flags = detect_asides(
-        transcript.sentences, silences, flagged, settings.aside_detection
+        transcript.sentences,
+        silences,
+        flagged,
+        settings.aside_detection,
+        llm_config=llm_config,
     )
     flagged |= {f.idx for f in aside_flags if not f.word_trims}
     return flags + aside_flags

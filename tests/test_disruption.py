@@ -178,7 +178,7 @@ def test_detect_all_flags_upgrades_existing_text_flag_with_audio_evidence(monkey
     monkeypatch.setattr(
         decisions,
         "detect_duplicates",
-        lambda _sentences, _cfg: [
+        lambda _sentences, _cfg, **_kwargs: [
             DuplicateFlag(
                 idx=1,
                 reason=FlagReason.DUPLICATE,

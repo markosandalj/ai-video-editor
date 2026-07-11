@@ -1,0 +1,950 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>One Video Workflow</title>
+    <style>
+      :root {
+        --bg: #f6f7f9;
+        --paper: #ffffff;
+        --ink: #1c2430;
+        --muted: #5e6978;
+        --line: #d9dee7;
+        --line-strong: #b8c1cf;
+        --system: #0f766e;
+        --human: #9a3412;
+        --output: #2563eb;
+        --risk: #b45309;
+        --good: #15803d;
+        --soft-system: #e6f5f2;
+        --soft-human: #fff1e8;
+        --soft-output: #eef4ff;
+        --soft-risk: #fff7df;
+        --shadow: 0 18px 45px rgba(28, 36, 48, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        line-height: 1.55;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .page {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 40px 24px 64px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+        gap: 28px;
+        align-items: stretch;
+        margin-bottom: 28px;
+      }
+
+      .hero-copy,
+      .panel,
+      .stage-card,
+      .artifact-card,
+      .check-card,
+      .note {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+      }
+
+      .hero-copy {
+        padding: 34px;
+      }
+
+      .eyebrow {
+        margin: 0 0 12px;
+        color: var(--system);
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        line-height: 1.1;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        max-width: 740px;
+        font-size: clamp(34px, 6vw, 66px);
+      }
+
+      h2 {
+        font-size: clamp(26px, 4vw, 38px);
+      }
+
+      h3 {
+        font-size: 19px;
+      }
+
+      p {
+        margin: 0;
+      }
+
+      .lead {
+        max-width: 720px;
+        margin-top: 20px;
+        color: var(--muted);
+        font-size: 19px;
+      }
+
+      .hero-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 28px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 34px;
+        padding: 7px 11px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: #fbfcfd;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: currentColor;
+      }
+
+      .hero-visual {
+        position: relative;
+        min-height: 420px;
+        overflow: hidden;
+        padding: 26px;
+        background:
+          linear-gradient(135deg, rgba(15, 118, 110, 0.08), transparent 38%),
+          linear-gradient(315deg, rgba(37, 99, 235, 0.09), transparent 42%),
+          var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+      }
+
+      .mini-label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .process-rail {
+        display: grid;
+        gap: 12px;
+        margin-top: 18px;
+      }
+
+      .rail-step {
+        display: grid;
+        grid-template-columns: 42px 1fr auto;
+        gap: 12px;
+        align-items: center;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.82);
+      }
+
+      .rail-number {
+        display: grid;
+        place-items: center;
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: var(--soft-output);
+        color: var(--output);
+        font-weight: 900;
+      }
+
+      .rail-step strong {
+        display: block;
+        font-size: 15px;
+      }
+
+      .rail-step span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .rail-owner {
+        min-width: 78px;
+        padding: 5px 8px;
+        border-radius: 999px;
+        text-align: center;
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .owner-system {
+        background: var(--soft-system);
+        color: var(--system);
+      }
+
+      .owner-human {
+        background: var(--soft-human);
+        color: var(--human);
+      }
+
+      .section {
+        margin-top: 48px;
+      }
+
+      .section-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 18px;
+        align-items: end;
+        margin-bottom: 18px;
+      }
+
+      .section-head p {
+        max-width: 560px;
+        color: var(--muted);
+      }
+
+      .overview {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .panel {
+        padding: 22px;
+      }
+
+      .panel h3 {
+        margin-bottom: 10px;
+      }
+
+      .panel p,
+      .stage-card p,
+      .artifact-card p,
+      .check-card p,
+      .note p {
+        color: var(--muted);
+      }
+
+      .panel-icon {
+        display: grid;
+        place-items: center;
+        width: 42px;
+        height: 42px;
+        margin-bottom: 16px;
+        border-radius: 8px;
+        color: var(--paper);
+        font-weight: 900;
+      }
+
+      .icon-system {
+        background: var(--system);
+      }
+
+      .icon-human {
+        background: var(--human);
+      }
+
+      .icon-output {
+        background: var(--output);
+      }
+
+      .flow-band {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+        padding: 22px;
+      }
+
+      .flow-svg {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .stages {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .stage-card {
+        position: relative;
+        padding: 24px 24px 24px 82px;
+        overflow: hidden;
+      }
+
+      .stage-card::before {
+        position: absolute;
+        left: 24px;
+        top: 24px;
+        display: grid;
+        place-items: center;
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: var(--soft-output);
+        color: var(--output);
+        content: attr(data-step);
+        font-weight: 900;
+      }
+
+      .stage-card h3 {
+        margin-bottom: 8px;
+      }
+
+      .stage-card ul,
+      .check-card ul,
+      .artifact-card ul {
+        margin: 14px 0 0;
+        padding-left: 18px;
+        color: var(--muted);
+      }
+
+      .stage-card li,
+      .check-card li,
+      .artifact-card li {
+        margin: 6px 0;
+      }
+
+      .artifact-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 16px;
+      }
+
+      .artifact-card {
+        padding: 22px;
+      }
+
+      .artifact-strip {
+        display: grid;
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      .artifact-item {
+        display: grid;
+        grid-template-columns: 9px 1fr;
+        gap: 12px;
+        align-items: start;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfcfd;
+      }
+
+      .artifact-item::before {
+        width: 9px;
+        height: 100%;
+        min-height: 34px;
+        border-radius: 999px;
+        background: var(--output);
+        content: "";
+      }
+
+      .artifact-item.raw::before {
+        background: var(--ink);
+      }
+
+      .artifact-item.auto::before {
+        background: var(--system);
+      }
+
+      .artifact-item.review::before {
+        background: var(--human);
+      }
+
+      .artifact-item.final::before {
+        background: var(--good);
+      }
+
+      .artifact-item strong {
+        display: block;
+        margin-bottom: 2px;
+      }
+
+      .artifact-item span {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .review-grid {
+        display: grid;
+        grid-template-columns: 1.05fr 0.95fr;
+        gap: 16px;
+      }
+
+      .check-card {
+        padding: 22px;
+      }
+
+      .check-card strong {
+        color: var(--ink);
+      }
+
+      .note {
+        padding: 24px;
+        border-left: 6px solid var(--risk);
+        background: var(--soft-risk);
+        box-shadow: none;
+      }
+
+      .boundary {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .boundary .panel {
+        box-shadow: none;
+      }
+
+      .footer-note {
+        margin-top: 48px;
+        color: var(--muted);
+        text-align: center;
+        font-size: 14px;
+      }
+
+      @media (max-width: 900px) {
+        .hero,
+        .overview,
+        .stages,
+        .artifact-grid,
+        .review-grid,
+        .boundary {
+          grid-template-columns: 1fr;
+        }
+
+        .hero-visual {
+          min-height: 0;
+        }
+
+        .section-head {
+          display: block;
+        }
+
+        .section-head p {
+          margin-top: 10px;
+        }
+      }
+
+      @media (max-width: 620px) {
+        .page {
+          padding: 22px 14px 40px;
+        }
+
+        .hero-copy,
+        .hero-visual,
+        .flow-band,
+        .panel,
+        .stage-card,
+        .artifact-card,
+        .check-card,
+        .note {
+          padding: 18px;
+        }
+
+        h1 {
+          font-size: 36px;
+        }
+
+        .lead {
+          font-size: 17px;
+        }
+
+        .rail-step {
+          grid-template-columns: 38px 1fr;
+        }
+
+        .rail-owner {
+          grid-column: 2;
+          width: fit-content;
+        }
+
+        .stage-card {
+          padding-left: 18px;
+          padding-top: 70px;
+        }
+
+        .stage-card::before {
+          left: 18px;
+          top: 18px;
+        }
+      }
+
+      @media print {
+        body {
+          background: #ffffff;
+        }
+
+        .page {
+          max-width: none;
+          padding: 0;
+        }
+
+        .hero-copy,
+        .hero-visual,
+        .panel,
+        .stage-card,
+        .artifact-card,
+        .check-card,
+        .note,
+        .flow-band {
+          box-shadow: none;
+          break-inside: avoid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero" aria-labelledby="page-title">
+        <div class="hero-copy">
+          <p class="eyebrow">AI video editor workflow</p>
+          <h1 id="page-title">One video from raw recording to final reviewed output</h1>
+          <p class="lead">
+            A plain-language explanation of how one educational recording is cleaned,
+            analyzed, automatically edited, reviewed by a person, and prepared for the next
+            Gradivo production step.
+          </p>
+          <div class="hero-meta" aria-label="Document summary">
+            <span class="pill"><span class="dot"></span> Non-destructive process</span>
+            <span class="pill"><span class="dot"></span> Human review before final</span>
+            <span class="pill"><span class="dot"></span> One raw video, one reviewed result</span>
+          </div>
+        </div>
+
+        <aside class="hero-visual" aria-label="Workflow summary">
+          <div class="mini-label">At a glance</div>
+          <div class="process-rail">
+            <div class="rail-step">
+              <div class="rail-number">1</div>
+              <div>
+                <strong>Prepare the recording</strong>
+                <span>Clean the audio, find speech, and detect long pauses.</span>
+              </div>
+              <div class="rail-owner owner-system">System</div>
+            </div>
+            <div class="rail-step">
+              <div class="rail-number">2</div>
+              <div>
+                <strong>Understand the spoken lesson</strong>
+                <span>Turn speech into timed, sentence-sized text for review.</span>
+              </div>
+              <div class="rail-owner owner-system">System</div>
+            </div>
+            <div class="rail-step">
+              <div class="rail-number">3</div>
+              <div>
+                <strong>Propose cuts</strong>
+                <span>Mark silence, repeated takes, false starts, and uncertain spots.</span>
+              </div>
+              <div class="rail-owner owner-system">System</div>
+            </div>
+            <div class="rail-step">
+              <div class="rail-number">4</div>
+              <div>
+                <strong>Review and correct</strong>
+                <span>A person checks the lesson and changes decisions when needed.</span>
+              </div>
+              <div class="rail-owner owner-human">Human</div>
+            </div>
+            <div class="rail-step">
+              <div class="rail-number">5</div>
+              <div>
+                <strong>Render final reviewed output</strong>
+                <span>The reviewed decision set becomes the handoff video.</span>
+              </div>
+              <div class="rail-owner owner-system">System</div>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="section overview" aria-label="Main principles">
+        <article class="panel">
+          <div class="panel-icon icon-system">AI</div>
+          <h3>The system makes a first draft</h3>
+          <p>
+            It removes obvious friction and highlights places that deserve attention, but
+            it does not make the final educational decision alone.
+          </p>
+        </article>
+        <article class="panel">
+          <div class="panel-icon icon-human">OK</div>
+          <h3>A person confirms the lesson</h3>
+          <p>
+            Human review protects against cutting a useful explanation, keeping a bad take,
+            or making the pacing feel unnatural.
+          </p>
+        </article>
+        <article class="panel">
+          <div class="panel-icon icon-output">1</div>
+          <h3>The raw video stays safe</h3>
+          <p>
+            Each layer is saved separately, so the team can inspect, compare, restore, or
+            rerun the process later.
+          </p>
+        </article>
+      </section>
+
+      <section class="section" aria-labelledby="flow-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Visual process map</p>
+            <h2 id="flow-title">What moves through the workflow</h2>
+          </div>
+          <p>
+            The raw recording stays as the source. The automatic edit is only a proposal.
+            The final reviewed output comes after a person checks and corrects that proposal.
+          </p>
+        </div>
+
+        <div class="flow-band">
+          <svg class="flow-svg" viewBox="0 0 1100 420" role="img" aria-labelledby="flow-svg-title flow-svg-desc">
+            <title id="flow-svg-title">One video workflow diagram</title>
+            <desc id="flow-svg-desc">
+              Raw recording goes through preparation, transcription, automatic edit proposal,
+              human review, and final reviewed output.
+            </desc>
+            <defs>
+              <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                <path d="M0,0 L10,5 L0,10 Z" fill="#64748b"></path>
+              </marker>
+              <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#1c2430" flood-opacity="0.12"></feDropShadow>
+              </filter>
+            </defs>
+
+            <rect x="20" y="54" width="174" height="92" rx="8" fill="#ffffff" stroke="#d9dee7" filter="url(#softShadow)"></rect>
+            <text x="107" y="86" text-anchor="middle" font-size="15" font-weight="800" fill="#1c2430">Raw recording</text>
+            <text x="107" y="113" text-anchor="middle" font-size="13" fill="#5e6978">One unedited</text>
+            <text x="107" y="132" text-anchor="middle" font-size="13" fill="#5e6978">problem explanation</text>
+
+            <line x1="194" y1="100" x2="264" y2="100" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"></line>
+
+            <rect x="264" y="34" width="188" height="132" rx="8" fill="#e6f5f2" stroke="#8ac9bf"></rect>
+            <text x="358" y="68" text-anchor="middle" font-size="15" font-weight="800" fill="#0f766e">Prepare</text>
+            <text x="358" y="96" text-anchor="middle" font-size="13" fill="#315b57">Clean sound</text>
+            <text x="358" y="116" text-anchor="middle" font-size="13" fill="#315b57">Find speech</text>
+            <text x="358" y="136" text-anchor="middle" font-size="13" fill="#315b57">Measure pauses</text>
+
+            <line x1="452" y1="100" x2="522" y2="100" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"></line>
+
+            <rect x="522" y="34" width="188" height="132" rx="8" fill="#eef4ff" stroke="#aac4ff"></rect>
+            <text x="616" y="68" text-anchor="middle" font-size="15" font-weight="800" fill="#2563eb">Understand</text>
+            <text x="616" y="96" text-anchor="middle" font-size="13" fill="#43546f">Timed transcript</text>
+            <text x="616" y="116" text-anchor="middle" font-size="13" fill="#43546f">Sentence chunks</text>
+            <text x="616" y="136" text-anchor="middle" font-size="13" fill="#43546f">Review markers</text>
+
+            <line x1="710" y1="100" x2="780" y2="100" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"></line>
+
+            <rect x="780" y="34" width="188" height="132" rx="8" fill="#e6f5f2" stroke="#8ac9bf"></rect>
+            <text x="874" y="68" text-anchor="middle" font-size="15" font-weight="800" fill="#0f766e">Propose edit</text>
+            <text x="874" y="96" text-anchor="middle" font-size="13" fill="#315b57">Keep useful parts</text>
+            <text x="874" y="116" text-anchor="middle" font-size="13" fill="#315b57">Cut likely mistakes</text>
+            <text x="874" y="136" text-anchor="middle" font-size="13" fill="#315b57">Flag uncertainty</text>
+
+            <line x1="874" y1="166" x2="874" y2="218" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"></line>
+
+            <rect x="780" y="218" width="188" height="116" rx="8" fill="#fff1e8" stroke="#fdba74"></rect>
+            <text x="874" y="252" text-anchor="middle" font-size="15" font-weight="800" fill="#9a3412">Human review</text>
+            <text x="874" y="281" text-anchor="middle" font-size="13" fill="#6d412c">Watch, read, adjust</text>
+            <text x="874" y="301" text-anchor="middle" font-size="13" fill="#6d412c">Keep or cut decisions</text>
+
+            <line x1="780" y1="276" x2="710" y2="276" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"></line>
+
+            <rect x="522" y="218" width="188" height="116" rx="8" fill="#ecfdf3" stroke="#86efac"></rect>
+            <text x="616" y="252" text-anchor="middle" font-size="15" font-weight="800" fill="#15803d">Final reviewed</text>
+            <text x="616" y="281" text-anchor="middle" font-size="13" fill="#365c43">Reviewed video</text>
+            <text x="616" y="301" text-anchor="middle" font-size="13" fill="#365c43">Ready for next step</text>
+
+            <path d="M107 146 C107 370 484 370 616 334" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="7 7"></path>
+            <text x="286" y="386" font-size="13" fill="#5e6978">Raw source remains available for recovery and comparison</text>
+          </svg>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="stage-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Step by step</p>
+            <h2 id="stage-title">The six stages</h2>
+          </div>
+          <p>
+            These stages describe what happens to a single raw recording. Batch processing
+            repeats this same process for many videos.
+          </p>
+        </div>
+
+        <div class="stages">
+          <article class="stage-card" data-step="1">
+            <h3>Prepare the recording</h3>
+            <p>
+              The system separates the audio from the video, reduces steady background
+              noise, and finds where speech and long pauses occur.
+            </p>
+            <ul>
+              <li>Protects the original recording.</li>
+              <li>Makes speech easier to understand.</li>
+              <li>Finds pauses that may be shortened.</li>
+            </ul>
+          </article>
+
+          <article class="stage-card" data-step="2">
+            <h3>Create reviewable text</h3>
+            <p>
+              Spoken Croatian is turned into timed text, then split into sentence-sized
+              pieces that can be reviewed next to the video.
+            </p>
+            <ul>
+              <li>Shows what was said.</li>
+              <li>Knows when each sentence happened.</li>
+              <li>Gives reviewers manageable pieces.</li>
+            </ul>
+          </article>
+
+          <article class="stage-card" data-step="3">
+            <h3>Find likely mistakes</h3>
+            <p>
+              The system searches for repeated takes, false starts, stutters, fragments,
+              side comments, long silence, and audio disruptions.
+            </p>
+            <ul>
+              <li>Uses both sound and transcript evidence.</li>
+              <li>Marks uncertain cases for attention.</li>
+              <li>Creates a proposed keep/cut plan.</li>
+            </ul>
+          </article>
+
+          <article class="stage-card" data-step="4">
+            <h3>Render the automatic first draft</h3>
+            <p>
+              The proposed edit is used to create an automatically edited video. This is
+              useful for review, but it is not treated as final.
+            </p>
+            <ul>
+              <li>Uses the original video picture.</li>
+              <li>Uses cleaned audio.</li>
+              <li>Adds small fades around cut points.</li>
+            </ul>
+          </article>
+
+          <article class="stage-card" data-step="5">
+            <h3>Review and correct</h3>
+            <p>
+              A reviewer watches the video and reads the transcript. They confirm good
+              decisions and fix places where the system was too aggressive or too cautious.
+            </p>
+            <ul>
+              <li>Restore useful explanations if needed.</li>
+              <li>Cut bad takes that were missed.</li>
+              <li>Check natural pacing and lesson continuity.</li>
+            </ul>
+          </article>
+
+          <article class="stage-card" data-step="6">
+            <h3>Render the final reviewed output</h3>
+            <p>
+              The reviewed decision set becomes the final reviewed video for the next
+              production step.
+            </p>
+            <ul>
+              <li>Keeps automatic and reviewed decisions separate.</li>
+              <li>Preserves a path back to the raw recording.</li>
+              <li>Hands off a video that has human approval.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="artifact-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Safety model</p>
+            <h2 id="artifact-title">What gets saved along the way</h2>
+          </div>
+          <p>
+            The workflow is safer because each important layer is saved separately. A later
+            mistake can be inspected instead of guessed.
+          </p>
+        </div>
+
+        <div class="artifact-grid">
+          <article class="artifact-card">
+            <h3>The preserved layers</h3>
+            <div class="artifact-strip">
+              <div class="artifact-item raw">
+                <div>
+                  <strong>Original raw recording</strong>
+                  <span>The untouched source. This is the recovery point.</span>
+                </div>
+              </div>
+              <div class="artifact-item auto">
+                <div>
+                  <strong>Automatic analysis</strong>
+                  <span>Transcript, timing, silence detection, and attention markers.</span>
+                </div>
+              </div>
+              <div class="artifact-item auto">
+                <div>
+                  <strong>Automatic edit plan</strong>
+                  <span>The system's first proposal for what to keep and cut.</span>
+                </div>
+              </div>
+              <div class="artifact-item review">
+                <div>
+                  <strong>Reviewed edit plan</strong>
+                  <span>The human-corrected decisions, saved separately from the automatic plan.</span>
+                </div>
+              </div>
+              <div class="artifact-item final">
+                <div>
+                  <strong>Final reviewed video</strong>
+                  <span>The output produced from the reviewed decisions.</span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="artifact-card">
+            <h3>Why this matters</h3>
+            <p>
+              The process is designed to support correction. If the automatic edit cuts too
+              much, the reviewer can restore it. If someone later asks why a section was
+              removed, the team can compare the raw recording, the automatic proposal, and
+              the human-reviewed decision.
+            </p>
+            <ul>
+              <li>The raw recording is not overwritten.</li>
+              <li>The automatic first draft is not the final authority.</li>
+              <li>The reviewed output can be traced back to decisions.</li>
+              <li>The team can rerun or improve the process without losing the source.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="review-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Human review</p>
+            <h2 id="review-title">What the reviewer is checking</h2>
+          </div>
+          <p>
+            The reviewer does not need to understand the technical pipeline. They only need
+            to verify that the final lesson still makes sense and sounds natural.
+          </p>
+        </div>
+
+        <div class="review-grid">
+          <article class="check-card">
+            <h3>Keep the lesson intact</h3>
+            <ul>
+              <li><strong>Was a useful explanation cut?</strong> Restore it.</li>
+              <li><strong>Was an incorrect take kept?</strong> Cut it.</li>
+              <li><strong>Did a correction get handled properly?</strong> Keep the correct version.</li>
+              <li><strong>Does the math or explanation still flow?</strong> Check before approving.</li>
+            </ul>
+          </article>
+
+          <article class="check-card">
+            <h3>Keep the video natural</h3>
+            <ul>
+              <li><strong>Is a pause too short?</strong> Adjust the decision if it feels rushed.</li>
+              <li><strong>Does a transition sound awkward?</strong> Review the nearby cut.</li>
+              <li><strong>Is a short filler phrase actually natural?</strong> It can stay.</li>
+              <li><strong>Is the system uncertain?</strong> Inspect the highlighted area.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="boundary-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Production boundary</p>
+            <h2 id="boundary-title">Where this process ends</h2>
+          </div>
+          <p>
+            The AI video editor prepares and reviews the edited video. Gradivo still owns
+            the final publishing workflow.
+          </p>
+        </div>
+
+        <div class="boundary">
+          <article class="panel">
+            <h3>AI video editor owns</h3>
+            <ul>
+              <li>Temporary media needed for processing.</li>
+              <li>Speech analysis and editing transcript.</li>
+              <li>Automatic edit decisions and attention markers.</li>
+              <li>Human-reviewed decisions.</li>
+              <li>Rendering the reviewed output.</li>
+            </ul>
+          </article>
+
+          <article class="panel">
+            <h3>Gradivo still owns</h3>
+            <ul>
+              <li>Which raw recording belongs to which problem.</li>
+              <li>Production status and responsibility tracking.</li>
+              <li>Upload to the final video platform.</li>
+              <li>Student-facing transcript, chapters, and explanations.</li>
+              <li>Final review, publishability, and publishing.</li>
+            </ul>
+          </article>
+        </div>
+
+        <div class="note" style="margin-top: 16px">
+          <h3>The editing transcript is not the final student transcript</h3>
+          <p>
+            The transcript created during AI editing helps the system make and review cut
+            decisions. Gradivo should still create the student-facing transcript from the
+            final reviewed video, so the transcript matches exactly what students watch.
+          </p>
+        </div>
+      </section>
+
+      <p class="footer-note">
+        Core principle: the system makes the first edit faster; a human confirms the final lesson.
+      </p>
+    </main>
+  </body>
+</html>

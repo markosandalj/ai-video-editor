@@ -1,0 +1,1591 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>One Video Workflow - Technical</title>
+    <style>
+      :root {
+        --bg: #f4f6f8;
+        --paper: #ffffff;
+        --ink: #18212f;
+        --muted: #5c6675;
+        --line: #d8dee8;
+        --line-strong: #adb8c9;
+        --audio: #0f766e;
+        --speech: #2563eb;
+        --decision: #7c3aed;
+        --human: #b45309;
+        --output: #15803d;
+        --risk: #be123c;
+        --soft-audio: #e5f4f1;
+        --soft-speech: #edf4ff;
+        --soft-decision: #f3edff;
+        --soft-human: #fff4e6;
+        --soft-output: #e9f8ef;
+        --soft-risk: #fff0f3;
+        --shadow: 0 14px 34px rgba(24, 33, 47, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        line-height: 1.5;
+      }
+
+      .page {
+        max-width: 1220px;
+        margin: 0 auto;
+        padding: 34px 24px 60px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1,
+      h2,
+      h3 {
+        line-height: 1.1;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        font-size: clamp(36px, 5.8vw, 64px);
+      }
+
+      h2 {
+        font-size: clamp(25px, 3.2vw, 38px);
+      }
+
+      h3 {
+        font-size: 18px;
+      }
+
+      .kicker {
+        color: var(--decision);
+        font-size: 12px;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 0.95fr) minmax(360px, 1.05fr);
+        gap: 18px;
+        align-items: stretch;
+      }
+
+      .hero-title,
+      .hero-map,
+      .card,
+      .stage,
+      .table-card,
+      .callout {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+      }
+
+      .hero-title {
+        padding: 30px;
+      }
+
+      .hero-title h1 {
+        margin-top: 12px;
+      }
+
+      .hero-title p {
+        margin-top: 18px;
+        color: var(--muted);
+        font-size: 18px;
+      }
+
+      .hero-map {
+        padding: 22px;
+      }
+
+      .map-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      .map-node {
+        min-height: 108px;
+        padding: 15px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfcfe;
+      }
+
+      .map-node strong {
+        display: block;
+        margin-bottom: 7px;
+      }
+
+      .map-node span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .map-node.audio {
+        border-color: #9dd4ca;
+        background: var(--soft-audio);
+      }
+
+      .map-node.speech {
+        border-color: #b8cdf9;
+        background: var(--soft-speech);
+      }
+
+      .map-node.decision {
+        border-color: #c7b4f8;
+        background: var(--soft-decision);
+      }
+
+      .map-node.human {
+        border-color: #f3c38d;
+        background: var(--soft-human);
+      }
+
+      .section {
+        margin-top: 42px;
+      }
+
+      .section-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 18px;
+        align-items: end;
+        margin-bottom: 16px;
+      }
+
+      .section-head p {
+        max-width: 600px;
+        color: var(--muted);
+      }
+
+      .pipeline {
+        display: grid;
+        gap: 12px;
+      }
+
+      .stage {
+        display: grid;
+        grid-template-columns: 178px minmax(0, 1fr);
+        gap: 18px;
+        padding: 20px;
+      }
+
+      .stage-label {
+        border-right: 1px solid var(--line);
+        padding-right: 18px;
+      }
+
+      .stage-label .num {
+        display: grid;
+        place-items: center;
+        width: 42px;
+        height: 42px;
+        margin-bottom: 12px;
+        border-radius: 50%;
+        background: var(--soft-decision);
+        color: var(--decision);
+        font-weight: 900;
+      }
+
+      .stage-body {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(260px, 0.9fr);
+        gap: 18px;
+      }
+
+      .stage-body p {
+        color: var(--muted);
+      }
+
+      .facts {
+        display: grid;
+        gap: 8px;
+      }
+
+      .fact {
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfcfe;
+      }
+
+      .fact b {
+        display: block;
+        color: var(--ink);
+        font-size: 13px;
+      }
+
+      .fact span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .grid-2 {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .card {
+        padding: 20px;
+      }
+
+      .card h3 {
+        margin-bottom: 10px;
+      }
+
+      .card p,
+      .card li {
+        color: var(--muted);
+      }
+
+      ul {
+        margin: 12px 0 0;
+        padding-left: 19px;
+      }
+
+      li {
+        margin: 6px 0;
+      }
+
+      .tag-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 5px 9px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: #fbfcfe;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .tag.audio {
+        background: var(--soft-audio);
+        color: var(--audio);
+      }
+
+      .tag.speech {
+        background: var(--soft-speech);
+        color: var(--speech);
+      }
+
+      .tag.decision {
+        background: var(--soft-decision);
+        color: var(--decision);
+      }
+
+      .tag.human {
+        background: var(--soft-human);
+        color: var(--human);
+      }
+
+      .table-card {
+        overflow: hidden;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--paper);
+      }
+
+      caption {
+        padding: 18px 20px;
+        text-align: left;
+        font-size: 18px;
+        font-weight: 900;
+      }
+
+      th,
+      td {
+        padding: 13px 16px;
+        border-top: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #f8fafc;
+        color: var(--ink);
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      td {
+        color: var(--muted);
+      }
+
+      td strong {
+        color: var(--ink);
+      }
+
+      .flow {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+        padding: 20px;
+      }
+
+      .flow svg {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .callout {
+        padding: 20px;
+        box-shadow: none;
+      }
+
+      .callout.risk {
+        border-left: 6px solid var(--risk);
+        background: var(--soft-risk);
+      }
+
+      .callout.output {
+        border-left: 6px solid var(--output);
+        background: var(--soft-output);
+      }
+
+      .artifact-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .artifact {
+        display: grid;
+        grid-template-columns: 12px 1fr;
+        gap: 12px;
+        padding: 13px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfcfe;
+      }
+
+      .artifact::before {
+        width: 12px;
+        border-radius: 999px;
+        background: var(--decision);
+        content: "";
+      }
+
+      .artifact.raw::before {
+        background: var(--ink);
+      }
+
+      .artifact.audio::before {
+        background: var(--audio);
+      }
+
+      .artifact.speech::before {
+        background: var(--speech);
+      }
+
+      .artifact.human::before {
+        background: var(--human);
+      }
+
+      .artifact.final::before {
+        background: var(--output);
+      }
+
+      .artifact strong {
+        display: block;
+      }
+
+      .artifact span {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .prompt-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .prompt-card {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      .prompt-card summary {
+        cursor: pointer;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 12px;
+        align-items: center;
+        padding: 16px 18px;
+        font-weight: 900;
+      }
+
+      .prompt-card summary span {
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .prompt-body {
+        border-top: 1px solid var(--line);
+        background: #0f172a;
+        color: #eef4ff;
+        margin: 0;
+        overflow-x: auto;
+        padding: 18px;
+        white-space: pre-wrap;
+        word-break: normal;
+        font-family:
+          ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+          monospace;
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .trace-grid {
+        display: grid;
+        gap: 16px;
+      }
+
+      .trace-card {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+        padding: 20px;
+      }
+
+      .trace-head {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+      }
+
+      .trace-head h3 {
+        font-size: 20px;
+      }
+
+      .trace-id {
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .trace-kind {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 5px 9px;
+        border-radius: 999px;
+        background: var(--soft-decision);
+        color: var(--decision);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .trace-columns {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 12px;
+      }
+
+      .trace-panel {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfcfe;
+        padding: 14px;
+      }
+
+      .trace-panel h4 {
+        margin: 0 0 10px;
+        color: var(--ink);
+        font-size: 13px;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      .transcript-line {
+        margin: 8px 0 0;
+        padding: 10px 11px;
+        border-left: 4px solid var(--line-strong);
+        border-radius: 6px;
+        background: #ffffff;
+        color: var(--ink);
+        font-size: 14px;
+      }
+
+      .transcript-line b {
+        display: block;
+        margin-bottom: 3px;
+        color: var(--muted);
+        font-size: 11px;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      .transcript-line.keep {
+        border-left-color: var(--output);
+        background: var(--soft-output);
+      }
+
+      .transcript-line.cut {
+        border-left-color: var(--risk);
+        background: var(--soft-risk);
+      }
+
+      .transcript-line.restore {
+        border-left-color: var(--human);
+        background: var(--soft-human);
+      }
+
+      .trace-signal {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .signal {
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfcfe;
+      }
+
+      .signal b {
+        display: block;
+        margin-bottom: 3px;
+        color: var(--ink);
+        font-size: 12px;
+      }
+
+      .signal span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .trace-rationale {
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      @media (max-width: 940px) {
+        .hero,
+        .grid-2,
+        .grid-3,
+        .stage-body,
+        .trace-columns,
+        .trace-signal {
+          grid-template-columns: 1fr;
+        }
+
+        .stage {
+          grid-template-columns: 1fr;
+        }
+
+        .stage-label {
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+          padding-right: 0;
+          padding-bottom: 14px;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .page {
+          padding: 22px 14px 42px;
+        }
+
+        .hero-title,
+        .hero-map,
+        .stage,
+        .card,
+        .flow,
+        .callout {
+          padding: 16px;
+        }
+
+        .map-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .section-head {
+          display: block;
+        }
+
+        .section-head p {
+          margin-top: 8px;
+        }
+
+        table {
+          min-width: 720px;
+        }
+
+        .table-card {
+          overflow-x: auto;
+        }
+      }
+
+      @media print {
+        body {
+          background: #ffffff;
+        }
+
+        .page {
+          max-width: none;
+          padding: 0;
+        }
+
+        .hero-title,
+        .hero-map,
+        .stage,
+        .card,
+        .table-card,
+        .flow,
+        .callout,
+        .trace-card {
+          box-shadow: none;
+          break-inside: avoid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero" aria-labelledby="title">
+        <div class="hero-title">
+          <p class="kicker">Technical workflow</p>
+          <h1 id="title">One video from raw input to reviewed output</h1>
+        </div>
+
+        <aside class="hero-map" aria-label="Pipeline map">
+          <p class="kicker">Processing layers</p>
+          <div class="map-grid">
+            <div class="map-node audio">
+              <strong>Audio layer</strong>
+              <span>FFmpeg extraction, non-stationary spectral gating, silence detection, acoustic disruption detection.</span>
+            </div>
+            <div class="map-node speech">
+              <strong>Speech layer</strong>
+              <span>ElevenLabs Scribe v2 word timestamps, Croatian transcript, sentence splitting, Gemini spell correction.</span>
+            </div>
+            <div class="map-node decision">
+              <strong>Decision layer</strong>
+              <span>RapidFuzz, multilingual sentence embeddings, Gemini duplicate checks, false-start and aside detection, enrichment arbiter.</span>
+            </div>
+            <div class="map-node human">
+              <strong>Review layer</strong>
+              <span>Word-level keep/cut payload, reviewed edit plan, reviewed render with the raw source preserved.</span>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="section" aria-labelledby="pipeline-title">
+        <div class="section-head">
+          <div>
+            <p class="kicker">Sequential pipeline</p>
+            <h2 id="pipeline-title">Processing stages</h2>
+          </div>
+          <p>
+            Each stage produces data used by later stages. Failures in enrichment fall
+            back to the base edit plan so a video can still render.
+          </p>
+        </div>
+
+        <div class="pipeline">
+          <article class="stage">
+            <div class="stage-label">
+              <div class="num">1</div>
+              <h3>Audio extraction and normalization</h3>
+            </div>
+            <div class="stage-body">
+              <p>
+                The raw video is probed for its first audio stream. Audio is extracted
+                as mono 16-bit PCM WAV while preserving the source sample rate. The
+                video stream remains the source for final rendering; this audio file
+                is the analysis input.
+              </p>
+              <div class="facts">
+                <div class="fact"><b>Tooling</b><span>FFmpeg and ffprobe.</span></div>
+                <div class="fact"><b>Output</b><span>Raw mono WAV in the temporary workspace.</span></div>
+                <div class="fact"><b>Purpose</b><span>Give audio, speech, and disruption passes a stable input.</span></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="stage">
+            <div class="stage-label">
+              <div class="num">2</div>
+              <h3>Noise reduction and silence map</h3>
+            </div>
+            <div class="stage-body">
+              <p>
+                The extracted audio is denoised with non-stationary spectral gating.
+                The default reduction strength is conservative, so speech quality is
+                prioritized over aggressive cleanup. FFmpeg silence detection then
+                finds long low-volume regions. Silence regions are inverted into padded
+                speech keep regions.
+              </p>
+              <div class="facts">
+                <div class="fact"><b>Algorithm</b><span>Non-stationary spectral gating via noisereduce.</span></div>
+                <div class="fact"><b>Silence threshold</b><span>-40 dB, minimum 3 seconds by default.</span></div>
+                <div class="fact"><b>Speech padding</b><span>500 ms before and after detected speech regions.</span></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="stage">
+            <div class="stage-label">
+              <div class="num">3</div>
+              <h3>Speech-to-text and correction</h3>
+            </div>
+            <div class="stage-body">
+              <p>
+                The denoised audio is transcribed in Croatian with word-level timestamps.
+                Audio-event tokens, such as cough or laughter markers, are kept separate
+                from spoken words so they can inform editing without polluting transcript
+                text. Sentences are built from timed words and split at long pauses.
+                A Gemini spell-correction loop fixes obvious Croatian spelling errors
+                without changing timestamps, style, grammar, or conversational filler.
+              </p>
+              <div class="facts">
+                <div class="fact"><b>STT model</b><span>ElevenLabs Scribe v2, language hr, word timestamps.</span></div>
+                <div class="fact"><b>Audio events</b><span>Enabled by default and stored separately.</span></div>
+                <div class="fact"><b>Correction model</b><span>Gemini 2.5 Flash, structured output, up to 5 passes.</span></div>
+                <div class="fact"><b>Sentence split</b><span>Punctuation plus pause split at 1.5 seconds by default.</span></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="stage">
+            <div class="stage-label">
+              <div class="num">4</div>
+              <h3>Candidate cut detection</h3>
+            </div>
+            <div class="stage-body">
+              <p>
+                The edit decision layer generates cut candidates from multiple signals:
+                silence, duplicate retakes, false starts, stutters, incomplete fragments,
+                off-topic asides, and acoustic disruptions. The system favors precision:
+                cheaper deterministic checks narrow the candidate set, and Gemini is used
+                for judgment where context is needed.
+              </p>
+              <div class="facts">
+                <div class="fact"><b>Duplicate window</b><span>Each sentence compares against the next 5 sentences by default.</span></div>
+                <div class="fact"><b>Lexical tier</b><span>RapidFuzz ratio and token-sort ratio.</span></div>
+                <div class="fact"><b>Semantic tier</b><span>SentenceTransformer paraphrase-multilingual-MiniLM-L12-v2 cosine similarity.</span></div>
+                <div class="fact"><b>LLM tier</b><span>Gemini 2.5 Flash for borderline pairs and context-heavy decisions.</span></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="stage">
+            <div class="stage-label">
+              <div class="num">5</div>
+              <h3>EDL build and enrichment arbitration</h3>
+            </div>
+            <div class="stage-body">
+              <p>
+                Silence keep regions and cut flags are merged into one ordered edit
+                decision list. Full-sentence flags remove sentence spans, while stutter
+                flags can punch out sub-sentence word ranges. A separate enrichment pass
+                scores every sentence as an independent keep/cut judgment. The arbiter
+                can restore high-confidence wrong cuts and add conservative extra cuts
+                for low-confidence asides, filler, incomplete thoughts, or tiny artifacts.
+              </p>
+              <div class="facts">
+                <div class="fact"><b>Enrichment model</b><span>Gemini 2.5 Pro, low temperature, 20-sentence batches.</span></div>
+                <div class="fact"><b>Status tiers</b><span>Green, yellow, red, restore.</span></div>
+                <div class="fact"><b>Restore threshold</b><span>Cut sentence with keep confidence at least 60 becomes a restore signal.</span></div>
+                <div class="fact"><b>Arbiter restore</b><span>Existing full-sentence cut can be removed at keep confidence 70 or higher.</span></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="stage">
+            <div class="stage-label">
+              <div class="num">6</div>
+              <h3>Automatic render</h3>
+            </div>
+            <div class="stage-body">
+              <p>
+                The automatic EDL is rendered into a first-draft edited MP4. Video comes
+                from the raw source. Audio comes from the denoised WAV. Every keep segment
+                is trimmed, timestamps are reset per segment, and the segments are
+                concatenated. Short audio fades are applied at splice boundaries to reduce
+                pops and harsh cuts.
+              </p>
+              <div class="facts">
+                <div class="fact"><b>Renderer</b><span>FFmpeg filter graph with trim, atrim, concat, and audio fades.</span></div>
+                <div class="fact"><b>Default codec</b><span>libx264, CRF 28, ultrafast preset.</span></div>
+                <div class="fact"><b>Splice smoothing</b><span>30 ms audio fade in and fade out at segment boundaries.</span></div>
+                <div class="fact"><b>Status</b><span>Production render settings still need final validation.</span></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="stage">
+            <div class="stage-label">
+              <div class="num">7</div>
+              <h3>Human review and reviewed render</h3>
+            </div>
+            <div class="stage-body">
+              <p>
+                The review payload exposes the raw video, timeline segments, transcript
+                sentences, per-word keep state, reasons, confidence, enrichment tags, and
+                salience scores. Reviewer changes are saved as word indices to cut. A
+                reviewed EDL is built from the remaining word spans, then rendered as a
+                separate reviewed MP4. The automatic EDL and raw recording remain intact.
+              </p>
+              <div class="facts">
+                <div class="fact"><b>Review granularity</b><span>Word-level keep/cut state with sentence-level grouping.</span></div>
+                <div class="fact"><b>Reviewed artifact</b><span>Separate reviewed EDL, not an overwrite of the automatic EDL.</span></div>
+                <div class="fact"><b>Reviewed output</b><span>Rendered with output suffix reviewed.</span></div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="decision-title">
+        <div class="section-head">
+          <div>
+            <p class="kicker">Decision orchestration</p>
+            <h2 id="decision-title">How keep and cut decisions are made</h2>
+          </div>
+          <p>
+            The pipeline is not a single AI call. It is a staged classifier that narrows
+            candidates cheaply, uses embeddings for meaning, and uses Gemini where local
+            context or editorial judgment is needed.
+          </p>
+        </div>
+
+        <div class="flow" aria-label="Decision stack diagram">
+          <svg viewBox="0 0 1160 360" role="img" aria-labelledby="decision-svg-title decision-svg-desc">
+            <title id="decision-svg-title">Decision stack</title>
+            <desc id="decision-svg-desc">Signals flow from audio and transcript into candidate flags, enrichment arbitration, and the final edit decision list.</desc>
+            <defs>
+              <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                <path d="M0,0 L10,5 L0,10 Z" fill="#64748b"></path>
+              </marker>
+            </defs>
+            <rect x="24" y="45" width="180" height="76" rx="8" fill="#e5f4f1" stroke="#8fcfc5"></rect>
+            <text x="114" y="77" text-anchor="middle" font-size="15" font-weight="800" fill="#0f766e">Audio signals</text>
+            <text x="114" y="101" text-anchor="middle" font-size="13" fill="#315b57">silence, noise bursts</text>
+
+            <rect x="24" y="190" width="180" height="76" rx="8" fill="#edf4ff" stroke="#abc5fb"></rect>
+            <text x="114" y="222" text-anchor="middle" font-size="15" font-weight="800" fill="#2563eb">Transcript signals</text>
+            <text x="114" y="246" text-anchor="middle" font-size="13" fill="#43546f">sentences, words, timing</text>
+
+            <line x1="204" y1="83" x2="284" y2="139" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"></line>
+            <line x1="204" y1="228" x2="284" y2="190" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"></line>
+
+            <rect x="284" y="112" width="205" height="106" rx="8" fill="#ffffff" stroke="#d8dee8"></rect>
+            <text x="386" y="144" text-anchor="middle" font-size="15" font-weight="800" fill="#18212f">Candidate flags</text>
+            <text x="386" y="169" text-anchor="middle" font-size="13" fill="#5c6675">duplicates, false starts</text>
+            <text x="386" y="190" text-anchor="middle" font-size="13" fill="#5c6675">stutters, fragments, asides</text>
+
+            <line x1="489" y1="165" x2="569" y2="165" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"></line>
+
+            <rect x="569" y="86" width="212" height="158" rx="8" fill="#f3edff" stroke="#c7b4f8"></rect>
+            <text x="675" y="120" text-anchor="middle" font-size="15" font-weight="800" fill="#7c3aed">EDL builder</text>
+            <text x="675" y="145" text-anchor="middle" font-size="13" fill="#5b4585">merge keep regions</text>
+            <text x="675" y="166" text-anchor="middle" font-size="13" fill="#5b4585">remove flagged spans</text>
+            <text x="675" y="187" text-anchor="middle" font-size="13" fill="#5b4585">preserve word trims</text>
+            <text x="675" y="208" text-anchor="middle" font-size="13" fill="#5b4585">classify cut gaps</text>
+
+            <line x1="675" y1="244" x2="675" y2="292" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"></line>
+            <rect x="552" y="292" width="246" height="52" rx="8" fill="#fff4e6" stroke="#f3c38d"></rect>
+            <text x="675" y="324" text-anchor="middle" font-size="14" font-weight="800" fill="#b45309">Gemini enrichment arbiter</text>
+
+            <line x1="781" y1="165" x2="861" y2="165" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"></line>
+
+            <rect x="861" y="112" width="126" height="106" rx="8" fill="#e9f8ef" stroke="#91d8a7"></rect>
+            <text x="924" y="152" text-anchor="middle" font-size="15" font-weight="800" fill="#15803d">Final EDL</text>
+            <text x="924" y="178" text-anchor="middle" font-size="13" fill="#365c43">keep and cut</text>
+
+            <line x1="987" y1="165" x2="1062" y2="165" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"></line>
+            <rect x="1062" y="112" width="74" height="106" rx="8" fill="#ffffff" stroke="#d8dee8"></rect>
+            <text x="1099" y="154" text-anchor="middle" font-size="14" font-weight="800" fill="#18212f">Render</text>
+            <text x="1099" y="179" text-anchor="middle" font-size="12" fill="#5c6675">MP4</text>
+          </svg>
+        </div>
+      </section>
+
+      <section class="section grid-3" aria-label="Algorithm details">
+        <article class="card">
+          <h3>Duplicate retake detection</h3>
+          <p>
+            Sentence pairs are considered only within a local lookahead window. This avoids
+            treating a later recap as a failed take.
+          </p>
+          <ul>
+            <li>RapidFuzz ratio and token-sort ratio identify exact or near-exact repetition.</li>
+            <li>Multilingual MiniLM embeddings catch paraphrased repetition.</li>
+            <li>Gemini 2.5 Flash judges borderline pairs with neighboring context and time gap.</li>
+            <li>Confirmed duplicate pairs are clustered so one sentence cannot be both kept and cut in different pair relationships.</li>
+            <li>Gemini chooses which confirmed version to keep, preferring completeness before clean delivery.</li>
+          </ul>
+          <div class="tag-row">
+            <span class="tag decision">window size 5</span>
+            <span class="tag decision">lexical maybe 70</span>
+            <span class="tag decision">lexical definite 90</span>
+            <span class="tag decision">semantic maybe 0.75</span>
+            <span class="tag decision">semantic definite 0.95</span>
+          </div>
+        </article>
+
+        <article class="card">
+          <h3>False starts, stutters, and fragments</h3>
+          <p>
+            These passes handle material that is not always a full duplicate sentence.
+            They combine local pattern detection with Gemini verification.
+          </p>
+          <ul>
+            <li>False starts between confirmed duplicate pairs are checked with Gemini against before and after context.</li>
+            <li>Intra-sentence stutters are detected by repeated 2-gram or 3-gram patterns, then Gemini chooses word ranges to cut.</li>
+            <li>Incomplete fragments are rule-prefiltered from punctuation, ellipses, and short filler-like wording, then verified by Gemini.</li>
+            <li>Word-level trims are represented as timed ranges, so the rest of the sentence can stay.</li>
+          </ul>
+          <div class="tag-row">
+            <span class="tag decision">Gemini 2.5 Flash</span>
+            <span class="tag decision">word-level trim</span>
+            <span class="tag decision">fragment threshold 0.8</span>
+          </div>
+        </article>
+
+        <article class="card">
+          <h3>Asides and acoustic disruptions</h3>
+          <p>
+            Production noise and short off-lesson remarks are structurally different from
+            duplicate retakes, so they have their own candidate path.
+          </p>
+          <ul>
+            <li>Short aside candidates must be near long silence or carry an audio-event marker.</li>
+            <li>Gemini answers whether the candidate is part of the lesson or an off-topic interruption.</li>
+            <li>Energy-based disruption detection looks for loud non-speech bursts inside gaps between transcribed words.</li>
+            <li>Audio false-start detection cuts short stranded phrases after a long pause and disruption when speech resumes promptly.</li>
+          </ul>
+          <div class="tag-row">
+            <span class="tag audio">RMS frame 25 ms</span>
+            <span class="tag audio">hop 10 ms</span>
+            <span class="tag audio">noise floor pct 10</span>
+            <span class="tag audio">threshold +22 dB</span>
+          </div>
+        </article>
+      </section>
+
+      <section class="section" aria-labelledby="models-title">
+        <div class="section-head">
+          <div>
+            <p class="kicker">Models and libraries</p>
+            <h2 id="models-title">Current model stack</h2>
+          </div>
+          <p>
+            WhisperX fields still exist for experiments, but the active single-video CLI
+            path uses ElevenLabs Scribe plus Gemini and sentence-transformer models.
+          </p>
+        </div>
+
+        <div class="table-card">
+          <table>
+            <caption>External models and algorithmic libraries</caption>
+            <thead>
+              <tr>
+                <th>Layer</th>
+                <th>Model or library</th>
+                <th>Use</th>
+                <th>Key settings</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Speech-to-text</strong></td>
+                <td>ElevenLabs Scribe v2</td>
+                <td>Croatian transcript with word-level timestamps and optional audio-event tokens.</td>
+                <td>language hr, timestamps granularity word, audio events enabled.</td>
+              </tr>
+              <tr>
+                <td><strong>Spell correction</strong></td>
+                <td>Gemini 2.5 Flash through structured output</td>
+                <td>Iterative transcript spelling correction without timestamp changes.</td>
+                <td>temperature 0.1, max 5 passes, strict first passes and lenient later passes.</td>
+              </tr>
+              <tr>
+                <td><strong>Lexical similarity</strong></td>
+                <td>RapidFuzz</td>
+                <td>Levenshtein-style ratio and token-sort ratio for near-identical sentence pairs.</td>
+                <td>maybe threshold 70, definite threshold 90.</td>
+              </tr>
+              <tr>
+                <td><strong>Semantic similarity</strong></td>
+                <td>SentenceTransformer paraphrase-multilingual-MiniLM-L12-v2</td>
+                <td>Normalized sentence embeddings and cosine similarity for paraphrased retakes.</td>
+                <td>maybe threshold 0.75, definite threshold 0.95.</td>
+              </tr>
+              <tr>
+                <td><strong>Editorial judgment</strong></td>
+                <td>Gemini 2.5 Flash</td>
+                <td>Duplicate verification, best-version selection, false-start blocks, stutters, fragments, and asides.</td>
+                <td>temperature 0.0, structured outputs, retries, contextual prompts in Croatian.</td>
+              </tr>
+              <tr>
+                <td><strong>Enrichment and arbiter</strong></td>
+                <td>Gemini 2.5 Pro</td>
+                <td>Independent per-sentence keep confidence, tags, rationale, word salience, and arbitration of pipeline mistakes.</td>
+                <td>temperature 0.1, batch size 20, green threshold 80, restore threshold 60.</td>
+              </tr>
+              <tr>
+                <td><strong>Audio cleanup</strong></td>
+                <td>noisereduce</td>
+                <td>Non-stationary spectral gating for denoised processing and render audio.</td>
+                <td>prop_decrease 0.3 by default.</td>
+              </tr>
+              <tr>
+                <td><strong>Media processing</strong></td>
+                <td>FFmpeg</td>
+                <td>Audio extraction, silence detection, filter-graph rendering, and MP4 assembly.</td>
+                <td>silencedetect at -40 dB for 3 seconds; render libx264 CRF 28 ultrafast by default.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="fixture-title">
+        <div class="section-head">
+          <div>
+            <p class="kicker">Fixture traces</p>
+            <h2 id="fixture-title">Real transcript examples from fixture runs</h2>
+          </div>
+          <p>
+            These cards quote generated fixture sidecars directly: raw transcript,
+            automatic EDL, enrichment, and the final edited transcript.
+          </p>
+        </div>
+
+        <div class="trace-grid">
+          <article class="trace-card">
+            <div class="trace-head">
+              <div>
+                <span class="trace-kind">Off-topic aside</span>
+                <h3>Environmental interruption removed</h3>
+              </div>
+              <span class="trace-id">test-13 · raw sentence 40 · 208.49-209.70s</span>
+            </div>
+
+            <div class="trace-columns">
+              <div class="trace-panel">
+                <h4>Raw transcript window</h4>
+                <p class="transcript-line keep"><b>Before</b>Znači, samo još moramo primijetiti da od ove nule do jedinice imamo pet kućica.</p>
+                <p class="transcript-line cut"><b>Cut candidate</b>Čekaj, otvaraju se vrata.</p>
+                <p class="transcript-line keep"><b>After</b>Dakle, ako je pet kućica, nama je svaka ta jedinična mjera podijeljena na pet jednakih dijelova.</p>
+              </div>
+
+              <div class="trace-panel">
+                <h4>Final edited transcript</h4>
+                <p class="transcript-line keep"><b>Final sentence 33</b>Znači, samo još moramo primijetiti da od ove nule do jedinice imamo pet kućica.</p>
+                <p class="transcript-line keep"><b>Final sentence 34</b>Dakle, ako je pet kućica, nama je svaka ta jedinična mjera podijeljena na pet jednakih dijelova.</p>
+              </div>
+            </div>
+
+            <div class="trace-signal">
+              <div class="signal"><b>EDL</b><span>Cut gap reason: aside, confidence 1.0.</span></div>
+              <div class="signal"><b>Enrichment</b><span>red, keep_confidence 5, tag off_topic_aside.</span></div>
+              <div class="signal"><b>Outcome</b><span>The lesson sentences become adjacent; the interruption is absent.</span></div>
+            </div>
+            <p class="trace-rationale">Enrichment rationale: Rečenica je nevezana za sadržaj lekcije i zvuči kao komentar na događaj u okolini.</p>
+          </article>
+
+          <article class="trace-card">
+            <div class="trace-head">
+              <div>
+                <span class="trace-kind">Duplicate retake</span>
+                <h3>Incomplete take replaced by completed take</h3>
+              </div>
+              <span class="trace-id">test-22 · raw sentence 29 · 228.06-232.06s</span>
+            </div>
+
+            <div class="trace-columns">
+              <div class="trace-panel">
+                <h4>Raw transcript window</h4>
+                <p class="transcript-line keep"><b>Before</b>Zato što na engleskom se to kaže choose, a na engleskom je isto tako choose naziv za ovaj tu povrh koji se kod nas tako zove.</p>
+                <p class="transcript-line cut"><b>Cut candidate</b>I onda još jedna dobra stvar, taj povrh zapravo imamo i u kalkulatoru iz...</p>
+                <p class="transcript-line keep"><b>Clean retake</b>I onda još jedna dobra stvar, taj povrh zapravo imamo i u kalkulatoru.</p>
+              </div>
+
+              <div class="trace-panel">
+                <h4>Final edited transcript</h4>
+                <p class="transcript-line keep"><b>Final sentence 22</b>Zato što na engleskom se to kaže choose, a na engleskom je isto tako choose naziv za ovaj tu povrh koji se kod nas tako zove.</p>
+                <p class="transcript-line keep"><b>Final sentence 23</b>I onda još jedna dobra stvar, taj povrh zapravo imamo i u kalkulatoru.</p>
+                <p class="transcript-line keep"><b>Final sentence 24</b>Evo i tu je zapravo označen istim tim slovom za riječ choose, sa c.</p>
+              </div>
+            </div>
+
+            <div class="trace-signal">
+              <div class="signal"><b>EDL</b><span>Cut reason: duplicate, confidence 1.0.</span></div>
+              <div class="signal"><b>Enrichment</b><span>red, keep_confidence 0, tag incomplete_thought.</span></div>
+              <div class="signal"><b>Outcome</b><span>The unfinished prefix is removed; the completed sentence remains.</span></div>
+            </div>
+            <p class="trace-rationale">Enrichment rationale: Ovo je lažni početak, nedovršena misao koju govornik odmah prekida i ispravno formulira u sljedećoj rečenici.</p>
+          </article>
+
+          <article class="trace-card">
+            <div class="trace-head">
+              <div>
+                <span class="trace-kind">False start</span>
+                <h3>Long interrupted explanation removed</h3>
+              </div>
+              <span class="trace-id">test-22 · raw sentence 47 · 305.34-312.80s</span>
+            </div>
+
+            <div class="trace-columns">
+              <div class="trace-panel">
+                <h4>Raw transcript window</h4>
+                <p class="transcript-line keep"><b>Before</b>Okej, super i time smo sad riješili ovaj prvi dio.</p>
+                <p class="transcript-line cut"><b>Cut candidate</b>Znači mi smo uspješno od dvadeset učenika odabrali tročlani tim i vidimo da se to može napraviti na tisuću sto četrdeset i na-</p>
+                <p class="transcript-line keep"><b>Clean restart</b>Okej, time smo uspješno riješili ovaj prvi dio.</p>
+              </div>
+
+              <div class="trace-panel">
+                <h4>Final edited transcript</h4>
+                <p class="transcript-line keep"><b>Final sentence 38</b>Okej, super i time smo sad riješili ovaj prvi dio.</p>
+                <p class="transcript-line keep"><b>Final sentence 39</b>Okej, time smo uspješno riješili ovaj prvi dio.</p>
+                <p class="transcript-line keep"><b>Final sentence 40</b>Znači mi smo prebrojali na koliko različitih načina možemo izabrati tročlani tim od dvadeset učenika.</p>
+              </div>
+            </div>
+
+            <div class="trace-signal">
+              <div class="signal"><b>EDL</b><span>Cut reason: false_start, confidence 1.0.</span></div>
+              <div class="signal"><b>Enrichment</b><span>red, keep_confidence 5, tag incomplete_thought.</span></div>
+              <div class="signal"><b>Outcome</b><span>The sentence ending in “na-” is absent from the final transcript.</span></div>
+            </div>
+            <p class="trace-rationale">Enrichment rationale: Rečenica je nedovršena i prekida se na kraju.</p>
+          </article>
+
+          <article class="trace-card">
+            <div class="trace-head">
+              <div>
+                <span class="trace-kind">Disfluency residue</span>
+                <h3>Repetition-heavy filler removed</h3>
+              </div>
+              <span class="trace-id">test-25 · raw sentence 40 · 195.02-199.32s</span>
+            </div>
+
+            <div class="trace-columns">
+              <div class="trace-panel">
+                <h4>Raw transcript window</h4>
+                <p class="transcript-line keep"><b>Before</b>Znači imamo X kroz dva X plus jedan.</p>
+                <p class="transcript-line cut"><b>Cut candidate</b>Dobro i sada ono ka, dobro i sada, kao što smo rekli, idemo ovo gore malo srediti.</p>
+                <p class="transcript-line keep"><b>After</b>Znači imamo X puta pet X.</p>
+              </div>
+
+              <div class="trace-panel">
+                <h4>Final edited transcript</h4>
+                <p class="transcript-line keep"><b>Final sentence 34</b>Znači imamo X kroz dva X plus jedan.</p>
+                <p class="transcript-line keep"><b>Final sentence 35</b>Znači imamo X puta pet X.</p>
+                <p class="transcript-line keep"><b>Final sentence 36</b>Vidimo da je jedini broj petica pa nju napišemo samo tako, a onda ovdje imamo X puta X.</p>
+              </div>
+            </div>
+
+            <div class="trace-signal">
+              <div class="signal"><b>EDL</b><span>Cut reason: duplicate, confidence 1.0.</span></div>
+              <div class="signal"><b>Enrichment</b><span>red, keep_confidence 15, tags minor_disfluency and repetition_residue.</span></div>
+              <div class="signal"><b>Outcome</b><span>The math explanation continues without the repeated setup phrase.</span></div>
+            </div>
+            <p class="trace-rationale">Enrichment rationale: Rečenica sadrži lažni početak i ponavljanje, što je čini nejasnom i nepotrebno dugačkom.</p>
+          </article>
+
+          <article class="trace-card">
+            <div class="trace-head">
+              <div>
+                <span class="trace-kind">Restore signal</span>
+                <h3>High-confidence content flagged for reviewer attention</h3>
+              </div>
+              <span class="trace-id">engleski25ljeto-reading-2 · raw sentence 184 · 1427.03-1433.25s</span>
+            </div>
+
+            <div class="trace-columns">
+              <div class="trace-panel">
+                <h4>Raw transcript window</h4>
+                <p class="transcript-line keep"><b>Before</b>Dakle, oni su zapravo se nalazili, ti New age travelers na tim zapravo arheološkim, aa, mjestima kao Stonehenge, ali ne i za samim krugovima u žitu.</p>
+                <p class="transcript-line restore"><b>Restore candidate</b>I to su bili dakle putnici, ne inhabiters, da, dakle, to su bili putnici, a ne stanovnici.</p>
+                <p class="transcript-line keep"><b>After</b>Dakle, nigdje se ne spominje da su tu zapravo stanovali nekakvi štovatelji Sunca.</p>
+              </div>
+
+              <div class="trace-panel">
+                <h4>Final edited transcript</h4>
+                <p class="transcript-line keep"><b>Final sentence 136</b>Dakle, oni su zapravo se nalazili, ti New age travelers na tim zapravo arheološkim, aa, mjestima kao Stonehenge, ali ne i za samim krugovima u žitu.</p>
+                <p class="transcript-line keep"><b>Final sentence 137</b>Dakle, nigdje se ne spominje da su tu zapravo stanovali nekakvi štovatelji Sunca.</p>
+                <p class="transcript-line keep"><b>Final sentence 138</b>Onda imamo opciju pod C: significant in the broader sense to the agriculture.</p>
+              </div>
+            </div>
+
+            <div class="trace-signal">
+              <div class="signal"><b>EDL</b><span>Cut reason: silence, confidence 1.0.</span></div>
+              <div class="signal"><b>Enrichment</b><span>restore, keep_confidence 90, tag minor_disfluency.</span></div>
+              <div class="signal"><b>Outcome</b><span>The final transcript omits it, so review should inspect the restore flag.</span></div>
+            </div>
+            <p class="trace-rationale">Enrichment rationale: Rečenica naglašava ključnu razliku u terminologiji (putnici vs. stanovnici) koja je bitna za razumijevanje.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section grid-2" aria-label="Artifacts and review">
+        <article class="card">
+          <h3>Artifacts created for one video</h3>
+          <div class="artifact-list">
+            <div class="artifact raw">
+              <div><strong>Raw source video</strong><span>Untouched input and visual source for all renders.</span></div>
+            </div>
+            <div class="artifact audio">
+              <div><strong>Raw extracted WAV</strong><span>Mono analysis file in temporary storage.</span></div>
+            </div>
+            <div class="artifact audio">
+              <div><strong>Denoised WAV</strong><span>Noise-reduced audio used by silence, disruption, and render stages.</span></div>
+            </div>
+            <div class="artifact speech">
+              <div><strong>Transcript sidecar</strong><span>Timed words, sentences, source metadata, language, and audio events.</span></div>
+            </div>
+            <div class="artifact speech">
+              <div><strong>Grammar report sidecar</strong><span>Gemini correction passes, suggestions, actual replacements, per-pass stats, and correction pairs.</span></div>
+            </div>
+            <div class="artifact">
+              <div><strong>Automatic EDL sidecar</strong><span>Ordered keep and cut segments with reason and confidence.</span></div>
+            </div>
+            <div class="artifact">
+              <div><strong>Enrichment sidecar</strong><span>Per-sentence status, tags, keep confidence, rationale, and word salience.</span></div>
+            </div>
+            <div class="artifact human">
+              <div><strong>Review payload</strong><span>Video metadata, timeline segments, sentence data, word decisions, and enrichment metadata.</span></div>
+            </div>
+            <div class="artifact human">
+              <div><strong>Reviewed EDL sidecar</strong><span>Human-corrected decision list built from cut-word selections.</span></div>
+            </div>
+            <div class="artifact final">
+              <div><strong>Automatic and reviewed MP4 outputs</strong><span>Separate renders; neither overwrites the raw source.</span></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <h3>Review payload semantics</h3>
+          <p>
+            Review is not a destructive video-editing session. It is a decision-editing
+            session over timed transcript words and timeline segments.
+          </p>
+          <ul>
+            <li>Each word has original AI kept state, current kept state, reason, confidence, and keep score.</li>
+            <li>Each sentence has current action, original action, keep coverage, reason, note, status, tags, keep confidence, and rationale.</li>
+            <li>Reviewer changes are represented as the set of word indices to cut.</li>
+            <li>The reviewed EDL is rebuilt from contiguous kept word spans.</li>
+            <li>The reviewed render uses the same raw video and denoised audio path, but with reviewed decisions.</li>
+          </ul>
+          <div class="tag-row">
+            <span class="tag human">word-level review</span>
+            <span class="tag human">review.v2 payload</span>
+            <span class="tag human">separate reviewed EDL</span>
+          </div>
+        </article>
+      </section>
+
+      <section class="section" aria-labelledby="prompts-title">
+        <div class="section-head">
+          <div>
+            <p class="kicker">Prompt reference</p>
+            <h2 id="prompts-title">Exact LLM prompt templates</h2>
+          </div>
+          <p>
+            Curly-brace values are runtime insertions. The text below is the prompt
+            template before those values are filled.
+          </p>
+        </div>
+
+        <div class="prompt-list">
+          <details class="prompt-card">
+            <summary>PROMPT_STRICT <span>grammar correction, early passes</span></summary>
+            <pre class="prompt-body">Pregledaj sljedeći transkript video lekcije na hrvatskom jeziku i pronađi SVE krivo napisane riječi.
+
+VAŽNO - Ovo je transkript govornog jezika:
+- NE ispravljaj stilske odabire, poštapalice ili razgovorni jezik
+- NE ispravljaj gramatiku rečenica - ljudi ne govore u savršenim rečenicama
+- Ispravi SAMO pravopisne pogreške (zatipci, krivo napisane riječi)
+- Zadrži TOČAN oblik riječi (veliko/malo slovo) - npr. ako je "Znači" na početku rečenice, vrati "Znači" a ne "znači"
+- Vrati samo parove riječi koje su stvarno krivo napisane
+
+PRIMJERI:
+✓ "zomirali" → "zumirali" (zatipak)
+✓ "korjen" → "korijen" (zatipak)
+✗ "znači" → NE ispravljaj (poštapalica, ali ispravno napisana)
+✗ nepotpune rečenice → NE ispravljaj (tako je govornik govorio)
+
+{skipped_words_section}Transkript:
+{transcript}</pre>
+          </details>
+
+          <details class="prompt-card">
+            <summary>PROMPT_LENIENT <span>grammar correction, later passes</span></summary>
+            <pre class="prompt-body">Pregledaj sljedeći transkript video lekcije na hrvatskom jeziku i pronađi SAMO OČITE pravopisne pogreške.
+
+VAŽNO - Ovo je već nekoliko puta provjereni tekst:
+- Budi IZUZETNO STROG - ispravi samo ako je POTPUNO SIGURNO da je pogreška
+- NE traži pogreške ako ih nema
+- NE ispravljaj riječi koje bi MOGLE biti ispravne u kontekstu
+- NE ispravljaj gramatiku ili stil govora
+- Ispravi SAMO očite zatipke i potpuno pogrešno napisane riječi
+
+{skipped_words_section}Transkript:
+{transcript}</pre>
+          </details>
+
+          <details class="prompt-card">
+            <summary>DUPLICATE_PROMPT <span>borderline duplicate verification</span></summary>
+            <pre class="prompt-body">Jesi li ekspert za analizu govornog jezika na hrvatskom. Tvoj zadatak je odlučiti jesu li parovi rečenica iz video lekcije **ponavljanja** (govornik je rekao istu stvar dva puta, jednom pogrešno pa zatim ispravno).
+
+PRAVILA:
+- "Duplikat" znači da je govornik ponovio istu misao — NE da su rečenice slične po temi
+- Ako govornik objašnjava istu temu ali dodaje nove informacije, to NISU duplikati
+- Ako je jedna rečenica nastavak prethodne misli, to NIJE duplikat
+- Kratki frazni obrasci poput pozdrava ili uvodnih fraza ("Dobro, idemo dalje") JESU duplikati samo ako se ponavljaju uzastopno
+
+KORISTI KONTEKST I VRIJEME:
+- Uz svaki par dani su SUSJEDNE rečenice (prije/poslije) i VREMENSKI RAZMAK između dvije verzije.
+- Mali razmak (par sekundi) + lažni početak između = ponovljeni pokušaj (snimanje) → vjerojatno DUPLIKAT.
+- Velik razmak (mnogo rečenica / dugo vrijeme) = govornik se vraća na temu radi PODSJETNIKA → NIJE duplikat, ZADRŽI obje.
+
+Za svaki par navedi:
+- is_duplicate: true/false
+- confidence: 0.0-1.0 (koliko si siguran)
+- reasoning: kratko objašnjenje na hrvatskom
+- preferred_index: AKO je duplikat, navedi indeks rečenice koja je BOLJA verzija i koju treba ZADRŽATI. Kriteriji za odabir (ovim redoslijedom):
+  1. Potpunija misao (više informativnog sadržaja, cjelovitije objašnjenje) — u edukacijskim lekcijama dulja verzija je obično vrjednija
+  2. Čišća izvedba (manje poštapalica, manje oklijevanja, manje nedovršenih riječi)
+  3. Ako su jednake kvalitete, preferiraj KASNIJU verziju (govornik obično ispravlja/poboljšava)
+
+Parovi rečenica za analizu:
+{pairs_text}</pre>
+          </details>
+
+          <details class="prompt-card">
+            <summary>WHICH_TO_KEEP_PROMPT <span>default confirmed-duplicate keep selection</span></summary>
+            <pre class="prompt-body">Ti si ekspert za analizu govornog jezika na hrvatskom. Ove rečenice su potvrđeni duplikati — govornik je rekao istu stvar dva puta. Odaberi BOLJU verziju za zadržati.
+
+Kriteriji (ovim redoslijedom):
+1. Potpunija misao (više informativnog sadržaja, cjelovitije objašnjenje) — u edukacijskim lekcijama dulja, potpunija verzija je obično vrjednija
+2. Čišća izvedba (manje poštapalica, oklijevanja, nedovršenih riječi)
+3. Ako su jednake kvalitete, preferiraj KASNIJU verziju (govornik obično ispravlja/poboljšava)
+
+Parovi:
+{pairs_text}</pre>
+          </details>
+
+          <details class="prompt-card">
+            <summary>WHICH_TO_KEEP_PROMPT_CLEAN <span>alternate keep selection when completeness preference is disabled</span></summary>
+            <pre class="prompt-body">Ti si ekspert za analizu govornog jezika na hrvatskom. Ove rečenice su potvrđeni duplikati — govornik je rekao istu stvar dva puta. Odaberi BOLJU verziju za zadržati.
+
+Kriteriji (ovim redoslijedom):
+1. Čišća izvedba (manje poštapalica, oklijevanja, nedovršenih riječi)
+2. Potpunija misao (više informativnog sadržaja)
+3. Ako su jednake kvalitete, preferiraj KASNIJU verziju (govornik obično ispravlja/poboljšava)
+
+Parovi:
+{pairs_text}</pre>
+          </details>
+
+          <details class="prompt-card">
+            <summary>FALSE_START_PROMPT <span>sentences between confirmed duplicate takes</span></summary>
+            <pre class="prompt-body">Analiziraj sljedeći blok rečenica iz video lekcije na hrvatskom. Ove rečenice se nalaze IZMEĐU dva ponavljanja — govornik je rekao istu stvar prije i poslije ovog bloka.
+
+Tvoj zadatak: odluči koje od ovih rečenica su **lažni počeci, nedovršene misli ili filler** koji se mogu izbaciti, a koje su **stvarni sadržaj** koji treba zadržati.
+
+PRAVILA:
+- "Lažni početak" = govornik je počeo rečenicu pa odustao i krenuo ispočetka
+- "Filler" = poštapalice bez sadržaja ("znači", "evo", "dakle" same za sebe)
+- Ako rečenica nosi novu informaciju ili objašnjenje, to NIJE filler — ZADRŽI je
+- Budi konzervativan: ako nisi siguran, označi kao "zadrži"
+
+Rečenice (s indeksima):
+{block_text}
+
+Kontekst — rečenica PRIJE bloka:
+{before}
+
+Kontekst — rečenica NAKON bloka:
+{after}</pre>
+          </details>
+
+          <details class="prompt-card">
+            <summary>STUTTER_PROMPT <span>word-level stutter verification</span></summary>
+            <pre class="prompt-body">Analiziraj sljedeću rečenicu iz video lekcije na hrvatskom. Rečenica sadrži ponovljene riječi/fraze koje ukazuju na mucanje ili lažni početak.
+
+Tvoj zadatak: prepoznaj koje RIJEČI su dio mucanja (ponovljeni/nedovršeni dio) i koje treba IZBACITI, a koje su dio čistog izlaganja i treba ih ZADRŽATI.
+
+PRAVILA:
+- Govornik obično počne frazu, zastane ili pogriješi, pa kaže istu stvar čišće — IZBACI prvi (pogrešni) pokušaj
+- Ako govornik koristi ponavljanje namjerno za naglašavanje — ZADRŽI sve
+- Budi konzervativan: ako nisi siguran, ZADRŽI sve (is_stutter=false)
+- word_indices_to_cut su indeksi (0-based) riječi koje treba izbaciti
+
+Riječi s indeksima:
+{words_indexed}
+
+Kontekst — rečenica PRIJE:
+{before}
+
+Kontekst — rečenica NAKON:
+{after}</pre>
+          </details>
+
+          <details class="prompt-card">
+            <summary>FRAGMENT_PROMPT <span>incomplete fragment verification</span></summary>
+            <pre class="prompt-body">Ti si profesionalni video editor. Pregledaj sljedeće kandidate za nepotpune fragmente u kontekstu okolnih rečenica.
+
+Za SVAKI kandidat odgovori:
+- should_cut: true AKO je fragment nepotpun/nedovršen i potpunija verzija postoji u okolnim rečenicama
+- should_cut: false AKO fragment zapravo služi svrsi (naglasak, prijelaz, uvod)
+- confidence: 0.0-1.0
+- reasoning: kratko obrazloženje
+
+VAŽNO: Rečenice koje završavaju s "..." ili "…" su JAKI signal da je govornik prekinuo misao i započeo ispočetka. Takve rečenice gotovo uvijek treba izbaciti jer slijedi potpunija verzija iste misli.
+
+Kandidati:
+{candidates_text}</pre>
+          </details>
+
+          <details class="prompt-card">
+            <summary>ASIDE_PROMPT <span>off-lesson aside and production noise verification</span></summary>
+            <pre class="prompt-body">Ti si profesionalni video editor za edukacijske lekcije na hrvatskom. Pregledaj sljedeće kandidate u kontekstu okolnih rečenica.
+
+Tvoj zadatak: za SVAKI kandidat odluči je li dio LEKCIJE ili je usputni komentar / smetnja koju treba izbaciti.
+
+IZBACI (is_aside=true) ako je kandidat:
+- usputni komentar koji ne pripada lekciji ("Čekaj, otvaraju se vrata.", "Ne mogu više pričati.")
+- zvuk/smetnja ((kašalj), (smijeh), nakašljavanje "Khm.")
+- prekid snimanja ili obraćanje nekome izvan lekcije
+
+ZADRŽI (is_aside=false) ako kandidat:
+- nosi bilo kakav sadržaj lekcije (korak, definicija, prijelaz, najava sljedećeg koraka)
+- je prirodan govorni prijelaz ("Dobro", "Evo", "Idemo dalje")
+
+Budi oprezan: ako nisi siguran, ZADRŽI (is_aside=false).
+
+Kandidati (svaki s kontekstom; kandidat označen s &lt;&lt;&lt;):
+{candidates_text}</pre>
+          </details>
+
+          <details class="prompt-card">
+            <summary>ENRICH_PROMPT <span>independent per-sentence enrichment and arbiter input</span></summary>
+            <pre class="prompt-body">Ti si iskusni video editor koji montira edukacijske lekcije na hrvatskom jeziku, snimljene neformalnim govornim stilom. Za SVAKU rečenicu NEOVISNO procijeni pripada li u finalnu montažu. Rečenice su dane redoslijedom kako su izgovorene, pa koristi susjedne rečenice da prepoznaš ponavljanja.
+
+KAKO LJUDSKI EDITOR ODLUČUJE:
+- ZADRŽAVA: svaki jedinstven sadržaj (korak, definiciju, formulu, međurezultat, odgovor) I prirodan govorni tok — kratke potvrde i prijelaze ("Okej", "Dobro", "Evo", "Pa evo", "Znači", "Dakle", "Jel tako?"). Prirodne poštapalice koje zvuče normalno OSTAJU u videu.
+- IZBACUJE: rečenicu koja DOSLOVNO PONAVLJA sadržaj susjedne rečenice, lažni početak (govornik krene pa se odmah ispravi) i nedovršenu misao koju odmah preformulira.
+
+Za SVAKU rečenicu vrati:
+- sentence_idx: indeks rečenice (točno kako je dan)
+- keep_confidence: broj 0-100 = koliko si SIGURAN da rečenica TREBA biti u finalnom videu
+    85-100 = jedinstven sadržaj ILI prirodan govorni prijelaz → ZADRŽI
+    0-30 = doslovno ponavljanje, lažni početak ili nedovršena misao → IZBACI
+    sredina = stvarno granično
+- tags: lista oznaka SAMO iz ovog skupa: {tags}
+- rationale: kratko objašnjenje na HRVATSKOM (jedna rečenica)
+- word_salience: lista 0-100, JEDAN broj po svakoj riječi istim redoslijedom (100 = ključna riječ, 0 = nebitan filler). Točno onoliko brojeva koliko rečenica ima riječi.
+
+VAŽNO:
+- Procjenjuj SADRŽAJ, ne stil. Kratke poštapalice i prijelazi NISU greška — daj im visok keep_confidence.
+- Nizak keep_confidence daj SAMO kada rečenica doslovno ponavlja susjednu, kada je lažni početak ili nedovršena misao.
+- Budi ODLUČAN: ne ograđuj se ocjenom ~50 osim za stvarno granične slučajeve.
+
+Rečenice (redoslijedom; svaka s riječima):
+{sentences_block}</pre>
+          </details>
+
+          <details class="prompt-card">
+            <summary>HOLISTIC_PROMPT <span>defined in code; not on the default single-video path</span></summary>
+            <pre class="prompt-body">Ti si profesionalni video editor za edukacijske video lekcije na hrvatskom jeziku. Pregledaj sljedeći transkript i označi rečenice koje su **nepotrebne** i mogu se izbaciti bez gubitka sadržaja.
+
+PRAVILA:
+- "Nepotrebna" znači da rečenica NE dodaje nikakvu novu informaciju koju kontekst već ne pokriva
+- Kratke nedovršene rečenice poput "Evo, ja." ili "A ovaj..." su kandidati AKO ih slijedi potpunija verzija
+- Trailing filler poput "Evo, znači, to znači da..." JEST nepotreban AKO sljedeća rečenica kaže istu stvar jasnije
+- Ponovljena pitanja su nepotrebna AKO se isto pitanje pojavljuje negdje drugdje u tekstu
+- NE brisi rečenice koje objašnjavaju, naglašavaju ili donose bilo kakvu novu informaciju
+- Budi VRLO konzervativan — bolje je ostaviti nepotrebnu rečenicu nego izbaciti korisnu
+- Za svaku označenu rečenicu navedi confidence (0.0-1.0) i kratko obrazloženje
+
+Transkript (s indeksima originalnih rečenica):
+{transcript_indexed}</pre>
+          </details>
+        </div>
+      </section>
+
+      <section class="section grid-2" aria-label="Boundaries and gaps">
+        <div class="callout output">
+          <h3>Production boundary</h3>
+          <ul>
+            <li>The AI editor transcript exists to drive editing and review, not to become the final Gradivo student-facing transcript.</li>
+            <li>Gradivo should still transcribe the final reviewed Mux asset so chapters, explanations, and transcript timestamps match the published video.</li>
+            <li>The AI editor currently operates on local filesystem paths and sidecars, not durable Gradivo job IDs.</li>
+            <li>Gradivo remains the owner of raw-recording association, problem mapping, publishing state, final Mux video, chapters, explanations, and Notion synchronization.</li>
+          </ul>
+        </div>
+
+        <div class="callout risk">
+          <h3>Known technical gaps before production service use</h3>
+          <ul>
+            <li>Production render settings are not finalized; current defaults are development-oriented.</li>
+            <li>Intro and outro insertion is not implemented.</li>
+            <li>Professional NLE export is planned but not part of the current active single-video flow.</li>
+            <li>Professor-specific profiles and trained custom models remain future phases.</li>
+            <li>Service integration still needs durable job identity, authenticated artifact access, queueing, retries, cancellation, progress, failure states, and storage adapters.</li>
+          </ul>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

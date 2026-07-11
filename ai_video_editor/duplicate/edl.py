@@ -75,6 +75,8 @@ def build_edl(
     transcript: Transcript,
     keep_regions: list[KeepRegion],
     duplicate_flags: list[DuplicateFlag],
+    *,
+    rescue_outside_keep_regions: bool = True,
 ) -> EditDecisionList:
     """
     Merge silence-based keep regions and duplicate flags into a single EDL.
@@ -126,10 +128,11 @@ def build_edl(
             keep_spans.append((current_start, current_end))
 
     rescued = 0
-    for i, s in enumerate(transcript.sentences):
-        if i not in in_keep_region and i not in flagged:
-            keep_spans.append((s.start, s.end))
-            rescued += 1
+    if rescue_outside_keep_regions:
+        for i, s in enumerate(transcript.sentences):
+            if i not in in_keep_region and i not in flagged:
+                keep_spans.append((s.start, s.end))
+                rescued += 1
 
     if rescued:
         logger.info("Rescued {} sentences from silence gaps", rescued)
