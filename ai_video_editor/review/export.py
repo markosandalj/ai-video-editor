@@ -2,10 +2,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from ai_video_editor.audio.snap import (
+    AudioEnvelope,
+    acoustic_split_points,
+    ensure_audio_envelope,
+)
 from ai_video_editor.duplicate.edl import EditAction, EditDecision, EditDecisionList, EditReason
 from ai_video_editor.enrich.cache import load_cached_enrichment
 from ai_video_editor.enrich.models import EnrichmentResult, SentenceEnrichment
 from ai_video_editor.review.models import (
+    CutRange,
     ReviewPayload,
     ReviewSaveRequest,
     ReviewSaveResponse,
@@ -26,7 +32,7 @@ def review_payload_path_for(video_path: Path) -> Path:
     return video_path.with_name(f"{video_path.stem}.review.json")
 
 
-def load_review_payload(video_path: Path) -> ReviewPayload:
+def load_review_payload(video_path: Path, audio_path: Path | None = None) -> ReviewPayload:
     transcript_path = cache_path_for(video_path)
     edl_path = video_path.with_suffix(".edl.json")
 
@@ -45,7 +51,15 @@ def load_review_payload(video_path: Path) -> ReviewPayload:
         else None
     )
     enrichment = load_cached_enrichment(video_path)
-    return build_review_payload(video_path, transcript, edl, reviewed, enrichment)
+    envelope = ensure_audio_envelope(video_path, audio_path)
+    return build_review_payload(
+        video_path,
+        transcript,
+        edl,
+        reviewed,
+        enrichment,
+        acoustic_envelope=envelope,
+    )
 
 
 def build_review_payload(
@@ -54,6 +68,8 @@ def build_review_payload(
     edl: EditDecisionList,
     reviewed: EditDecisionList | None = None,
     enrichment: EnrichmentResult | None = None,
+    *,
+    acoustic_envelope: AudioEnvelope | None = None,
 ) -> ReviewPayload:
     segments = [
         ReviewTimelineSegment.from_decision(idx, decision)
@@ -64,11 +80,24 @@ def build_review_payload(
     current = reviewed.decisions if reviewed is not None else edl.decisions
     enrich_map = enrichment.by_index() if enrichment is not None else {}
 
+    all_transcript_words = [word for sentence in transcript.sentences for word in sentence.words]
+    splits = (
+        acoustic_split_points(all_transcript_words, acoustic_envelope, total_duration=edl.total_duration)
+        if acoustic_envelope is not None and all_transcript_words
+        else []
+    )
+
     sentences: list[ReviewSentence] = []
     word_idx = 0
     for sidx, sentence in enumerate(transcript.sentences):
         review_sentence, word_idx = _build_review_sentence(
-            sidx, word_idx, sentence, edl.decisions, current, enrich_map.get(sidx)
+            sidx,
+            word_idx,
+            sentence,
+            edl.decisions,
+            current,
+            enrich_map.get(sidx),
+            split_points=splits,
         )
         sentences.append(review_sentence)
 
@@ -82,7 +111,27 @@ def build_review_payload(
         keep_duration=edl.keep_duration,
         cut_duration=edl.cut_duration,
     )
-    return ReviewPayload(video=video, segments=segments, sentences=sentences)
+    cut_ranges = _decisions_to_cut_ranges(current, edl.total_duration)
+    return ReviewPayload(
+        video=video,
+        segments=segments,
+        sentences=sentences,
+        cut_ranges=cut_ranges,
+    )
+
+
+def _decisions_to_cut_ranges(
+    decisions: list[EditDecision],
+    total_duration: float,
+) -> list[CutRange]:
+    """The canonical cut state = the CUT spans of the current decision list."""
+    cuts = [
+        (decision.start, decision.end)
+        for decision in decisions
+        if decision.action == EditAction.CUT
+    ]
+    merged = _merge_spans(_clamp_spans(cuts, total_duration))
+    return [CutRange(start=start, end=end) for start, end in merged]
 
 
 def write_review_payload(video_path: Path, payload: ReviewPayload | None = None) -> Path:
@@ -98,6 +147,30 @@ def build_reviewed_edl(
     payload: ReviewPayload,
     request: ReviewSaveRequest,
 ) -> EditDecisionList:
+    # Canonical path: free-form cut ranges. Keeps are the complement of the
+    # merged cut spans over the full source duration.
+    if request.cut_ranges is not None:
+        total = payload.video.duration
+        cuts = _merge_spans(
+            _clamp_spans(((r.start, r.end) for r in request.cut_ranges), total)
+        )
+        keep_spans = _complement_spans(cuts, total)
+        decisions = _spans_to_decisions(keep_spans, total)
+        return EditDecisionList(
+            decisions=decisions,
+            source_video=str(video_path),
+            total_duration=total,
+        )
+
+    return _build_reviewed_edl_from_words(video_path, payload, request)
+
+
+def _build_reviewed_edl_from_words(
+    video_path: Path,
+    payload: ReviewPayload,
+    request: ReviewSaveRequest,
+) -> EditDecisionList:
+    """Legacy path: reviewer decisions expressed as word indices to cut."""
     cut = set(request.cut_words)
     words = sorted(
         (word for sentence in payload.sentences for word in sentence.words),
@@ -114,9 +187,11 @@ def build_reviewed_edl(
                 run_start = None
             continue
         if run_start is None:
-            run_start, run_end = word.start, word.end
+            run_start = word.cut_in if word.cut_in is not None else word.start
+            run_end = word.cut_out if word.cut_out is not None else word.end
         else:
-            run_end = max(run_end, word.end)
+            word_end = word.cut_out if word.cut_out is not None else word.end
+            run_end = max(run_end, word_end)
     if run_start is not None:
         keep_spans.append((run_start, run_end))
 
@@ -129,8 +204,12 @@ def build_reviewed_edl(
     )
 
 
-def save_reviewed_edl(video_path: Path, request: ReviewSaveRequest) -> ReviewSaveResponse:
-    payload = load_review_payload(video_path)
+def save_reviewed_edl(
+    video_path: Path,
+    request: ReviewSaveRequest,
+    audio_path: Path | None = None,
+) -> ReviewSaveResponse:
+    payload = load_review_payload(video_path, audio_path)
     edl = build_reviewed_edl(video_path, payload, request)
     output = review_edl_path_for(video_path)
     output.write_text(edl.model_dump_json(indent=2), encoding="utf-8")
@@ -149,6 +228,8 @@ def _build_review_sentence(
     ai_decisions: list[EditDecision],
     current_decisions: list[EditDecision],
     enrichment: SentenceEnrichment | None = None,
+    *,
+    split_points: list[float] | None = None,
 ) -> tuple[ReviewSentence, int]:
     salience = enrichment.word_salience if enrichment is not None else []
     words: list[ReviewWord] = []
@@ -185,6 +266,8 @@ def _build_review_sentence(
                 reason=reason,
                 confidence=confidence,
                 keep_score=keep_score,
+                cut_in=split_points[word_idx] if split_points else None,
+                cut_out=split_points[word_idx + 1] if split_points else None,
             )
         )
         if kept:
@@ -251,7 +334,7 @@ def _decision_at(timestamp: float, decisions: list[EditDecision]) -> EditDecisio
     return None
 
 
-def _merge_spans(spans: list[tuple[float, float]]) -> list[tuple[float, float]]:
+def _merge_spans(spans) -> list[tuple[float, float]]:
     valid = sorted((start, end) for start, end in spans if end > start + 0.01)
     merged: list[tuple[float, float]] = []
     for start, end in valid:
@@ -260,6 +343,33 @@ def _merge_spans(spans: list[tuple[float, float]]) -> list[tuple[float, float]]:
         else:
             merged.append((start, end))
     return merged
+
+
+def _clamp_spans(spans, total_duration: float) -> list[tuple[float, float]]:
+    """Clamp each span to [0, total_duration], dropping anything empty."""
+    clamped: list[tuple[float, float]] = []
+    for start, end in spans:
+        lo = max(0.0, min(start, total_duration))
+        hi = max(0.0, min(end, total_duration))
+        if hi > lo:
+            clamped.append((lo, hi))
+    return clamped
+
+
+def _complement_spans(
+    spans: list[tuple[float, float]],
+    total_duration: float,
+) -> list[tuple[float, float]]:
+    """Gaps within [0, total_duration] not covered by ``spans`` (assumed merged)."""
+    keeps: list[tuple[float, float]] = []
+    prev_end = 0.0
+    for start, end in spans:
+        if start > prev_end + 0.01:
+            keeps.append((prev_end, start))
+        prev_end = max(prev_end, end)
+    if prev_end < total_duration - 0.01:
+        keeps.append((prev_end, total_duration))
+    return keeps
 
 
 def _spans_to_decisions(

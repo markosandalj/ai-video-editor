@@ -39,6 +39,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/videos/{video_id}/diff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Diff
+         * @description Dev-only: raw transcript with pipeline vs human-edit cuts overlaid.
+         */
+        get: operations["get_diff_api_videos__video_id__diff_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/videos/{video_id}/render": {
         parameters: {
             query?: never;
@@ -50,6 +70,27 @@ export interface paths {
         put?: never;
         /** Render Review */
         post: operations["render_review_api_videos__video_id__render_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/videos/{video_id}/peaks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Peaks
+         * @description Downsampled waveform peaks for the timeline (built from the cached
+         *     RMS envelope; degrades to an empty waveform if no audio is available).
+         */
+        get: operations["get_peaks_api_videos__video_id__peaks_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -78,6 +119,103 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
+         * CutRange
+         * @description A free-form span of source video (seconds) removed from the edit.
+         */
+        CutRange: {
+            /** Start */
+            start: number;
+            /** End */
+            end: number;
+        };
+        /** DiffPayload */
+        DiffPayload: {
+            video: components["schemas"]["DiffVideo"];
+            summary: components["schemas"]["DiffSummary"];
+            /** Sentences */
+            sentences?: components["schemas"]["DiffSentence"][];
+        };
+        /** DiffSentence */
+        DiffSentence: {
+            /** Idx */
+            idx: number;
+            /** Text */
+            text: string;
+            /** Start */
+            start: number;
+            /** End */
+            end: number;
+            /** Pipeline Kept */
+            pipeline_kept: boolean;
+            /** Human Kept */
+            human_kept: boolean;
+            /** Keep Confidence */
+            keep_confidence?: number | null;
+            /**
+             * Status
+             * @default
+             */
+            status: string;
+            /** Tags */
+            tags?: string[];
+            /**
+             * Rationale
+             * @default
+             */
+            rationale: string;
+            /** Words */
+            words?: components["schemas"]["DiffWord"][];
+        };
+        /** DiffSummary */
+        DiffSummary: {
+            /** Has Ground Truth */
+            has_ground_truth: boolean;
+            /** Raw Sentences */
+            raw_sentences: number;
+            /** Raw Words */
+            raw_words: number;
+            /** Pipeline Kept Sentences */
+            pipeline_kept_sentences: number;
+            /** Human Kept Sentences */
+            human_kept_sentences: number;
+            /** Pipeline Kept Words */
+            pipeline_kept_words: number;
+            /** Human Kept Words */
+            human_kept_words: number;
+            /** Agree Keep */
+            agree_keep: number;
+            /** Agree Cut */
+            agree_cut: number;
+            /** Pipeline Only Cut */
+            pipeline_only_cut: number;
+            /** Human Only Cut */
+            human_only_cut: number;
+        };
+        /** DiffVideo */
+        DiffVideo: {
+            /** Id */
+            id: string;
+            /** Source Name */
+            source_name: string;
+            /** Duration */
+            duration: number;
+            /** Has Ground Truth */
+            has_ground_truth: boolean;
+        };
+        /** DiffWord */
+        DiffWord: {
+            /** Text */
+            text: string;
+            /** Start */
+            start: number;
+            /** End */
+            end: number;
+            /** Pipeline Kept */
+            pipeline_kept: boolean;
+            /** Human Kept */
+            human_kept: boolean;
+        };
+        /**
          * EditAction
          * @enum {string}
          */
@@ -86,6 +224,23 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * PeaksPayload
+         * @description Downsampled audio waveform for the timeline strip.
+         */
+        PeaksPayload: {
+            /**
+             * Version
+             * @default peaks.v1
+             */
+            version: string;
+            /** Duration */
+            duration: number;
+            /** Length */
+            length: number;
+            /** Peaks */
+            peaks: number[];
         };
         /** RenderResponse */
         RenderResponse: {
@@ -98,7 +253,7 @@ export interface components {
         ReviewPayload: {
             /**
              * Schema Version
-             * @default review.v2
+             * @default review.v3
              */
             schema_version: string;
             video: components["schemas"]["ReviewVideoMetadata"];
@@ -106,12 +261,21 @@ export interface components {
             segments: components["schemas"]["ReviewTimelineSegment"][];
             /** Sentences */
             sentences: components["schemas"]["ReviewSentence"][];
+            /** Cut Ranges */
+            cut_ranges?: components["schemas"]["CutRange"][];
         };
         /**
          * ReviewSaveRequest
-         * @description Reviewer decisions expressed as the set of word indices to cut.
+         * @description Reviewer decisions to persist.
+         *
+         *     The canonical form is ``cut_ranges`` (free-form source-time spans). Legacy
+         *     clients may still send ``cut_words`` (word indices); it is used only when
+         *     ``cut_ranges`` is omitted (``None``). An explicit empty ``cut_ranges`` list
+         *     means "no cuts" (restore everything), which is distinct from omitting it.
          */
         ReviewSaveRequest: {
+            /** Cut Ranges */
+            cut_ranges?: components["schemas"]["CutRange"][] | null;
             /** Cut Words */
             cut_words?: number[];
         };
@@ -278,6 +442,10 @@ export interface components {
              * @default 1
              */
             keep_score: number;
+            /** Cut In */
+            cut_in?: number | null;
+            /** Cut Out */
+            cut_out?: number | null;
             /** Duration */
             readonly duration: number;
         };
@@ -389,6 +557,37 @@ export interface operations {
             };
         };
     };
+    get_diff_api_videos__video_id__diff_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                video_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiffPayload"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     render_review_api_videos__video_id__render_post: {
         parameters: {
             query?: never;
@@ -407,6 +606,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RenderResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_peaks_api_videos__video_id__peaks_get: {
+        parameters: {
+            query?: {
+                buckets?: number;
+            };
+            header?: never;
+            path: {
+                video_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PeaksPayload"];
                 };
             };
             /** @description Validation Error */

@@ -545,6 +545,7 @@
           </p>
           <div class="hero-meta" aria-label="Document summary">
             <span class="pill"><span class="dot"></span> Non-destructive process</span>
+            <span class="pill"><span class="dot"></span> AI suggests, fixed rules decide</span>
             <span class="pill"><span class="dot"></span> Human review before final</span>
             <span class="pill"><span class="dot"></span> One raw video, one reviewed result</span>
           </div>
@@ -602,8 +603,9 @@
           <div class="panel-icon icon-system">AI</div>
           <h3>The system makes a first draft</h3>
           <p>
-            It removes obvious friction and highlights places that deserve attention, but
-            it does not make the final educational decision alone.
+            AI is used to spot likely mistakes, but it only suggests. What actually gets
+            cut is decided by fixed, predictable editing rules that were tested against
+            how real human editors edit these same lessons.
           </p>
         </article>
         <article class="panel">
@@ -744,12 +746,13 @@
             <h3>Find likely mistakes</h3>
             <p>
               The system searches for repeated takes, false starts, stutters, fragments,
-              side comments, long silence, and audio disruptions.
+              side comments, long silence, and audio disruptions. AI helps spot them,
+              but fixed rules make the actual cut decisions.
             </p>
             <ul>
               <li>Uses both sound and transcript evidence.</li>
-              <li>Marks uncertain cases for attention.</li>
-              <li>Creates a proposed keep/cut plan.</li>
+              <li>When something was said twice, the later take always wins — a simple rule the professor can rely on while recording.</li>
+              <li>Risky or uncertain suggestions become flagged spots for the reviewer, not automatic cuts.</li>
             </ul>
           </article>
 
@@ -769,13 +772,15 @@
           <article class="stage-card" data-step="5">
             <h3>Review and correct</h3>
             <p>
-              A reviewer watches the video and reads the transcript. They confirm good
-              decisions and fix places where the system was too aggressive or too cautious.
+              A reviewer opens the review tool: the video and its transcript side by side,
+              with every proposed cut marked. Each suggestion comes with a plain-language
+              explanation of why it was made and how confident the system is.
             </p>
             <ul>
-              <li>Restore useful explanations if needed.</li>
+              <li>Restore useful explanations with one click.</li>
               <li>Cut bad takes that were missed.</li>
               <li>Check natural pacing and lesson continuity.</li>
+              <li>Produce the final video from the same screen.</li>
             </ul>
           </article>
 
@@ -868,8 +873,10 @@
             <h2 id="review-title">What the reviewer is checking</h2>
           </div>
           <p>
-            The reviewer does not need to understand the technical pipeline. They only need
-            to verify that the final lesson still makes sense and sounds natural.
+            The reviewer does not need to understand the technical pipeline. Every
+            suggested cut explains itself in plain language, uncertain spots are
+            highlighted, and the reviewer only needs to verify that the final lesson
+            still makes sense and sounds natural.
           </p>
         </div>
 
@@ -891,6 +898,43 @@
               <li><strong>Does a transition sound awkward?</strong> Review the nearby cut.</li>
               <li><strong>Is a short filler phrase actually natural?</strong> It can stay.</li>
               <li><strong>Is the system uncertain?</strong> Inspect the highlighted area.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="rules-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Predictable by design</p>
+            <h2 id="rules-title">Why the AI is not the editor</h2>
+          </div>
+          <p>
+            Early versions let the AI make more of the editorial choices. We measured
+            those choices against real human editors and replaced the ones a simple rule
+            does better — so the system behaves the same way every time.
+          </p>
+        </div>
+
+        <div class="review-grid">
+          <article class="check-card">
+            <h3>Fixed rules make the cuts</h3>
+            <ul>
+              <li><strong>Repeated something?</strong> The later take is always the one that stays. The professor can flub, pause, and simply say it again — the earlier attempt is cut, every time.</li>
+              <li><strong>Short phrases like "Dobro." or "Ok."?</strong> Never cut automatically, even when they repeat — they are natural speech, not mistakes.</li>
+              <li><strong>AI wants to remove a unique explanation?</strong> That never happens automatically. It becomes a flagged suggestion the reviewer decides on.</li>
+              <li><strong>Every AI suggestion is verified</strong> against the actual recording before it can become a cut.</li>
+            </ul>
+          </article>
+
+          <article class="check-card">
+            <h3>Measured against real editors</h3>
+            <ul>
+              <li><strong>The benchmark is human work:</strong> 98 lessons that human editors already edited, compared word by word.</li>
+              <li><strong>The keep-the-later-take rule comes from that data:</strong> it matches what human editors chose in the large majority of cases — better than the AI's own judgment did.</li>
+              <li><strong>Disagreements are visible, not hidden:</strong> a comparison view shows, on the same transcript, what the system cut versus what the human editor cut.</li>
+              <li><strong>Every change to the system is tested</strong> against this benchmark before it ships, so quality moves in one direction.</li>
+              <li><strong>Same video in, same edit out:</strong> predictable rules mean results the team can trust and reproduce.</li>
             </ul>
           </article>
         </div>
@@ -943,7 +987,7 @@
       </section>
 
       <p class="footer-note">
-        Core principle: the system makes the first edit faster; a human confirms the final lesson.
+        Core principle: AI suggests, predictable rules decide, and a human confirms the final lesson.
       </p>
     </main>
   </body>

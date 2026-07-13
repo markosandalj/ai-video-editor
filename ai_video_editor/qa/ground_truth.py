@@ -351,6 +351,48 @@ def derive_word_coverage(
     ]
 
 
+def derive_word_keep_flags(
+    raw_sentences: list[Sentence],
+    gt_sentences: list[Sentence],
+) -> list[list[bool]]:
+    """Per raw sentence, per word: True if that word survives into the human edit.
+
+    Like :func:`derive_word_coverage` but keeps the per-word resolution instead of
+    collapsing to a ratio — the honest granularity for scoring partial (word-level)
+    cuts, where a stutter-trim inside a kept sentence must be judged word by word.
+    """
+    raw_words: list[str] = []
+    owners: list[tuple[int, int]] = []
+    flags: list[list[bool]] = []
+    for sentence_idx, sentence in enumerate(raw_sentences):
+        flags.append([False] * len(sentence.words))
+        for word_idx, word in enumerate(sentence.words):
+            normalised = _normalise_word(word.text)
+            if not normalised:
+                # Punctuation-only tokens carry no text signal; treat as kept so
+                # they never count as a spurious missed cut.
+                flags[sentence_idx][word_idx] = True
+                continue
+            raw_words.append(normalised)
+            owners.append((sentence_idx, word_idx))
+
+    gt_words = [
+        normalised
+        for sentence in gt_sentences
+        for word in sentence.words
+        if (normalised := _normalise_word(word.text))
+    ]
+
+    if raw_words and gt_words:
+        matcher = SequenceMatcher(None, raw_words, gt_words, autojunk=False)
+        for block in matcher.get_matching_blocks():
+            for offset in range(block.size):
+                sentence_idx, word_idx = owners[block.a + offset]
+                flags[sentence_idx][word_idx] = True
+
+    return flags
+
+
 def _filter_outliers_iqr(values: list[float]) -> list[float]:
     """Remove outliers using the IQR method (> Q3 + 1.5*IQR)."""
     if len(values) < 4:

@@ -9,7 +9,7 @@ import '@/index.css'
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider delayDuration={150}>
+      <TooltipProvider delay={150}>
         <App />
       </TooltipProvider>
     </QueryClientProvider>

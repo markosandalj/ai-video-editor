@@ -10,6 +10,7 @@ from ai_video_editor.review.export import (
     write_review_payload,
 )
 from ai_video_editor.review.models import (
+    CutRange,
     ReviewPayload,
     ReviewSaveRequest,
     ReviewSaveResponse,
@@ -19,6 +20,7 @@ from ai_video_editor.review.models import (
 )
 
 __all__ = [
+    "CutRange",
     "ReviewPayload",
     "ReviewSaveRequest",
     "ReviewSaveResponse",

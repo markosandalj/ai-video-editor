@@ -24,7 +24,7 @@ from rapidfuzz import fuzz
 from ai_video_editor.duplicate.edl import EditAction, EditDecisionList
 from ai_video_editor.qa.ground_truth import _align_monotonic, derive_word_coverage
 from ai_video_editor.qa.models import CutDecisionResult
-from ai_video_editor.transcription.models import Sentence, Transcript
+from ai_video_editor.transcription.models import Sentence, Transcript, Word
 
 MATCH_THRESHOLD = 65.0
 COVERAGE_THRESHOLD = 0.5
@@ -240,6 +240,82 @@ def evaluate_decisions(
         else:
             score.tn += 1
     return score
+
+
+@dataclass
+class WordDecisionScore:
+    """Word-level cut/keep confusion vs the human edit (positive class = CUT).
+
+    Sentence-level scoring counts a word-trim that removes a stutter as a full
+    missed/over cut. This scores every word independently, so a partial trim is
+    credited for the words it correctly removed and only penalised for the rest.
+    """
+    name: str = ""
+    tp: int = 0  # word cut by pipeline, cut by human
+    fp: int = 0  # word cut by pipeline, kept by human
+    fn: int = 0  # word kept by pipeline, cut by human
+    tn: int = 0
+
+    @property
+    def cut_precision(self) -> float:
+        made = self.tp + self.fp
+        return self.tp / made if made else 1.0
+
+    @property
+    def cut_recall(self) -> float:
+        needed = self.tp + self.fn
+        return self.tp / needed if needed else 1.0
+
+    @property
+    def cut_f1(self) -> float:
+        p, r = self.cut_precision, self.cut_recall
+        return 2 * p * r / (p + r) if (p + r) else 0.0
+
+
+def _word_is_cut(word: Word, edl: EditDecisionList) -> bool:
+    """A word is cut if its midpoint lands in no KEEP decision."""
+    mid = (word.start + word.end) / 2.0
+    for d in edl.decisions:
+        if d.action == EditAction.KEEP and d.start <= mid <= d.end:
+            return False
+    return True
+
+
+def evaluate_decisions_word_level(
+    raw_sentences: list[Sentence],
+    edl: EditDecisionList,
+    gt_sentences: list[Sentence],
+    *,
+    name: str = "",
+) -> WordDecisionScore:
+    """Score the EDL's cut/keep at word granularity against the human edit."""
+    from ai_video_editor.qa.ground_truth import derive_word_keep_flags
+
+    human_kept = derive_word_keep_flags(raw_sentences, gt_sentences)
+    score = WordDecisionScore(name=name)
+    for si, sentence in enumerate(raw_sentences):
+        for wi, word in enumerate(sentence.words):
+            pipeline_cut = _word_is_cut(word, edl)
+            kept_by_human = human_kept[si][wi]
+            if pipeline_cut and not kept_by_human:
+                score.tp += 1
+            elif pipeline_cut and kept_by_human:
+                score.fp += 1
+            elif not pipeline_cut and not kept_by_human:
+                score.fn += 1
+            else:
+                score.tn += 1
+    return score
+
+
+def aggregate_word_scores(scores: list[WordDecisionScore]) -> WordDecisionScore:
+    agg = WordDecisionScore(name="AGGREGATE")
+    for s in scores:
+        agg.tp += s.tp
+        agg.fp += s.fp
+        agg.fn += s.fn
+        agg.tn += s.tn
+    return agg
 
 
 def to_cut_decision_result(score: DecisionScore) -> CutDecisionResult:

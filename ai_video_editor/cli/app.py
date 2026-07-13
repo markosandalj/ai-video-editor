@@ -42,11 +42,14 @@ def _process_video_file(
     total: int,
 ) -> bool:
     from ai_video_editor.audio import (
+        build_audio_envelope,
         build_disruptions,
         compute_keep_regions,
         detect_silences,
         extract_audio,
         reduce_noise,
+        snap_edl_boundaries,
+        write_audio_envelope,
     )
     from ai_video_editor.decisions import decide_edits
     from ai_video_editor.duplicate.debug import save_debug_files
@@ -75,6 +78,10 @@ def _process_video_file(
         edl, _ = decide_edits(
             p, cached, keeps, silences, settings, force=force, log=log, disruptions=disruptions
         )
+
+        envelope = build_audio_envelope(Path(denoised.path))
+        write_audio_envelope(p, envelope)
+        edl = snap_edl_boundaries(edl, cached, envelope)
 
         edl_path = p.with_suffix(".edl.json")
         edl_path.write_text(edl.model_dump_json(indent=2), encoding="utf-8")
@@ -269,11 +276,14 @@ def process(
     log.info("Processing: {}", input_path)
 
     from ai_video_editor.audio import (
+        build_audio_envelope,
         build_disruptions,
         compute_keep_regions,
         detect_silences,
         extract_audio,
         reduce_noise,
+        snap_edl_boundaries,
+        write_audio_envelope,
     )
     from ai_video_editor.decisions import decide_edits
     from ai_video_editor.duplicate.debug import save_debug_files
@@ -297,6 +307,10 @@ def process(
     edl, _ = decide_edits(
         input_path, cached, keeps, silences, settings, force=force, log=log, disruptions=disruptions
     )
+
+    envelope = build_audio_envelope(Path(denoised.path))
+    write_audio_envelope(input_path, envelope)
+    edl = snap_edl_boundaries(edl, cached, envelope)
 
     edl_path = input_path.with_suffix(".edl.json")
     edl_path.write_text(edl.model_dump_json(indent=2), encoding="utf-8")
@@ -646,6 +660,68 @@ def eval_models(
     logger.info("Model evaluation complete: {}", output_dir)
     print(f"results: {results.output_dir / 'results.json'}")
     print(f"report:  {results.output_dir / 'report.md'}")
+
+
+@app.command("eval-section-editor")
+def eval_section_editor(
+    fixtures_dir: Path = typer.Option(
+        Path("tests/fixtures"),
+        "--fixtures-dir",
+        file_okay=False,
+        dir_okay=True,
+        help="Directory with cached transcript, EDL, and ground-truth sidecars.",
+    ),
+    output_dir: Path = typer.Option(
+        Path("output/section-pilot"),
+        "--output-dir",
+        "-o",
+        file_okay=False,
+        dir_okay=True,
+        help="Directory for report.md, results.json, and per-fixture EDLs.",
+    ),
+    names: list[str] = typer.Option(
+        None,
+        "--name",
+        "-n",
+        help="Fixture names to run (repeatable). Default: a curated diverse slice.",
+    ),
+    manifest: Path = typer.Option(
+        None,
+        "--manifest",
+        exists=True,
+        readable=True,
+        help="Optional experiment manifest to pull the section-editor model from.",
+    ),
+    model: str = typer.Option(
+        None,
+        "--model",
+        help="Model key within the manifest (defaults to gemini-2.5-pro if no manifest).",
+    ),
+) -> None:
+    """Pilot the LLM section editor on fixtures, word-level scored vs the human edit."""
+    from ai_video_editor.experiments.section_pilot import run_section_pilot
+    from ai_video_editor.llm import default_annotation_model_config
+
+    llm_config = None
+    if manifest is not None:
+        from ai_video_editor.experiments import load_manifest
+
+        loaded = load_manifest(manifest)
+        if model is None or model not in loaded.models:
+            logger.error("--model must name one of: {}", ", ".join(loaded.models))
+            raise typer.Exit(code=1)
+        llm_config = loaded.models[model].with_id(model)
+    elif model is not None:
+        llm_config = default_annotation_model_config(model=model)
+
+    results = run_section_pilot(
+        fixtures_dir, output_dir, names=names or None, llm_config=llm_config
+    )
+    if not results:
+        logger.error("No evaluable fixtures found in {}", fixtures_dir)
+        raise typer.Exit(code=1)
+    print((output_dir / "report.md").read_text("utf-8"))
+    print(f"\nreport:  {output_dir / 'report.md'}")
 
 
 @app.command("review-export")

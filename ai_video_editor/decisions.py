@@ -21,6 +21,7 @@ from ai_video_editor.duplicate.edl import EditDecisionList, build_edl
 from ai_video_editor.duplicate.false_start_audio import detect_audio_false_starts
 from ai_video_editor.duplicate.models import DuplicateFlag, FlagReason
 from ai_video_editor.duplicate.pipeline import detect_duplicates
+from ai_video_editor.duplicate.section_editor import detect_section_edits
 from ai_video_editor.enrich import (
     EnrichmentResult,
     apply_enrichment_arbiter,
@@ -44,11 +45,20 @@ def detect_all_flags(
     """Duplicate/false-start/stutter/fragment flags, aside flags, and audio-driven
     (cough/noise) false starts."""
     llm_config = cutting_llm_config or settings.cutting_llm
-    flags = detect_duplicates(
-        transcript.sentences,
-        settings.duplicate_detection,
-        llm_config=llm_config,
-    )
+    if settings.section_editor.enabled:
+        # Section editor replaces the tiered duplicate detector for text-judgment
+        # cuts; the audio lane (disruptions, asides) below still runs.
+        flags = detect_section_edits(
+            transcript.sentences,
+            settings.section_editor,
+            llm_config=settings.section_editor.llm,
+        )
+    else:
+        flags = detect_duplicates(
+            transcript.sentences,
+            settings.duplicate_detection,
+            llm_config=llm_config,
+        )
     flagged = {f.idx for f in flags if not f.word_trims}
 
     # Audio evidence can overlap a text-derived flag. In that case it should
@@ -113,7 +123,17 @@ def decide_edits(
         if enrichment is None:
             enrichment = enrich_transcript(transcript, edl, settings.enrichment)
 
-        if settings.enrichment.arbiter_enabled:
+        # The arbiter was tuned to correct the tiered detector (~0.40 word-level
+        # cut precision). Against the section editor (~0.77) its overrides are
+        # noise: on the 98-fixture A/B its restores were a coin flip (103 good /
+        # 103 bad) and its extra cuts worse than one (76/95), costing −0.030 F1.
+        # Enrichment itself still runs — the sidecar feeds the review UI.
+        arbiter_applicable = (
+            settings.enrichment.arbiter_enabled and not settings.section_editor.enabled
+        )
+        if settings.enrichment.arbiter_enabled and not arbiter_applicable:
+            log.info("Arbiter skipped — section editor is the cutter (see arbiter A/B)")
+        if arbiter_applicable:
             revised = apply_enrichment_arbiter(
                 flags, transcript, enrichment, settings.enrichment
             )

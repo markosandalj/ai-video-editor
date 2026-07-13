@@ -7,7 +7,11 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 
-from ai_video_editor.llm import LangChainModelConfig, default_cutting_model_config
+from ai_video_editor.llm import (
+    LangChainModelConfig,
+    default_annotation_model_config,
+    default_cutting_model_config,
+)
 
 
 LogLevel = Literal["TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR"]
@@ -228,6 +232,100 @@ class DuplicateDetectionConfig(BaseModel):
             "fixture corpus sentence length carried no signal (keep-longer was "
             "right 11/23 on near-identical pairs, 61% on paraphrase pairs) while "
             "keep-later was right 71%/82%."
+        ),
+    )
+
+
+class SectionEditorConfig(BaseModel):
+    """Section-based cutting: a strong LLM reads paragraph-sized windows and
+    proposes verbatim spans to delete (whole sentences *or* partial spans), which
+    are then mapped back to word-level timestamps deterministically. This replaces
+    the tiered pair-comparison duplicate detector for the text-judgment cuts; the
+    audio lane (silence, disruptions, asides) still runs alongside."""
+
+    model_config = ConfigDict(extra="allow")
+
+    enabled: bool = Field(
+        default=False,
+        description=(
+            "Use the LLM section editor for text-judgment cuts instead of the "
+            "tiered duplicate detector. Off by default while it is piloted."
+        ),
+    )
+    llm: LangChainModelConfig = Field(
+        default_factory=lambda: default_annotation_model_config(model="gemini-2.5-pro"),
+        description=(
+            "Chat model that judges each section. Meant to be a strong model "
+            "(Gemini 2.5 Pro, GPT-5.5, Opus) — the whole premise is that one "
+            "capable model reading a full section beats many small pair calls."
+        ),
+    )
+    target_words: int = Field(
+        default=1200,
+        ge=200,
+        description="Preferred section size in words; boundaries snap to the largest pause near this.",
+    )
+    max_words: int = Field(
+        default=2000,
+        ge=400,
+        description="Hard cap on a section's word count before a boundary is forced.",
+    )
+    overlap_sentences: int = Field(
+        default=2,
+        ge=0,
+        description=(
+            "Sentences of context shown on each side of a section's owned range so "
+            "a retake pair straddling a boundary is still visible. Ownership stays "
+            "disjoint — a deletion is only accepted for the section that owns it — "
+            "so overlap never double-cuts."
+        ),
+    )
+    min_span_match_ratio: float = Field(
+        default=0.8,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "A proposed deletion's verbatim text must match this fraction of a "
+            "contiguous word run in the named sentence or it is rejected. This is "
+            "the verify-the-claim guardrail: the model may only delete text that "
+            "actually exists."
+        ),
+    )
+    full_sentence_threshold: float = Field(
+        default=0.9,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "If a matched span covers at least this fraction of the sentence's "
+            "words, cut the whole sentence; otherwise emit a word-level trim."
+        ),
+    )
+    protect_min_words: int = Field(
+        default=4,
+        ge=0,
+        description=(
+            "Whole-sentence retake deletions of sentences shorter than this are "
+            "rejected — short near-identical lines ('Dobro.', 'Ok.') are usually "
+            "recurring discourse markers, not retakes (mirrors "
+            "DuplicateDetectionConfig.definite_min_words)."
+        ),
+    )
+    retake_max_gap_s: float = Field(
+        default=60.0,
+        ge=0.0,
+        description=(
+            "Retake deletions whose surviving twin is farther than this in time are "
+            "demoted (lower confidence + note) rather than dropped — a large gap "
+            "means recap, not retake. On the corpus, correct duplicate cuts sit a "
+            "median 10s from their twin; wrong ones 25s with a long tail."
+        ),
+    )
+    review_types: list[str] = Field(
+        default_factory=lambda: ["redundant"],
+        description=(
+            "Deletion types emitted at reduced confidence with a review note "
+            "instead of full confidence. These cut unique content and are the most "
+            "dangerous, so they surface as flagged suggestions in the review UI."
         ),
     )
 
@@ -505,6 +603,7 @@ class Settings(BaseSettings):
     audio: AudioConfig = Field(default_factory=AudioConfig)
     transcription: TranscriptionConfig = Field(default_factory=TranscriptionConfig)
     duplicate_detection: DuplicateDetectionConfig = Field(default_factory=DuplicateDetectionConfig)
+    section_editor: SectionEditorConfig = Field(default_factory=SectionEditorConfig)
     aside_detection: AsideDetectionConfig = Field(default_factory=AsideDetectionConfig)
     disruption: DisruptionConfig = Field(default_factory=DisruptionConfig)
     false_start_audio: FalseStartAudioConfig = Field(default_factory=FalseStartAudioConfig)
