@@ -17,6 +17,7 @@ keep-later rule and a recap time-gap. Output is the same ``DuplicateFlag`` /
 """
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from typing import Literal
@@ -86,6 +87,7 @@ class SectionHealth:
     model for a careful one."""
     sections_total: int = 0
     sections_failed: int = 0
+    section_retries: int = 0
     deletions_proposed: int = 0
     deletions_rejected_unverifiable: int = 0
     deletions_rejected_guardrail: int = 0
@@ -362,6 +364,36 @@ def _edit_section(
     return [d for d in result.deletions if section.owns(d.sentence_index)]
 
 
+def _edit_section_with_retry(
+    sentences: list[Sentence],
+    section: Section,
+    llm,
+    cfg: SectionEditorConfig,
+    health: SectionHealth,
+) -> list[SectionDeletion]:
+    """Retry structured-output failures that occur after a successful HTTP response."""
+    for attempt in range(1, cfg.section_max_attempts + 1):
+        try:
+            return _edit_section(sentences, section, llm)
+        except Exception as exc:
+            if attempt >= cfg.section_max_attempts:
+                raise
+            health.section_retries += 1
+            delay = cfg.section_retry_backoff_s * attempt
+            logger.warning(
+                "Section editor: attempt {}/{} failed ({}: {}); retrying in {:.1f}s",
+                attempt,
+                cfg.section_max_attempts,
+                type(exc).__name__,
+                str(exc)[:120],
+                delay,
+            )
+            if delay:
+                time.sleep(delay)
+
+    raise AssertionError("section retry loop exhausted unexpectedly")
+
+
 def detect_section_edits(
     sentences: list[Sentence],
     cfg: SectionEditorConfig | None = None,
@@ -392,7 +424,7 @@ def detect_section_edits(
     raw_flags: list[DuplicateFlag] = []
     for si, section in enumerate(sections):
         try:
-            deletions = _edit_section(sentences, section, llm)
+            deletions = _edit_section_with_retry(sentences, section, llm, cfg, health)
         except Exception:
             logger.exception(
                 "Section editor: section {}/{} ([{}–{}]) failed — skipping",
@@ -412,9 +444,10 @@ def detect_section_edits(
     trims = sum(1 for f in flags if f.word_trims)
     logger.info(
         "Section editor: {} flags ({} full-sentence, {} word-trim) — "
-        "{}/{} sections failed, {} spans rejected",
+        "{}/{} sections failed, {} retries, {} spans rejected",
         len(flags), full, trims,
         health.sections_failed, health.sections_total,
+        health.section_retries,
         health.deletions_rejected_unverifiable + health.deletions_rejected_guardrail,
     )
     return flags

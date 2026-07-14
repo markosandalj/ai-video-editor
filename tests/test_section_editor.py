@@ -9,6 +9,7 @@ from ai_video_editor.duplicate.models import FlagReason
 from ai_video_editor.duplicate.section_editor import (
     SectionDeletion,
     SectionEdits,
+    SectionHealth,
     _build_sections,
     _deletion_to_flag,
     _locate_span,
@@ -300,6 +301,48 @@ class TestWordLevelScoring:
 
 
 class TestDetectSectionEditsEndToEnd:
+    def test_transient_section_failure_is_retried(self, monkeypatch):
+        import ai_video_editor.duplicate.section_editor as se
+
+        sents = [
+            _sentence("Prvi pokušaj rečenice koji treba ukloniti sada", 0, 3),
+            _sentence("Ispravan pokušaj rečenice koji ostaje u videu", 4, 7),
+        ]
+        calls = 0
+
+        class FlakyStructured:
+            def invoke(self, prompt):
+                nonlocal calls
+                calls += 1
+                if calls == 1:
+                    raise TypeError("'NoneType' object is not iterable")
+                return SectionEdits(deletions=[
+                    SectionDeletion(
+                        sentence_index=0,
+                        verbatim_text="Prvi pokušaj rečenice koji treba ukloniti sada",
+                        delete_type="retake",
+                        kept_index=1,
+                    )
+                ])
+
+        class FlakyLLM:
+            def with_structured_output(self, schema):
+                return FlakyStructured()
+
+        monkeypatch.setattr(se, "build_chat_model", lambda cfg: FlakyLLM())
+
+        health = SectionHealth()
+        flags = detect_section_edits(
+            sents,
+            SectionEditorConfig(section_max_attempts=2, section_retry_backoff_s=0),
+            health=health,
+        )
+
+        assert calls == 2
+        assert health.section_retries == 1
+        assert health.sections_failed == 0
+        assert [flag.idx for flag in flags] == [0]
+
     def test_mocked_model_flow(self, monkeypatch):
         import ai_video_editor.duplicate.section_editor as se
 
@@ -348,5 +391,8 @@ class TestDetectSectionEditsEndToEnd:
 
         monkeypatch.setattr(se, "build_chat_model", lambda cfg: BoomLLM())
         # Must not raise — best-effort per section.
-        flags = detect_section_edits(sents, SectionEditorConfig())
+        flags = detect_section_edits(
+            sents,
+            SectionEditorConfig(section_max_attempts=1, section_retry_backoff_s=0),
+        )
         assert flags == []

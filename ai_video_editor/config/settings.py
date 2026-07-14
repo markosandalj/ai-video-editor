@@ -259,6 +259,21 @@ class SectionEditorConfig(BaseModel):
             "so overlap never double-cuts."
         ),
     )
+    section_max_attempts: int = Field(
+        default=3,
+        ge=1,
+        le=5,
+        description=(
+            "Maximum attempts for one section. This catches malformed successful "
+            "provider responses that bypass transport-level retries."
+        ),
+    )
+    section_retry_backoff_s: float = Field(
+        default=1.0,
+        ge=0.0,
+        le=30.0,
+        description="Linear backoff in seconds between section attempts.",
+    )
     min_span_match_ratio: float = Field(
         default=0.8,
         ge=0.0,

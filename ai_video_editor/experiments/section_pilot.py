@@ -162,6 +162,7 @@ def format_pilot_report(results: list[FixturePilotResult], *, model_id: str) -> 
     sec_agg = aggregate_word_scores([r.section for r in results])
     sections_total = sum(r.health.sections_total for r in results)
     sections_failed = sum(r.health.sections_failed for r in results)
+    section_retries = sum(r.health.section_retries for r in results)
     proposed = sum(r.health.deletions_proposed for r in results)
     rejected = sum(
         r.health.deletions_rejected_unverifiable + r.health.deletions_rejected_guardrail
@@ -180,6 +181,7 @@ def format_pilot_report(results: list[FixturePilotResult], *, model_id: str) -> 
         "",
         f"**Health: {'OK' if healthy else 'DEGRADED'}** — "
         f"{sections_failed}/{sections_total} sections failed, "
+        f"{section_retries} retries, "
         f"{rejected}/{proposed} proposed spans rejected by guardrails."
         + ("" if healthy else " Scores are NOT trustworthy — failed sections score as zero cuts."),
     ]
