@@ -1,4 +1,4 @@
-import type { ReviewSentence, ReviewWord } from '@/api'
+import type { ReviewWord } from '@/api'
 
 export type TimeRange = { start: number; end: number }
 
@@ -43,20 +43,6 @@ export function cutDuration(cuts: TimeRange[]): number {
 /** Resulting output length = source duration minus everything cut. */
 export function keepDuration(duration: number, cuts: TimeRange[]): number {
   return Math.max(0, duration - cutDuration(cuts))
-}
-
-// The two "AI is unsure" buckets a reviewer should eyeball: `yellow` (kept but
-// maybe cut) and `restore` (cut but maybe kept). Rendered as attention bands.
-export type AttentionBand = { start: number; end: number; kind: 'yellow' | 'restore' }
-
-export function attentionBands(sentences: ReviewSentence[]): AttentionBand[] {
-  const bands: AttentionBand[] = []
-  for (const sentence of sentences) {
-    if (sentence.status === 'yellow' || sentence.status === 'restore') {
-      bands.push({ start: sentence.start, end: sentence.end, kind: sentence.status })
-    }
-  }
-  return bands
 }
 
 /**

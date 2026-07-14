@@ -180,7 +180,7 @@ export function DiffView({
         {s && (
           <div className="ml-auto flex flex-wrap items-center gap-1.5">
             {!hasGt && (
-              <Badge variant="outline" className="border-status-yellow/50 text-status-yellow">
+              <Badge variant="outline" className="border-changed/50 text-changed">
                 no human edit
               </Badge>
             )}

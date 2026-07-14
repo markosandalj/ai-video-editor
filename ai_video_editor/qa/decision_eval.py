@@ -255,6 +255,8 @@ class WordDecisionScore:
     fp: int = 0  # word cut by pipeline, kept by human
     fn: int = 0  # word kept by pipeline, cut by human
     tn: int = 0
+    wrong_cut_by_reason: Counter = field(default_factory=Counter)
+    right_cut_by_reason: Counter = field(default_factory=Counter)
 
     @property
     def cut_precision(self) -> float:
@@ -272,13 +274,18 @@ class WordDecisionScore:
         return 2 * p * r / (p + r) if (p + r) else 0.0
 
 
-def _word_is_cut(word: Word, edl: EditDecisionList) -> bool:
-    """A word is cut if its midpoint lands in no KEEP decision."""
+def _word_cut_reason(word: Word, edl: EditDecisionList) -> tuple[bool, str]:
+    """Return whether a word is cut and the EDL reason at its midpoint."""
     mid = (word.start + word.end) / 2.0
+    reason = ""
     for d in edl.decisions:
-        if d.action == EditAction.KEEP and d.start <= mid <= d.end:
-            return False
-    return True
+        if not (d.start <= mid <= d.end):
+            continue
+        if d.action == EditAction.KEEP:
+            return False, ""
+        if not reason:
+            reason = d.reason.value
+    return True, reason
 
 
 def evaluate_decisions_word_level(
@@ -295,12 +302,14 @@ def evaluate_decisions_word_level(
     score = WordDecisionScore(name=name)
     for si, sentence in enumerate(raw_sentences):
         for wi, word in enumerate(sentence.words):
-            pipeline_cut = _word_is_cut(word, edl)
+            pipeline_cut, reason = _word_cut_reason(word, edl)
             kept_by_human = human_kept[si][wi]
             if pipeline_cut and not kept_by_human:
                 score.tp += 1
+                score.right_cut_by_reason[reason] += 1
             elif pipeline_cut and kept_by_human:
                 score.fp += 1
+                score.wrong_cut_by_reason[reason] += 1
             elif not pipeline_cut and not kept_by_human:
                 score.fn += 1
             else:
@@ -315,6 +324,8 @@ def aggregate_word_scores(scores: list[WordDecisionScore]) -> WordDecisionScore:
         agg.fp += s.fp
         agg.fn += s.fn
         agg.tn += s.tn
+        agg.wrong_cut_by_reason.update(s.wrong_cut_by_reason)
+        agg.right_cut_by_reason.update(s.right_cut_by_reason)
     return agg
 
 
@@ -326,6 +337,19 @@ def to_cut_decision_result(score: DecisionScore) -> CutDecisionResult:
         missed_cuts=score.fn,
         true_keeps=score.tn,
         take_disagreements=score.take_disagreements,
+        wrong_cut_by_reason=dict(score.wrong_cut_by_reason),
+        right_cut_by_reason=dict(score.right_cut_by_reason),
+    )
+
+
+def to_word_cut_decision_result(score: WordDecisionScore) -> CutDecisionResult:
+    """Convert word-level decision counts into the QA-report model."""
+    return CutDecisionResult(
+        granularity="word",
+        true_cuts=score.tp,
+        overcuts=score.fp,
+        missed_cuts=score.fn,
+        true_keeps=score.tn,
         wrong_cut_by_reason=dict(score.wrong_cut_by_reason),
         right_cut_by_reason=dict(score.right_cut_by_reason),
     )

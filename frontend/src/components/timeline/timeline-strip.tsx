@@ -18,7 +18,6 @@ import { findCutAt, findCutEdge, snapTime } from '@/lib/cut-ranges'
 import { formatDuration, formatTimestamp } from '@/lib/format'
 import { Player } from '@/lib/player'
 import {
-  type AttentionBand,
   type TimeRange,
   clampWindow,
   cutDuration,
@@ -40,8 +39,6 @@ const NO_PEAKS: number[] = []
 
 type Palette = {
   cut: string
-  changed: string
-  restore: string
   wave: string
   border: string
   playhead: string
@@ -51,8 +48,6 @@ type Palette = {
 
 const FALLBACK_PALETTE: Palette = {
   cut: '#e5484d',
-  changed: '#e2a336',
-  restore: '#8e4ec6',
   wave: '#8b8b8b',
   border: '#d4d4d4',
   playhead: '#111111',
@@ -87,8 +82,6 @@ function usePalette(ref: RefObject<HTMLElement | null>): Palette {
       const pick = (name: string, fallback: string) => cs.getPropertyValue(name).trim() || fallback
       setPalette({
         cut: pick('--cut', FALLBACK_PALETTE.cut),
-        changed: pick('--changed', FALLBACK_PALETTE.changed),
-        restore: pick('--status-restore', FALLBACK_PALETTE.restore),
         wave: pick('--muted-foreground', FALLBACK_PALETTE.wave),
         border: pick('--border', FALLBACK_PALETTE.border),
         playhead: pick('--foreground', FALLBACK_PALETTE.playhead),
@@ -195,26 +188,6 @@ function drawSelection(
   ctx.restore()
 }
 
-function drawAttention(
-  ctx: CanvasRenderingContext2D,
-  width: number,
-  bands: AttentionBand[],
-  toX: (t: number) => number,
-  palette: Palette,
-  bandHeight: number,
-) {
-  ctx.save()
-  ctx.globalAlpha = 0.85
-  for (const band of bands) {
-    const x0 = clamp(toX(band.start), 0, width)
-    const x1 = clamp(toX(band.end), 0, width)
-    if (x1 - x0 < 0.5) continue
-    ctx.fillStyle = band.kind === 'restore' ? palette.restore : palette.changed
-    ctx.fillRect(x0, 0, Math.max(1, x1 - x0), bandHeight)
-  }
-  ctx.restore()
-}
-
 function drawPlayhead(
   ctx: CanvasRenderingContext2D,
   width: number,
@@ -273,7 +246,6 @@ export type TimelineStripProps = {
   videoId: string
   duration: number
   cutRanges: TimeRange[]
-  attention: AttentionBand[]
   words: ReviewWord[]
   sentences: ReviewSentence[]
   timeSelection: TimeRange | null
@@ -300,7 +272,6 @@ export function TimelineStrip({
   videoId,
   duration,
   cutRanges,
-  attention,
   words,
   sentences,
   timeSelection,
@@ -400,7 +371,6 @@ export function TimelineStrip({
     (ctx, w, h) => {
       drawWaveform(ctx, h, minimapSamples, palette.wave, 0.5)
       drawRanges(ctx, w, h, displayRanges, minimapToX, palette.cut, 0.3, false)
-      drawAttention(ctx, w, attention, minimapToX, palette, 3)
       drawSelection(ctx, w, h, activeSelection, minimapToX, palette.select, false)
       if (!collapsed && duration > 0) {
         const vx0 = clamp(minimapToX(view.start), 0, w)
@@ -416,7 +386,7 @@ export function TimelineStrip({
         ctx.restore()
       }
     },
-    [minimapSamples, displayRanges, attention, activeSelection, palette, duration, collapsed, view.start, view.end, width],
+    [minimapSamples, displayRanges, activeSelection, palette, duration, collapsed, view.start, view.end, width],
   )
   useCanvasLayer(
     minimapHead,
@@ -435,11 +405,10 @@ export function TimelineStrip({
       const waveH = h - RULER_HEIGHT
       drawWaveform(ctx, waveH, detailSamples, palette.wave, 0.65)
       drawRanges(ctx, w, waveH, displayRanges, detailToX, palette.cut, 0.24, true)
-      drawAttention(ctx, w, attention, detailToX, palette, 4)
       drawSelection(ctx, w, waveH, activeSelection, detailToX, palette.select, true)
       drawRuler(ctx, w, h, view, palette.wave)
     },
-    [detailSamples, displayRanges, attention, activeSelection, palette, view.start, view.end, width],
+    [detailSamples, displayRanges, activeSelection, palette, view.start, view.end, width],
   )
   useCanvasLayer(
     detailHead,

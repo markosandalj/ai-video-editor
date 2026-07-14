@@ -67,7 +67,7 @@ def create_app(
 
     @app.get("/api/videos/{video_id}/diff", response_model=DiffPayload)
     def get_diff(video_id: str) -> DiffPayload:
-        """Dev-only: raw transcript with pipeline vs human-edit cuts overlaid."""
+        """Raw transcript with pipeline vs human-edit cuts overlaid for QA."""
         video_path = _video_by_id(root, video_id)
         try:
             return build_diff_payload(video_path)

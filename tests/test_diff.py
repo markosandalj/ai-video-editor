@@ -158,7 +158,8 @@ def test_diff_human_kept_survives_chunking_and_tokenisation_mismatch(tmp_path: P
 
 
 def test_diff_api_endpoint(tmp_path: Path) -> None:
-    _write_fixture(tmp_path)
+    video = _write_fixture(tmp_path)
+    video.with_suffix(".enrichment.json").write_text('{"stale": true}', encoding="utf-8")
     client = TestClient(create_app(media_root=tmp_path, frontend_dist=tmp_path / "missing-dist"))
 
     res = client.get("/api/videos/lesson-raw/diff")
@@ -167,3 +168,5 @@ def test_diff_api_endpoint(tmp_path: Path) -> None:
     assert body["video"]["id"] == "lesson-raw"
     assert len(body["sentences"]) == 4
     assert body["summary"]["human_only_cut"] == 1
+    assert "status" not in body["sentences"][0]
+    assert "rationale" not in body["sentences"][0]

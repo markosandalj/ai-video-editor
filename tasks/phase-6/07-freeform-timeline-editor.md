@@ -8,7 +8,8 @@ Phase: 6
 - **M1 (componentize)** — already done before this work started: `App.tsx` is
   ~340 lines and the editor is split across `components/`, `hooks/`, and
   `lib/review-model.ts`. No separate componentization pass was needed.
-- **M2 backend (range core)** — done. `review.v3`, `CutRange`, `cut_ranges` in
+- **M2 backend (range core)** — done. Introduced in `review.v3`; current payload is
+  `review.v4` after removal of the retired annotation fields. `CutRange`, `cut_ranges` in
   the payload (derived from current decisions) and save request (legacy
   `cut_words` still honored when `cut_ranges` is omitted), range-based
   `build_reviewed_edl` (keeps = complement of merged cuts). Key realization: the
@@ -88,7 +89,7 @@ both views editing one shared cut state.
 
 - **Canonical edit state is a list of cut time-ranges** (`{start, end}` in
   source seconds), replacing the word-index set. Word/sentence keep status is
-  *derived* by overlap. Save schema bumps to `review.v3`.
+  *derived* by overlap. Save schema originally bumped to `review.v3`.
 - **Cuts-only scope**: output is always the source video minus cut ranges, in
   original order. No reordering, multi-track, external media, or per-cut
   transition control.
@@ -203,7 +204,7 @@ consumes `TimeRange[]`, so only the producer changes.
 
 ## Backend work
 
-- `ai_video_editor/review/models.py`: `SCHEMA_VERSION = "review.v3"`. New
+- `ai_video_editor/review/models.py`: range editing was introduced with `review.v3`.
   `CutRange {start, end}`. `ReviewSaveRequest` becomes `{cut_ranges: list[CutRange]}`
   (accept legacy `cut_words` and convert server-side). `ReviewPayload` includes
   the saved `cut_ranges` so the client restores exact state.
@@ -307,7 +308,7 @@ failure. Timebox the peaks.js spike in M3 and decide build-vs-adopt from it.
 ## Acceptance criteria
 
 - [ ] Cut state is range-based end-to-end: timeline and transcript edit the
-      same ranges; save produces `review.v3`; legacy saves and drafts load
+      same ranges; save produces the current review schema; legacy saves and drafts load
       correctly and render an identical EDL.
 - [ ] Timeline strip shows minimap + zoomable detail track with waveform,
       confidence heat, cut regions, playhead; collapsible; click seeks video.

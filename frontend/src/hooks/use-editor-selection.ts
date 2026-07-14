@@ -3,13 +3,11 @@ import { useHotkeys, type UseHotkeyDefinition } from '@tanstack/react-hotkeys'
 import * as R from 'remeda'
 import { useEventCallback } from 'usehooks-ts'
 
-import type { ReviewSentence } from '@/api'
 import type { ReviewSession } from '@/hooks/use-review-session'
 import { Player } from '@/lib/player'
-import { needsReview, sentenceRange } from '@/lib/review-model'
+import { sentenceRange } from '@/lib/review-model'
 
 type Options = {
-  sentences: ReviewSentence[]
   session: ReviewSession
   activeIdx: number | null
   enabled: boolean
@@ -27,7 +25,6 @@ type Options = {
  * source of truth. Registers the editor-scoped hotkeys while enabled.
  */
 export function useEditorSelection({
-  sentences,
   session,
   activeIdx,
   enabled,
@@ -124,23 +121,6 @@ export function useEditorSelection({
     if (currentSentence) onAudition(currentSentence.start, currentSentence.end, 'sentence')
   })
 
-  const jumpToNextFlag = useEventCallback(() => {
-    const time = player.currentTime ?? 0
-    const next =
-      sentences.find((s) => needsReview(s) && s.start > time + 0.05) ?? sentences.find(needsReview)
-    if (!next) {
-      onStatus('Nothing flagged for review in this lecture.')
-      return
-    }
-    const first = (next.words ?? [])[0]
-    void player.seek(next.start)
-    if (first) {
-      placeCaret(first.idx, null)
-      scrollToWord(first.idx, true)
-    }
-    onStatus('Jumped to the next flagged sentence.')
-  })
-
   const copySelection = useEventCallback(() => {
     if (!selectionRange) return
     const text = words
@@ -183,7 +163,6 @@ export function useEditorSelection({
     { hotkey: 'Delete', callback: () => applySelection(true), options: { enabled } },
     { hotkey: 'Enter', callback: () => applySelection(false), options: { enabled } },
     { hotkey: 'L', callback: auditionContext, options: { enabled } },
-    { hotkey: 'N', callback: jumpToNextFlag, options: { enabled } },
     { hotkey: 'Mod+C', callback: copySelection, options: { enabled } },
     { hotkey: 'Escape', callback: clearSelection, options: { enabled, ignoreInputs: true } },
   ]
@@ -203,7 +182,6 @@ export function useEditorSelection({
     applySelection,
     auditionContext,
     selectCurrentSentence,
-    jumpToNextFlag,
     findMatchesJump,
   }
 }

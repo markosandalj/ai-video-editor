@@ -19,7 +19,7 @@ Add all required Python dependencies to `pyproject.toml` so the development envi
 
 - `pyproject.toml` updated with Phase 0 dependencies using `>=` ranges
 - `uv sync` to install and lock
-- Future phases will add: `noisereduce`, `ffmpeg-python`, `whisperx`, `sentence-transformers`, `thefuzz`, `numpy`, `scipy`, `librosa`, `opentimelineio`
+- Later phases add their provider and media dependencies as needed.
 
 ## Acceptance Criteria
 

@@ -9,8 +9,8 @@ from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, Settings
 
 from ai_video_editor.llm import (
     LangChainModelConfig,
-    default_annotation_model_config,
     default_cutting_model_config,
+    default_section_editor_model_config,
 )
 
 
@@ -66,13 +66,13 @@ class AudioConfig(BaseModel):
 
 
 class TranscriptionConfig(BaseModel):
-    """Transcription: default pipeline is ElevenLabs Scribe + grammar. WhisperX fields are kept for optional use."""
+    """ElevenLabs Scribe transcription followed by grammar correction."""
 
     model_config = ConfigDict(extra="allow")
 
     language: str = Field(
         default="hr",
-        description="Language code for ElevenLabs and (if used) WhisperX.",
+        description="Language code for ElevenLabs.",
     )
 
     elevenlabs_model_id: str = Field(
@@ -102,26 +102,6 @@ class TranscriptionConfig(BaseModel):
             "cut logic a false-start-shaped unit. 0 disables pause splitting."
         ),
     )
-
-    # WhisperX — not used by CLI; kept for experiments or future use
-    model_size: str = Field(
-        default="small",
-        description="Whisper model size (WhisperX only): tiny, base, small, medium, large-v3.",
-    )
-    device: str = Field(
-        default="cpu",
-        description="Compute device for WhisperX: cpu or cuda. MPS not supported.",
-    )
-    batch_size: int = Field(
-        default=16,
-        gt=0,
-        description="Batch size for WhisperX transcription.",
-    )
-    compute_type: str = Field(
-        default="int8",
-        description="Quantization type for WhisperX: float16, float32, int8.",
-    )
-
 
 class DuplicateDetectionConfig(BaseModel):
     """Duplicate detection thresholds and behaviour."""
@@ -246,18 +226,17 @@ class SectionEditorConfig(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     enabled: bool = Field(
-        default=False,
+        default=True,
         description=(
             "Use the LLM section editor for text-judgment cuts instead of the "
-            "tiered duplicate detector. Off by default while it is piloted."
+            "tiered duplicate detector."
         ),
     )
     llm: LangChainModelConfig = Field(
-        default_factory=lambda: default_annotation_model_config(model="gemini-2.5-pro"),
+        default_factory=default_section_editor_model_config,
         description=(
-            "Chat model that judges each section. Meant to be a strong model "
-            "(Gemini 2.5 Pro, GPT-5.5, Opus) — the whole premise is that one "
-            "capable model reading a full section beats many small pair calls."
+            "Chat model that judges each section. The default is the GPT-5.6 Sol "
+            "configuration selected by the section-editor evaluation."
         ),
     )
     target_words: int = Field(
@@ -315,17 +294,16 @@ class SectionEditorConfig(BaseModel):
         ge=0.0,
         description=(
             "Retake deletions whose surviving twin is farther than this in time are "
-            "demoted (lower confidence + note) rather than dropped — a large gap "
-            "means recap, not retake. On the corpus, correct duplicate cuts sit a "
+            "rejected — a large gap means recap, not retake. On the corpus, "
+            "correct duplicate cuts sit a "
             "median 10s from their twin; wrong ones 25s with a long tail."
         ),
     )
-    review_types: list[str] = Field(
+    reject_types: list[str] = Field(
         default_factory=lambda: ["redundant"],
         description=(
-            "Deletion types emitted at reduced confidence with a review note "
-            "instead of full confidence. These cut unique content and are the most "
-            "dangerous, so they surface as flagged suggestions in the review UI."
+            "Deletion types rejected instead of auto-cut. These can remove unique "
+            "content and require a human-review system before they are safe to use."
         ),
     )
 
@@ -468,101 +446,6 @@ class FalseStartAudioConfig(BaseModel):
     )
 
 
-class EnrichmentConfig(BaseModel):
-    """Transcript metadata enrichment (clean, standalone Gemini pass)."""
-
-    model_config = ConfigDict(extra="allow")
-
-    enabled: bool = Field(
-        default=True,
-        description="Run the enrichment pass during processing (override per run with --no-enrich).",
-    )
-    model: str = Field(
-        default="gemini-2.5-pro",
-        description="Gemini model for enrichment — the stronger 'pro' tier (judgment > cost).",
-    )
-    temperature: float = Field(
-        default=0.1,
-        ge=0.0,
-        le=2.0,
-        description="Low temperature for stable, repeatable scoring.",
-    )
-    llm: LangChainModelConfig | None = Field(
-        default=None,
-        description=(
-            "Optional generic LangChain chat-model config for enrichment. "
-            "When omitted, the legacy Gemini model/temperature fields are used."
-        ),
-    )
-    batch_size: int = Field(
-        default=20,
-        gt=0,
-        description="Number of sentences sent to Gemini per enrichment call.",
-    )
-    green_threshold: float = Field(
-        default=80.0,
-        ge=0.0,
-        le=100.0,
-        description="Kept sentences with keep_confidence >= this are 'green'; below are 'yellow'.",
-    )
-    restore_threshold: float = Field(
-        default=60.0,
-        ge=0.0,
-        le=100.0,
-        description="Cut sentences with keep_confidence >= this become 'restore' suggestions; below are 'red'.",
-    )
-
-    arbiter_enabled: bool = Field(
-        default=True,
-        description=(
-            "Let the independent enrichment score arbitrate the duplicate/false-start "
-            "decisions before the EDL is rendered. The enrichment pass scores every "
-            "sentence on its own and empirically beats the tiered pipeline as a "
-            "keep/cut classifier, so it is used to correct the pipeline's worst calls."
-        ),
-    )
-    arbiter_uncut_confidence: float = Field(
-        default=70.0,
-        ge=0.0,
-        le=100.0,
-        description=(
-            "Restore (un-cut) a sentence the pipeline flagged when enrichment "
-            "keep_confidence is at or above this — targets wrong duplicate cuts."
-        ),
-    )
-    arbiter_extra_cut_confidence: float = Field(
-        default=15.0,
-        ge=0.0,
-        le=100.0,
-        description=(
-            "Additionally cut a kept sentence when enrichment keep_confidence is "
-            "below this AND it carries an aside/filler/incomplete tag. Conservative "
-            "by design — most over-keeps are asides the duplicate logic can't see. "
-            "15 chosen by sweep: best precision with negligible recall loss vs 25."
-        ),
-    )
-    arbiter_artifact_max_words: int = Field(
-        default=2,
-        ge=0,
-        description=(
-            "A still-kept sentence is treated as a transcription artifact when it "
-            "is punctuation-only OR has at most this many words. Targets junk "
-            "frames the duplicate logic keeps because they aren't duplicates "
-            "('.', '...', stray one-word interjections)."
-        ),
-    )
-    arbiter_artifact_confidence: float = Field(
-        default=25.0,
-        ge=0.0,
-        le=100.0,
-        description=(
-            "Cut an artifact sentence (see arbiter_artifact_max_words) only when "
-            "enrichment keep_confidence is below this — guards genuine short "
-            "answers. 98-video sweep: +13 recovered cuts, 0 new false positives."
-        ),
-    )
-
-
 class RenderConfig(BaseModel):
     """Video render / assembly parameters."""
 
@@ -608,7 +491,6 @@ class Settings(BaseSettings):
     disruption: DisruptionConfig = Field(default_factory=DisruptionConfig)
     false_start_audio: FalseStartAudioConfig = Field(default_factory=FalseStartAudioConfig)
     cutting_llm: LangChainModelConfig = Field(default_factory=default_cutting_model_config)
-    enrichment: EnrichmentConfig = Field(default_factory=EnrichmentConfig)
     render: RenderConfig = Field(default_factory=RenderConfig)
 
     @classmethod

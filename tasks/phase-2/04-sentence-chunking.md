@@ -11,7 +11,7 @@ Aggregate word-level data into sentence-level chunks by splitting on terminal pu
 ## Requirements
 
 - Split on terminal punctuation: `.`, `?`, `!`
-- Trust WhisperX punctuation as-is (no post-processing)
+- Use ElevenLabs punctuation, followed by the dedicated grammar-correction pass
 - Each sentence: start = first word start, end = last word end
 - Handle edge cases: abbreviations, decimal numbers, ellipses
 

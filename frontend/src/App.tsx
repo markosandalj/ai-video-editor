@@ -1,9 +1,9 @@
 import '@videojs/react/video/skin.css'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useHotkeys, type UseHotkeyDefinition } from '@tanstack/react-hotkeys'
 import { Agentation } from 'agentation'
-import { Check, CircleHelp, Redo2, Scissors, SkipForward, Sparkles, Undo2 } from 'lucide-react'
+import { Check, CircleHelp, Redo2, Scissors, Sparkles, Undo2 } from 'lucide-react'
 import { useBoolean, useEventCallback } from 'usehooks-ts'
 
 import { DiffView } from '@/DiffView'
@@ -11,7 +11,6 @@ import { HelpDrawer } from '@/components/help-drawer'
 import { MediaColumn } from '@/components/media-column'
 import type { AuditionRange } from '@/components/playback-sync'
 import { ResizableSplit } from '@/components/resizable-split'
-import { ReviewQueue } from '@/components/review-queue'
 import { TimelineStrip } from '@/components/timeline/timeline-strip'
 import { TranscriptView } from '@/components/transcript-view'
 import { Badge } from '@/components/ui/badge'
@@ -29,7 +28,7 @@ import type { ReviewPayload, VideoSummary } from '@/api'
 import { useEditorSelection } from '@/hooks/use-editor-selection'
 import { useReviewSession } from '@/hooks/use-review-session'
 import { Player } from '@/lib/player'
-import { attentionBands, type TimeRange } from '@/lib/timeline-model'
+import type { TimeRange } from '@/lib/timeline-model'
 
 export default function App() {
   const videosQuery = useVideos()
@@ -51,9 +50,9 @@ export default function App() {
 
   return (
     <>
-      {/* Keyed only on the video: switching queue↔editor must not remount the player. */}
+      {/* Keyed only on the video so switching Transcript↔Compare keeps playback stable. */}
       <Player.Provider key={selectedId || 'empty'}>
-        {view === 'diff' && import.meta.env.DEV ? (
+        {view === 'diff' ? (
           <DiffView
             videoId={selectedId}
             videos={videosQuery.data ?? []}
@@ -68,7 +67,6 @@ export default function App() {
             videos={videosQuery.data ?? []}
             message={message}
             onSelect={setSelectedId}
-            view={view === 'diff' ? 'editor' : view}
             onViewChange={setView}
           />
         )}
@@ -83,11 +81,10 @@ type WorkspaceProps = {
   videos: VideoSummary[]
   message: string
   onSelect: (id: string) => void
-  view: AppView
   onViewChange: (view: AppView) => void
 }
 
-function Workspace({ videoId, videos, message, onSelect, view, onViewChange }: WorkspaceProps) {
+function Workspace({ videoId, videos, message, onSelect, onViewChange }: WorkspaceProps) {
   const player = Player.usePlayer()
   const review = useReview(videoId)
   const payload = (review.data as ReviewPayload | undefined) ?? null
@@ -104,9 +101,6 @@ function Workspace({ videoId, videos, message, onSelect, view, onViewChange }: W
   // existing cut). Exactly one selection is active app-wide: setting this clears
   // the transcript's word selection and vice versa.
   const [timeSelection, setTimeSelection] = useState<TimeRange | null>(null)
-
-  // The canonical cut ranges the session owns, plus attention bands for heat.
-  const attention = useMemo(() => attentionBands(payload?.sentences ?? []), [payload])
 
   const [auditionRange, setAuditionRange] = useState<AuditionRange | null>(null)
   const [activeIdx, setActiveIdx] = useState<number | null>(null)
@@ -140,12 +134,11 @@ function Workspace({ videoId, videos, message, onSelect, view, onViewChange }: W
   })
 
   const selection = useEditorSelection({
-    sentences: payload?.sentences ?? [],
     session,
     activeIdx,
     // Disabled while a timeline selection is active, so the shared verbs
     // (X/⏎/L/Esc) act on exactly one selection.
-    enabled: view === 'editor' && payload !== null && !helpOpen.value && timeSelection === null,
+    enabled: payload !== null && !helpOpen.value && timeSelection === null,
     onAudition: audition,
     onStatus,
     scrollToWord,
@@ -187,11 +180,11 @@ function Workspace({ videoId, videos, message, onSelect, view, onViewChange }: W
 
   useHotkeys(globalHotkeys, { conflictBehavior: 'allow', preventDefault: true, stopPropagation: true })
 
-  // Follow playback in the editor: keep the active word in view without jitter.
+  // Follow playback in the transcript: keep the active word in view without jitter.
   useEffect(() => {
-    if (view !== 'editor' || !followPlayback.value || activeIdx === null) return
+    if (!followPlayback.value || activeIdx === null) return
     scrollToWord(activeIdx, true)
-  }, [activeIdx, view, followPlayback.value, scrollToWord])
+  }, [activeIdx, followPlayback.value, scrollToWord])
 
   const finishLabel =
     session.finishState === 'saving'
@@ -207,13 +200,13 @@ function Workspace({ videoId, videos, message, onSelect, view, onViewChange }: W
     ? 'Loading review…'
     : review.error
       ? review.error.message
-      : status || (payload ? defaultHint(view) : message)
+      : status || (payload ? defaultHint() : message)
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
       <header className="flex shrink-0 flex-wrap items-center gap-3 border-b bg-card px-4 py-2.5">
         <span className="text-sm font-extrabold tracking-tight">AI Video Editor</span>
-        <ViewSwitch view={view} onChange={onViewChange} />
+        <ViewSwitch view="editor" onChange={onViewChange} />
 
         <Select value={videoId} onValueChange={onSelect}>
           <SelectTrigger size="sm" className="w-[260px]">
@@ -272,30 +265,18 @@ function Workspace({ videoId, videos, message, onSelect, view, onViewChange }: W
                 setStatus('Audition complete.')
               }}
             >
-              {view === 'editor' && (
-                <EditorControls session={session} selection={selection} />
-              )}
+              <EditorControls session={session} selection={selection} />
             </MediaColumn>
           }
           main={
-            view === 'editor' ? (
-              <TranscriptView
-                sentences={payload.sentences}
-                wordStatus={session.wordStatus}
-                selection={selection}
-                activeIdx={activeIdx}
-                wordRefs={wordRefs}
-                scrollRef={scrollRef}
-              />
-            ) : (
-              <ReviewQueue
-                flags={session.flags}
-                session={session}
-                onAudition={audition}
-                onOpenTranscript={() => onViewChange('editor')}
-                onFinish={finish}
-              />
-            )
+            <TranscriptView
+              sentences={payload.sentences}
+              wordStatus={session.wordStatus}
+              selection={selection}
+              activeIdx={activeIdx}
+              wordRefs={wordRefs}
+              scrollRef={scrollRef}
+            />
           }
         />
       ) : (
@@ -304,12 +285,11 @@ function Workspace({ videoId, videos, message, onSelect, view, onViewChange }: W
         </div>
       )}
 
-      {payload && view === 'editor' && (
+      {payload && (
         <TimelineStrip
           videoId={payload.video.id}
           duration={payload.video.duration}
           cutRanges={session.cutRanges}
-          attention={attention}
           words={session.words}
           sentences={payload.sentences}
           timeSelection={timeSelection}
@@ -334,8 +314,7 @@ function Workspace({ videoId, videos, message, onSelect, view, onViewChange }: W
   )
 }
 
-// The five things that earn a permanent slot under the video in editor mode:
-// cut, keep, undo, redo, and jumping to the next flagged sentence.
+// The four editing actions that earn a permanent slot under the video.
 function EditorControls({
   session,
   selection,
@@ -375,16 +354,10 @@ function EditorControls({
           Redo ⇧⌘Z
         </Button>
       </div>
-      <Button variant="secondary" size="sm" onClick={selection.jumpToNextFlag}>
-        <SkipForward />
-        Next flagged (N)
-      </Button>
     </div>
   )
 }
 
-function defaultHint(view: AppView): string {
-  return view === 'editor'
-    ? 'Click a word to place the cursor · double-click selects · X cuts · L auditions.'
-    : 'Hear each suggestion, then keep it or cut it. Approve & finish when you are done.'
+function defaultHint(): string {
+  return 'Click a word to place the cursor · double-click selects · X cuts · L auditions.'
 }

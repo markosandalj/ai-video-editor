@@ -37,14 +37,32 @@ def _build_sections(report: QAReport) -> str:
 
     if report.cut_decisions:
         cd = report.cut_decisions
-        parts.append(f"""<div class="section"><h2>Cut Decisions vs Human</h2>
+        if cd.granularity == "word":
+            heading = "Word-Level Cut Decisions vs Human"
+            needed_label = "Words cut by human"
+            made_label = "Words cut by pipeline"
+            correct_label = "Correctly cut words"
+            missed_label = "Missed cut words"
+            overcut_label = "Overcut words (human kept)"
+            disagreement_row = ""
+        else:
+            heading = "Cut Decisions vs Human"
+            needed_label = "Needed cuts (human)"
+            made_label = "Made cuts (pipeline)"
+            correct_label = "Correct cuts"
+            missed_label = "Missed cuts"
+            overcut_label = "Overcuts (human kept)"
+            disagreement_row = (
+                f"<tr><td>Take disagreements</td><td>{cd.take_disagreements}</td></tr>"
+            )
+        parts.append(f"""<div class="section"><h2>{heading}</h2>
 <table><tr><th>Metric</th><th>Value</th></tr>
-<tr><td>Needed cuts (human)</td><td>{cd.needed_cuts}</td></tr>
-<tr><td>Made cuts (pipeline)</td><td>{cd.made_cuts}</td></tr>
-<tr><td>Correct cuts</td><td>{cd.true_cuts}</td></tr>
-<tr><td>Missed cuts</td><td>{cd.missed_cuts}</td></tr>
-<tr><td>Overcuts (human kept)</td><td>{cd.overcuts}</td></tr>
-<tr><td>Take disagreements</td><td>{cd.take_disagreements}</td></tr>
+<tr><td>{needed_label}</td><td>{cd.needed_cuts}</td></tr>
+<tr><td>{made_label}</td><td>{cd.made_cuts}</td></tr>
+<tr><td>{correct_label}</td><td>{cd.true_cuts}</td></tr>
+<tr><td>{missed_label}</td><td>{cd.missed_cuts}</td></tr>
+<tr><td>{overcut_label}</td><td>{cd.overcuts}</td></tr>
+{disagreement_row}
 <tr><td>Cut precision</td><td>{cd.cut_precision:.1%}</td></tr>
 <tr><td>Cut recall</td><td>{cd.cut_recall:.1%}</td></tr>
 <tr><td>Cut F1</td><td>{cd.cut_f1:.1%}</td></tr>
@@ -169,11 +187,14 @@ def print_summary(report: QAReport) -> None:
 
     if report.cut_decisions:
         cd = report.cut_decisions
+        granularity = "word-level" if cd.granularity == "word" else "sentence-level"
+        unit = "words" if cd.granularity == "word" else "cuts"
         logger.info(
-            "  Cut decisions: P={:.1%} R={:.1%} F1={:.1%} "
-            "(missed {}/{}, overcut {}, take disagreements {})",
+            "  Cut decisions ({}): P={:.1%} R={:.1%} F1={:.1%} "
+            "(missed {}/{} {}, overcut {})",
+            granularity,
             cd.cut_precision, cd.cut_recall, cd.cut_f1,
-            cd.missed_cuts, cd.needed_cuts, cd.overcuts, cd.take_disagreements,
+            cd.missed_cuts, cd.needed_cuts, unit, cd.overcuts,
         )
 
     if report.transcript_comparison:

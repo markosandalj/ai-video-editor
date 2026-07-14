@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from ai_video_editor.config.settings import SectionEditorConfig
+from ai_video_editor.config.settings import SectionEditorConfig, Settings
 from ai_video_editor.duplicate.models import FlagReason
 from ai_video_editor.duplicate.section_editor import (
     SectionDeletion,
@@ -16,6 +16,20 @@ from ai_video_editor.duplicate.section_editor import (
     detect_section_edits,
 )
 from ai_video_editor.transcription.models import Sentence, Word
+
+
+def test_section_editor_is_the_default_cutter() -> None:
+    settings = Settings()
+
+    assert settings.section_editor.enabled is True
+    assert settings.section_editor.llm.id == "gpt-5.6-sol"
+    assert settings.section_editor.llm.class_path == "langchain_openai.ChatOpenAI"
+    assert settings.section_editor.llm.model == "openai/gpt-5.6-sol"
+    assert settings.section_editor.llm.api_key_env == "OPENROUTER_API_KEY"
+    assert settings.section_editor.llm.provider_kwargs["base_url"] == (
+        "https://openrouter.ai/api/v1"
+    )
+    assert not hasattr(settings, "enrichment")
 
 
 def _sentence(text: str, start: float, end: float) -> Sentence:
@@ -157,7 +171,7 @@ class TestDeletionToFlag:
         )
         assert _deletion_to_flag(d, sents, SectionEditorConfig(protect_min_words=4)) is None
 
-    def test_keep_later_violation_lowers_confidence(self):
+    def test_keep_later_violation_is_rejected(self):
         sents = self._sents()
         # Model wants to keep the EARLIER take (index 0) and cut the LATER (index 2).
         d = SectionDeletion(
@@ -166,12 +180,9 @@ class TestDeletionToFlag:
             delete_type="retake",
             kept_index=0,
         )
-        flag = _deletion_to_flag(d, sents, SectionEditorConfig())
-        assert flag is not None
-        assert flag.confidence <= 0.5
-        assert "keep-later" in flag.note
+        assert _deletion_to_flag(d, sents, SectionEditorConfig()) is None
 
-    def test_long_gap_retake_demoted(self):
+    def test_long_gap_retake_is_rejected(self):
         sents = [
             _sentence("Danas govorimo o zakonu ocuvanja kolicine gibanja", 0, 4),
             _sentence("Danas govorimo o zakonu ocuvanja kolicine gibanja", 200, 204),
@@ -182,22 +193,18 @@ class TestDeletionToFlag:
             delete_type="retake",
             kept_index=1,
         )
-        flag = _deletion_to_flag(d, sents, SectionEditorConfig(retake_max_gap_s=60))
-        assert flag is not None
-        assert flag.confidence <= 0.55
-        assert "recap risk" in flag.note
+        assert _deletion_to_flag(
+            d, sents, SectionEditorConfig(retake_max_gap_s=60)
+        ) is None
 
-    def test_redundant_type_is_review_suggestion(self):
+    def test_redundant_type_is_rejected(self):
         sents = [_sentence("Ova recenica samo ponavlja ono sto smo vec rekli ranije", 0, 4)]
         d = SectionDeletion(
             sentence_index=0,
             verbatim_text="Ova recenica samo ponavlja ono sto smo vec rekli ranije",
             delete_type="redundant",
         )
-        flag = _deletion_to_flag(d, sents, SectionEditorConfig())
-        assert flag is not None
-        assert flag.confidence <= 0.5
-        assert "review" in flag.note
+        assert _deletion_to_flag(d, sents, SectionEditorConfig()) is None
 
 
 class TestMergeFlags:

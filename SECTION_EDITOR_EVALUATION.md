@@ -105,9 +105,9 @@ it becomes a cut (`ai_video_editor/duplicate/section_editor.py`):
 - **recap time-gap** — retake deletions whose twin is >60s away are demoted;
 - **annotate-only** — "redundant" (unique-content) cuts surface as review suggestions.
 
-Config: `SectionEditorConfig` (`ai_video_editor/config/settings.py`), `enabled=False` by
-default (still pilot-gated). The audio lane (silence, disruptions, asides) runs alongside;
-the section editor only replaces the text-judgment cuts.
+Config: `SectionEditorConfig` (`ai_video_editor/config/settings.py`), enabled by default
+with `gpt-5.6-sol` through OpenRouter. The audio lane (silence, disruptions, asides) runs
+alongside; the section editor only replaces the text-judgment cuts.
 
 ---
 
@@ -133,8 +133,8 @@ which is where gemini-3.1-pro becomes attractive.
 
 ## Enrichment-arbiter A/B (2026-07-13): disabled for section-editor cuts
 
-The enrichment arbiter (`enrich/arbiter.py`) can override the cutter — restoring flags
-it is confident about and adding tag-gated extra cuts. It was tuned to correct the old
+The former enrichment arbiter could override the cutter — restoring flags it was
+confident about and adding tag-gated extra cuts. It was tuned to correct the old
 tiered detector (word-level cut precision ~0.40). A/B on all 98 fixtures, same fresh
 gpt-5.6-sol flags in both arms, enrichment scored by **gemini-3.1-pro**:
 
@@ -154,11 +154,11 @@ This is ensemble logic working as expected: an overrider only helps when it is m
 accurate than the thing it overrides. Enrichment beat the old 0.40-precision detector;
 it loses to the 0.77-precision section editor.
 
-**Action taken:** `decide_edits` now skips the arbiter when `section_editor.enabled` is
-on (the enrichment pass itself still runs — its sidecar feeds the review UI). The arbiter
-remains active for the tiered-detector fallback path, where it was tuned and presumably
-still helps. Artifacts: `output/arbiter-ab/` (results.json, per-fixture flags + enrichment
-sidecars — cached, so threshold sweeps are free).
+**Action taken (updated 2026-07-14):** enrichment and its arbiter were removed from the
+active processing path entirely. Review and QA diff payloads also ignore historical
+`.enrichment.json` sidecars, so old annotations cannot leak into a new review. The
+enrichment runtime and experiment code have now been deleted. Historical result artifacts:
+`output/arbiter-ab/` (results.json, per-fixture flags + enrichment sidecars).
 
 Sanity note: arm A re-ran sol from scratch and scored 0.710 vs 0.724 recorded above —
 that's temp-1.0 run-to-run variance (~±0.015), worth remembering when comparing tables.
@@ -175,15 +175,13 @@ that's temp-1.0 run-to-run variance (~±0.015), worth remembering when comparing
 
 ## Open items / next steps
 
-1. **Wire `gpt-5.6-sol` as the section-editor default** in `SectionEditorConfig.llm`
-   (currently gemini-2.5-pro). Not yet done — this report records the decision.
+1. **Completed 2026-07-14:** `gpt-5.6-sol` is the enabled section-editor default;
+   enrichment and its arbiter are absent from processing and QA review payloads.
 2. **Add an automatic section retry** for transient provider failures (the 1–2 degraded
    sections). Cheap and removes the health caveat.
-3. **Production integration** — flip `section_editor.enabled` on behind a rollout, keep the
-   tiered detector as fallback.
-4. **Bigger corpus / re-run** if the top-3 gap (0.68–0.73) needs tightening — it's within
+3. **Bigger corpus / re-run** if the top-3 gap (0.68–0.73) needs tightening — it's within
    run-to-run variance today.
-5. **Re-test grok-4.5** if regional access is sorted.
+4. **Re-test grok-4.5** if regional access is sorted.
 
 ---
 

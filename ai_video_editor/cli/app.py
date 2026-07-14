@@ -75,9 +75,7 @@ def _process_video_file(
             save_transcript(p, cached)
 
         disruptions = build_disruptions(Path(meta.path), cached, settings.disruption)
-        edl, _ = decide_edits(
-            p, cached, keeps, silences, settings, force=force, log=log, disruptions=disruptions
-        )
+        edl = decide_edits(cached, keeps, silences, settings, disruptions=disruptions)
 
         envelope = build_audio_envelope(Path(denoised.path))
         write_audio_envelope(p, envelope)
@@ -104,7 +102,10 @@ def _process_video_file(
 
 def _eval_cut_decisions(raw_path: Path, edl, gt_sentences, *, name: str, issues: list):
     """Score the EDL's cut/keep calls against the human edit; append QA issues."""
-    from ai_video_editor.qa.decision_eval import evaluate_decisions, to_cut_decision_result
+    from ai_video_editor.qa.decision_eval import (
+        evaluate_decisions_word_level,
+        to_word_cut_decision_result,
+    )
     from ai_video_editor.qa.models import QAIssue, Severity
     from ai_video_editor.transcription.models import Transcript
 
@@ -117,23 +118,23 @@ def _eval_cut_decisions(raw_path: Path, edl, gt_sentences, *, name: str, issues:
         return None
 
     raw_transcript = Transcript.model_validate_json(raw_transcript_path.read_text("utf-8"))
-    ds = evaluate_decisions(raw_transcript.sentences, edl, gt_sentences, name=name)
-    cd = to_cut_decision_result(ds)
+    ds = evaluate_decisions_word_level(raw_transcript.sentences, edl, gt_sentences, name=name)
+    cd = to_word_cut_decision_result(ds)
 
     if cd.needed_cuts and cd.true_cuts == 0:
         issues.append(QAIssue(
             check="cut_decisions", severity=Severity.ERROR,
-            message=f"Missed all {cd.needed_cuts} cuts the human made",
+            message=f"Missed all {cd.needed_cuts} words the human cut",
         ))
     elif cd.missed_cuts:
         issues.append(QAIssue(
             check="cut_decisions", severity=Severity.WARNING,
-            message=f"Missed {cd.missed_cuts}/{cd.needed_cuts} cuts the human made",
+            message=f"Missed {cd.missed_cuts}/{cd.needed_cuts} words the human cut",
         ))
     if cd.overcuts:
         issues.append(QAIssue(
             check="cut_decisions", severity=Severity.WARNING,
-            message=f"{cd.overcuts} overcut(s) — removed content the human kept",
+            message=f"{cd.overcuts} overcut word(s) — removed content the human kept",
             details={"by_mechanism": cd.wrong_cut_by_reason},
         ))
     return cd
@@ -251,7 +252,6 @@ def process(
     ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Shortcut for DEBUG log level."),
     force: bool = typer.Option(False, "--force", "-f", help="Ignore cached transcripts, re-process from scratch."),
-    no_enrich: bool = typer.Option(False, "--no-enrich", help="Skip the transcript metadata enrichment pass."),
 ) -> None:
     """Process a single video through the editing pipeline."""
     settings = get_settings(config_path=config)
@@ -264,11 +264,6 @@ def process(
         settings = settings.model_copy(
             update={"general": settings.general.model_copy(update=g_updates)}
         )
-    if no_enrich:
-        settings = settings.model_copy(
-            update={"enrichment": settings.enrichment.model_copy(update={"enabled": False})}
-        )
-
     setup_logging(settings)
     stem = input_path.stem
     attach_video_log(settings, stem)
@@ -304,9 +299,7 @@ def process(
         save_transcript(input_path, cached)
 
     disruptions = build_disruptions(Path(meta.path), cached, settings.disruption)
-    edl, _ = decide_edits(
-        input_path, cached, keeps, silences, settings, force=force, log=log, disruptions=disruptions
-    )
+    edl = decide_edits(cached, keeps, silences, settings, disruptions=disruptions)
 
     envelope = build_audio_envelope(Path(denoised.path))
     write_audio_envelope(input_path, envelope)
@@ -350,7 +343,6 @@ def batch(
     ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Shortcut for DEBUG log level."),
     force: bool = typer.Option(False, "--force", "-f", help="Ignore cached transcripts, re-process from scratch."),
-    no_enrich: bool = typer.Option(False, "--no-enrich", help="Skip the transcript metadata enrichment pass."),
     workers: int = typer.Option(
         DEFAULT_WORKERS,
         "--workers",
@@ -370,11 +362,6 @@ def batch(
         settings = settings.model_copy(
             update={"general": settings.general.model_copy(update=g_updates)}
         )
-    if no_enrich:
-        settings = settings.model_copy(
-            update={"enrichment": settings.enrichment.model_copy(update={"enabled": False})}
-        )
-
     setup_logging(settings)
     paths = sorted(Path(p) for p in glob.glob(pattern, recursive=True))
     exts = _resolve_video_extensions()
@@ -632,7 +619,7 @@ def eval_models(
         "--fixtures-dir",
         file_okay=False,
         dir_okay=True,
-        help="Directory with cached transcript, EDL, enrichment, and ground-truth sidecars.",
+        help="Directory with cached transcript, EDL, and ground-truth sidecars.",
     ),
     output_dir: Path = typer.Option(
         Path("output/experiments"),
@@ -648,7 +635,7 @@ def eval_models(
         help="Restrict to specific fixture names (repeatable). Default: manifest fixtures or all cached fixtures.",
     ),
 ) -> None:
-    """Evaluate cutting or annotation LLMs independently from cached fixture sidecars."""
+    """Evaluate cutting LLMs independently from cached fixture sidecars."""
     from ai_video_editor.experiments import run_experiments
 
     results = run_experiments(
@@ -695,12 +682,12 @@ def eval_section_editor(
     model: str = typer.Option(
         None,
         "--model",
-        help="Model key within the manifest (defaults to gemini-2.5-pro if no manifest).",
+        help="Model key within the manifest (defaults to gpt-5.6-sol if no manifest).",
     ),
 ) -> None:
     """Pilot the LLM section editor on fixtures, word-level scored vs the human edit."""
     from ai_video_editor.experiments.section_pilot import run_section_pilot
-    from ai_video_editor.llm import default_annotation_model_config
+    from ai_video_editor.llm import direct_gemini_model_config
 
     llm_config = None
     if manifest is not None:
@@ -712,7 +699,7 @@ def eval_section_editor(
             raise typer.Exit(code=1)
         llm_config = loaded.models[model].with_id(model)
     elif model is not None:
-        llm_config = default_annotation_model_config(model=model)
+        llm_config = direct_gemini_model_config(model=model)
 
     results = run_section_pilot(
         fixtures_dir, output_dir, names=names or None, llm_config=llm_config

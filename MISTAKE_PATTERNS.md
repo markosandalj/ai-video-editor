@@ -47,8 +47,6 @@ transcript, the pipeline's EDL, and a re-transcription of the human editor's fin
 > `DUPLICATE_PROMPT`'s recap rule / raise the confidence bar; (2) false-start
 > full-sentence overcuts vs word-trims (same granularity theme as before, now on both
 > sides of the ledger); (3) content cuts (Pattern 1) unchanged as the top recall gap.
-> Note: aside detection produced zero cuts in this run because the runner passes no
-> enrichment annotations — production EDLs will differ slightly there.
 >
 > **Status update 2026-07-11 (late) — section-editor architecture piloted, beats the
 > tiered detector.** Rather than patch the failure modes above one at a time, we built an
@@ -330,7 +328,7 @@ A single strong model reading a whole section can judge both. So the section edi
 *replaces* the text-judgment mechanisms; the audio lane (silence, disruptions, asides)
 still runs alongside.
 
-### Design (`duplicate/section_editor.py`, `SectionEditorConfig`, off by default)
+### Design (`duplicate/section_editor.py`, `SectionEditorConfig`, now the default)
 LLM proposes, deterministic code disposes:
 1. **Chunk** the transcript into ~1200-word sections snapped to pause boundaries.
    Ownership is disjoint; a few sentences of overlap give context so a retake straddling a
@@ -349,15 +347,15 @@ proposals (not a patch on the tiered detector, which is bypassed when the sectio
 is on):
 - **verify-the-claim** → a span that can't be located verbatim (`min_span_match_ratio`) is
   rejected; the model may only delete text that exists.
-- **keep-later** → a retake deletion that keeps the *earlier* take is demoted (low
-  confidence + note), surfaced in review rather than auto-applied.
-- **recap time-gap** → retake deletions whose twin is >`retake_max_gap_s` away are demoted
-  (the 10s-vs-25s separation measured in Pattern 2a).
+- **keep-later** → a retake deletion that keeps the *earlier* take is rejected, so the
+  proposed deletion stays in the video.
+- **recap time-gap** → retake deletions whose twin is >`retake_max_gap_s` away are
+  rejected (the 10s-vs-25s separation measured in Pattern 2a).
 - **short-interjection protection** (`protect_min_words`) → whole-sentence retake cuts of
   <4-word lines ("Dobro.") are rejected, mirroring `definite_min_words`.
-- **annotate-only for risky cuts** (`review_types`) → `redundant` (unique-content)
-  deletions emit at reduced confidence as review suggestions, per the Pattern 1 rule that
-  content cuts should never auto-apply.
+- **reject risky cuts** (`reject_types`) → `redundant` (unique-content) deletions are
+  rejected rather than emitted, per the Pattern 1 rule that risky content cuts should
+  not auto-apply without a dedicated review queue.
 
 ### Pilot result (10 fixtures, Gemini 2.5 Pro, word-level scoring)
 

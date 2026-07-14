@@ -19,8 +19,8 @@ export type WordProps = {
 
 // One transcript word. Memoized on primitive props so a karaoke tick that changes
 // a single word's `isPlaying` re-renders only that word, not the whole transcript.
-// The old per-word "suggest keep / trim candidate" hints and score tooltips are
-// gone — that signal now lives at the sentence level and in the review queue.
+// Annotation score tooltips are gone; this component only reflects the current
+// edit state and playback position.
 export const Word = memo(function Word({
   idx,
   text,

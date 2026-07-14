@@ -191,6 +191,20 @@ def test_review_api_lists_loads_and_saves(tmp_path: Path) -> None:
     assert reloaded.status_code == 200
 
 
+def test_review_api_ignores_stale_enrichment_sidecar(tmp_path: Path) -> None:
+    video = _write_fixture(tmp_path)
+    video.with_suffix(".enrichment.json").write_text('{"stale": true}', encoding="utf-8")
+
+    client = TestClient(create_app(media_root=tmp_path, frontend_dist=tmp_path / "missing-dist"))
+    response = client.get("/api/videos/lesson-raw/review")
+
+    assert response.status_code == 200
+    sentence = response.json()["sentences"][0]
+    assert "status" not in sentence
+    assert "rationale" not in sentence
+    assert all("keep_score" not in word for word in sentence["words"])
+
+
 def test_payload_exposes_cut_ranges_from_ai_edl() -> None:
     payload = build_review_payload(Path("lesson-raw.mp4"), _transcript(), _edl())
     # The AI EDL has a single CUT segment; it surfaces as the canonical cut state.

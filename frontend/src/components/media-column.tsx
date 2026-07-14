@@ -21,8 +21,7 @@ type MediaColumnProps = {
 }
 
 // The always-mounted left column: the video, the preview-edit toggle, the playback
-// engine, and whatever mode-specific controls the caller slots in as children.
-// Staying mounted across queue↔editor switches keeps the video from reloading.
+// engine, and the editing controls the caller slots in as children.
 export function MediaColumn({
   videoId,
   session,

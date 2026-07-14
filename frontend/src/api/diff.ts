@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 
-// Dev-only diff view types. Hand-written (not from the generated OpenAPI schema)
-// so this throwaway comparison view stays decoupled from the prod API surface.
+// QA diff view types. Hand-written so the comparison surface stays decoupled
+// from the generated review API types.
 
 export type DiffWord = {
   text: string
@@ -18,10 +18,6 @@ export type DiffSentence = {
   end: number
   pipeline_kept: boolean
   human_kept: boolean
-  keep_confidence: number | null
-  status: string
-  tags: string[]
-  rationale: string
   words: DiffWord[]
 }
 

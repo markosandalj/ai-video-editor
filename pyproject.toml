@@ -16,7 +16,6 @@ dependencies = [
     "noisereduce>=3.0",
     "soundfile>=0.12",
     "numpy>=1.26",
-    "whisperx>=3.8",
     "python-dotenv>=1.0",
     "langchain-google-genai>=4.0",
     "langchain-openai>=1.1",

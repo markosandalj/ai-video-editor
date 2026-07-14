@@ -20,8 +20,6 @@ def transcribe_with_elevenlabs_and_grammar(
 ) -> Transcript:
     """
     Denoised audio → ElevenLabs Scribe → sentence chunking → Gemini grammar pass.
-
-    WhisperX is not used here; see ``transcription.transcribe`` if needed.
     """
     cfg = settings.transcription
     audio_path = Path(denoised.path)

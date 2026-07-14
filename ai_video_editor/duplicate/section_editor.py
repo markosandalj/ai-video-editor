@@ -29,7 +29,6 @@ from ai_video_editor.duplicate.models import DuplicateFlag, FlagReason, WordTrim
 from ai_video_editor.llm import (
     LangChainModelConfig,
     build_chat_model,
-    default_annotation_model_config,
 )
 from ai_video_editor.transcription.models import Sentence
 
@@ -271,22 +270,38 @@ def _deletion_to_flag(
         health.deletions_rejected_guardrail += 1
         return None
 
-    # Guardrail: retake keep-later + recap time-gap.
+    # Guardrail: reject retake proposals that would require human review. With
+    # no annotation queue, lowering confidence would still auto-cut the flag.
     if deletion.delete_type == "retake" and deletion.kept_index is not None:
         kept = deletion.kept_index
         if 0 <= kept < len(sentences):
             if kept < idx:
-                confidence = min(confidence, 0.5)
-                notes.append("keep-later violation: model kept the earlier take")
+                logger.info(
+                    "Section editor: rejecting sentence {} — model kept earlier take {}",
+                    idx,
+                    kept,
+                )
+                health.deletions_rejected_guardrail += 1
+                return None
             gap = abs(sentences[kept].start - sentences[idx].start)
             if gap > cfg.retake_max_gap_s:
-                confidence = min(confidence, 0.55)
-                notes.append(f"long gap to twin ({gap:.0f}s) — recap risk")
+                logger.info(
+                    "Section editor: rejecting sentence {} — twin is {:.0f}s away (recap risk)",
+                    idx,
+                    gap,
+                )
+                health.deletions_rejected_guardrail += 1
+                return None
 
-    # Guardrail: risky content-removal types surface as review suggestions.
-    if deletion.delete_type in cfg.review_types:
-        confidence = min(confidence, 0.5)
-        notes.append("review: removes unique content")
+    # Guardrail: risky unique-content removals stay kept until a review system exists.
+    if deletion.delete_type in cfg.reject_types:
+        logger.info(
+            "Section editor: rejecting sentence {} — protected deletion type {}",
+            idx,
+            deletion.delete_type,
+        )
+        health.deletions_rejected_guardrail += 1
+        return None
 
     word_trims: list[WordTrim] = []
     if not full_sentence:
@@ -366,9 +381,7 @@ def detect_section_edits(
     if len(sentences) < 2:
         return []
 
-    llm = build_chat_model(
-        llm_config or cfg.llm or default_annotation_model_config(model="gemini-2.5-pro")
-    )
+    llm = build_chat_model(llm_config or cfg.llm)
     sections = _build_sections(sentences, cfg)
     health.sections_total += len(sections)
     logger.info(

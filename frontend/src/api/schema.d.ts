@@ -48,7 +48,7 @@ export interface paths {
         };
         /**
          * Get Diff
-         * @description Dev-only: raw transcript with pipeline vs human-edit cuts overlaid.
+         * @description Raw transcript with pipeline vs human-edit cuts overlaid for QA.
          */
         get: operations["get_diff_api_videos__video_id__diff_get"];
         put?: never;
@@ -149,20 +149,6 @@ export interface components {
             pipeline_kept: boolean;
             /** Human Kept */
             human_kept: boolean;
-            /** Keep Confidence */
-            keep_confidence?: number | null;
-            /**
-             * Status
-             * @default
-             */
-            status: string;
-            /** Tags */
-            tags?: string[];
-            /**
-             * Rationale
-             * @default
-             */
-            rationale: string;
             /** Words */
             words?: components["schemas"]["DiffWord"][];
         };
@@ -253,7 +239,7 @@ export interface components {
         ReviewPayload: {
             /**
              * Schema Version
-             * @default review.v3
+             * @default review.v4
              */
             schema_version: string;
             video: components["schemas"]["ReviewVideoMetadata"];
@@ -319,23 +305,6 @@ export interface components {
              * @default
              */
             note: string;
-            /**
-             * Status
-             * @default
-             */
-            status: string;
-            /** Tags */
-            tags?: string[];
-            /**
-             * Keep Confidence
-             * @default 100
-             */
-            keep_confidence: number;
-            /**
-             * Rationale
-             * @default
-             */
-            rationale: string;
             /** Words */
             words?: components["schemas"]["ReviewWord"][];
             /** Duration */
@@ -410,7 +379,7 @@ export interface components {
         };
         /**
          * ReviewWord
-         * @description A single transcript word with the AI decision and a keep-likelihood score.
+         * @description A single transcript word with the AI decision.
          */
         ReviewWord: {
             /** Idx */
@@ -437,11 +406,6 @@ export interface components {
              * @default 1
              */
             confidence: number;
-            /**
-             * Keep Score
-             * @default 1
-             */
-            keep_score: number;
             /** Cut In */
             cut_in?: number | null;
             /** Cut Out */

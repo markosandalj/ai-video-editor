@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from enum import Enum
+from typing import Literal
 
 from pydantic import BaseModel, Field, computed_field
 
@@ -86,13 +87,17 @@ class WordLevelComparisonResult(BaseModel):
 
 
 class CutDecisionResult(BaseModel):
-    """Sentence-level cut/keep decisions vs the human edit (positive class = CUT).
+    """Cut/keep decisions vs the human edit (positive class = CUT).
 
     Word-overlap metrics normalise by total content, so on a video that needs
     only a couple of cuts, missing every one of them still scores ~95%. These
-    counts are normalised by the number of *edit decisions* instead: miss all
-    needed cuts and ``cut_recall`` is 0, no matter how much text overlaps.
+    counts score the cutter's decisions directly: miss all needed cuts and
+    ``cut_recall`` is 0, no matter how much text overlaps.
+
+    New QA reports use word granularity so partial trims are judged honestly.
+    The sentence default keeps previously saved reports backwards-compatible.
     """
+    granularity: Literal["sentence", "word"] = "sentence"
     true_cuts: int = 0    # pipeline cut, human cut
     overcuts: int = 0     # pipeline cut, human kept
     missed_cuts: int = 0  # pipeline kept, human cut

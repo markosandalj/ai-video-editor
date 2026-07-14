@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button'
 import { Word } from '@/components/word'
 import type { WordStatus } from '@/lib/cut-ranges'
 import type { EditorSelection } from '@/hooks/use-editor-selection'
-import { needsReview } from '@/lib/review-model'
 
 type TranscriptViewProps = {
   sentences: ReviewSentence[]
@@ -81,12 +80,6 @@ export function TranscriptView({
         <article aria-label="Transcript editor" className="mx-auto my-6 max-w-3xl px-6 text-lg leading-8">
           {sentences.map((sentence) => (
             <p key={sentence.idx} className="relative mb-5 rounded-md last:mb-0">
-              {needsReview(sentence) && (
-                <span
-                  aria-hidden="true"
-                  className="absolute top-1 bottom-1 -left-3 w-0.5 rounded-full bg-status-yellow"
-                />
-              )}
               {(sentence.words ?? []).map((word) => (
                 <Word
                   key={word.idx}

@@ -8,8 +8,6 @@ from ai_video_editor.audio.snap import (
     ensure_audio_envelope,
 )
 from ai_video_editor.duplicate.edl import EditAction, EditDecision, EditDecisionList, EditReason
-from ai_video_editor.enrich.cache import load_cached_enrichment
-from ai_video_editor.enrich.models import EnrichmentResult, SentenceEnrichment
 from ai_video_editor.review.models import (
     CutRange,
     ReviewPayload,
@@ -50,14 +48,12 @@ def load_review_payload(video_path: Path, audio_path: Path | None = None) -> Rev
         if review_edl_path.exists()
         else None
     )
-    enrichment = load_cached_enrichment(video_path)
     envelope = ensure_audio_envelope(video_path, audio_path)
     return build_review_payload(
         video_path,
         transcript,
         edl,
         reviewed,
-        enrichment,
         acoustic_envelope=envelope,
     )
 
@@ -67,7 +63,6 @@ def build_review_payload(
     transcript: Transcript,
     edl: EditDecisionList,
     reviewed: EditDecisionList | None = None,
-    enrichment: EnrichmentResult | None = None,
     *,
     acoustic_envelope: AudioEnvelope | None = None,
 ) -> ReviewPayload:
@@ -78,7 +73,6 @@ def build_review_payload(
 
     # When a review sidecar exists, the "current" kept state reflects prior edits.
     current = reviewed.decisions if reviewed is not None else edl.decisions
-    enrich_map = enrichment.by_index() if enrichment is not None else {}
 
     all_transcript_words = [word for sentence in transcript.sentences for word in sentence.words]
     splits = (
@@ -96,7 +90,6 @@ def build_review_payload(
             sentence,
             edl.decisions,
             current,
-            enrich_map.get(sidx),
             split_points=splits,
         )
         sentences.append(review_sentence)
@@ -227,14 +220,12 @@ def _build_review_sentence(
     sentence: Sentence,
     ai_decisions: list[EditDecision],
     current_decisions: list[EditDecision],
-    enrichment: SentenceEnrichment | None = None,
     *,
     split_points: list[float] | None = None,
 ) -> tuple[ReviewSentence, int]:
-    salience = enrichment.word_salience if enrichment is not None else []
     words: list[ReviewWord] = []
     kept_count = 0
-    for pos, word in enumerate(sentence.words):
+    for word in sentence.words:
         ai_kept = _is_kept(word, ai_decisions)
         kept = _is_kept(word, current_decisions)
         cut_decision = _decision_at(_midpoint(word), ai_decisions)
@@ -244,16 +235,6 @@ def _build_review_sentence(
             else ""
         )
         confidence = cut_decision.confidence if cut_decision else 1.0
-        if ai_kept:
-            # Kept words: prefer the enrichment salience (0-100 → 0-1) over the
-            # old hardcoded 1.0; cut words keep the existing reason/confidence path.
-            keep_score = (
-                round(max(0.0, min(100.0, salience[pos])) / 100.0, 3)
-                if pos < len(salience)
-                else 1.0
-            )
-        else:
-            keep_score = round(max(0.0, 1.0 - confidence), 3)
         words.append(
             ReviewWord(
                 idx=word_idx,
@@ -265,7 +246,6 @@ def _build_review_sentence(
                 kept=kept,
                 reason=reason,
                 confidence=confidence,
-                keep_score=keep_score,
                 cut_in=split_points[word_idx] if split_points else None,
                 cut_out=split_points[word_idx + 1] if split_points else None,
             )
@@ -296,10 +276,6 @@ def _build_review_sentence(
         confidence=confidence,
         keep_coverage=coverage,
         note=note,
-        status=enrichment.status.value if enrichment is not None else "",
-        tags=[tag.value for tag in enrichment.tags] if enrichment is not None else [],
-        keep_confidence=enrichment.keep_confidence if enrichment is not None else 100.0,
-        rationale=enrichment.rationale if enrichment is not None else "",
         words=words,
     )
     return review_sentence, word_idx

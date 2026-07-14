@@ -8,10 +8,10 @@ This document defines how tasks are organized, planned, and executed in this pro
 tasks/
   phase-0/          # Project Scaffolding & Infrastructure         ✅
   phase-1/          # Acoustic Pre-Processing                      ✅
-  phase-2/          # Transcription & Forced Alignment             ✅
+  phase-2/          # ElevenLabs Transcription                     ✅
   phase-3/          # Semantic Duplicate Detection                 ✅
   phase-4/          # Video Assembly & Rendering                   ✅
-  phase-5/          # Transcript Metadata Enrichment (clean LLM pass)
+  phase-5/          # Retired: Transcript Metadata Enrichment
   phase-6/          # Review: JSON Export & Web Frontend
   phase-7/          # Programmatic QA, Quality Iteration & Production Render
   phase-8/          # Interoperability Export (OTIO / FCP7 / EDL)
@@ -19,12 +19,9 @@ tasks/
   phase-10/         # ML Model Training (V3/V4)
 ```
 
-> **Note on ordering (2026-06):** Phases were re-sequenced to match the actual build
-> order. Transcript metadata enrichment (5) was inserted between the pipeline and any
-> consumption surface, and the review export + web frontend (6) were moved ahead of the
-> QA/iteration loop (7), because the human-in-the-loop editor is now the mechanism for
-> closing the last ~10% of edit quality. Professor Profiling (9) and ML Training (10)
-> are unchanged. Phases 0–4 keep their original numbers.
+> **Current ordering (2026-07):** Phase 5 was retired after the annotation pass stopped
+> improving edit decisions. The active path goes directly from rendering to the review
+> UI and QA loop. The phase number remains reserved so historical references stay clear.
 
 Each phase folder contains individual `.md` files, one per task (e.g., `01-audio-extraction.md`).
 
@@ -64,7 +61,7 @@ Technical decisions, library choices, and approach details filled in after grill
 ### Before Starting a Phase
 
 1. **Grilling session.** The AI asks the user targeted implementation questions for every task in the upcoming phase. These are not generic -- they are specific to the decisions that affect how the code gets written. Examples:
-   - "What sample rate should we extract audio at -- 16kHz for Whisper compatibility or 44.1kHz for quality?"
+   - "What sample rate should we extract audio at for transcription and rendering?"
    - "Should silence detection be configurable per-video or use a global threshold?"
    - "Do you want the CLI to support both single-file and batch modes from day one?"
 
@@ -97,7 +94,7 @@ Phase 0 (Scaffolding)
 Phase 1 (Audio Pre-Processing)
     |
     v
-Phase 2 (Transcription & Alignment)
+Phase 2 (ElevenLabs Transcription)
     |
     v
 Phase 3 (Duplicate Detection)
@@ -106,7 +103,7 @@ Phase 3 (Duplicate Detection)
 Phase 4 (Video Assembly & Rendering)
     |
     v
-Phase 5 (Transcript Metadata Enrichment)  ←  clean LLM pass: per-chunk score + tags
+Phase 5 (retired; skipped)
     |
     v
 Phase 6 (Review: JSON Export & Web Frontend)  ←  human-in-the-loop editor
@@ -121,7 +118,7 @@ Phase 7 (QA, Quality Iteration & Production Render)  ←  maximize quality (auto
     +---> Phase 10 (ML Training)
 ```
 
-**Critical path:** Phases 0 → 1 → 2 → 3 → 4 → 5 (enrichment) → 6 (review UI) → **iteration loop in Phase 7** produce the best possible edit with a human closing the gap.
+**Critical path:** Phases 0 → 1 → 2 → 3 → 4 → 6 (review UI) → **iteration loop in Phase 7** produce the best possible edit with a human closing the gap.
 Phase 8+ (NLE interop, profiling, ML) come after the edit quality and review workflow are solid.
 
 ## Quality Iteration Loop (within Phase 7)

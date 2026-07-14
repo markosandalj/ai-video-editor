@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, computed_field
 from ai_video_editor.duplicate.edl import EditAction, EditDecision
 
 
-SCHEMA_VERSION = "review.v3"
+SCHEMA_VERSION = "review.v4"
 
 
 class CutRange(BaseModel):
@@ -68,7 +68,7 @@ class ReviewTimelineSegment(BaseModel):
 
 
 class ReviewWord(BaseModel):
-    """A single transcript word with the AI decision and a keep-likelihood score."""
+    """A single transcript word with the AI decision."""
 
     idx: int
     sentence_idx: int
@@ -79,7 +79,6 @@ class ReviewWord(BaseModel):
     kept: bool
     reason: str = ""
     confidence: float = 1.0
-    keep_score: float = Field(default=1.0, ge=0.0, le=1.0)
     # Shared acoustic split points. Older payloads omit these and remain valid.
     cut_in: float | None = None
     cut_out: float | None = None
@@ -101,11 +100,6 @@ class ReviewSentence(BaseModel):
     confidence: float = 1.0
     keep_coverage: float = Field(default=0.0, ge=0.0, le=1.0)
     note: str = ""
-    # Enrichment metadata (phase 5). Defaults keep older payloads valid.
-    status: str = ""
-    tags: list[str] = Field(default_factory=list)
-    keep_confidence: float = Field(default=100.0, ge=0.0, le=100.0)
-    rationale: str = ""
     words: list[ReviewWord] = Field(default_factory=list)
 
     @computed_field  # type: ignore[prop-decorator]

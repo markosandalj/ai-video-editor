@@ -6,24 +6,22 @@ Depends on: 2.01, 2.02
 
 ## Objective
 
-Parse WhisperX raw output into the standardized `Word` model instances, handling edge cases.
+Parse ElevenLabs Scribe tokens into standardized `Word` and `AudioEvent` models.
 
 ## Requirements
 
-- Parse WhisperX segment/word JSON into `Word` objects
-- Drop words with missing start or end timestamps
-- Log count of dropped words for visibility
-- Preserve word ordering
+- Keep word tokens as timestamped `Word` objects
+- Keep non-speech tokens as separate `AudioEvent` objects
+- Drop spacing tokens so they never enter transcript text
+- Preserve token ordering
 
 ## Implementation Notes
 
-- WhisperX returns `{"segments": [{"words": [{"word": "...", "start": ..., "end": ...}]}]}`
-- Filter out any word dict where `start` or `end` is None/missing
-- Create `Word` instances from remaining dicts
-- Function: `parse_whisperx_output(result) -> list[Word]`
+- ElevenLabs returns word, spacing, and audio-event tokens.
+- `_parse_stt_tokens()` creates words and audio events in separate lists.
 
 ## Acceptance Criteria
 
-- [x] WhisperX output parsed into `Word` objects
-- [x] Words with missing timestamps dropped (with log message)
-- [x] Word ordering preserved from WhisperX output
+- [x] ElevenLabs word tokens parsed into `Word` objects
+- [x] Audio events kept outside transcript text
+- [x] Word ordering preserved

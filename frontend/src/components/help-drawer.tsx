@@ -29,7 +29,6 @@ const SHORTCUT_GROUPS = [
       ['S', 'Select the current sentence'],
       ['X / ⌫', 'Cut the word or selection'],
       ['⏎', 'Keep (un-cut) the selection'],
-      ['N', 'Jump to the next flagged sentence'],
     ],
   },
   {
@@ -58,7 +57,6 @@ const SHORTCUT_GROUPS = [
 const LEGEND = [
   { swatch: 'bg-foreground', label: 'Kept in the final video' },
   { swatch: 'bg-cut/40', label: 'Cut from the final video' },
-  { swatch: 'bg-status-yellow', label: 'Flagged — the AI wasn’t sure' },
 ]
 
 export function HelpDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {

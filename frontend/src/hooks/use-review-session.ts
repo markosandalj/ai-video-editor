@@ -15,7 +15,6 @@ import {
   CUT_HISTORY_LIMIT,
   REVIEW_DRAFT_VERSION,
   buildInitialCutRanges,
-  buildReviewQueue,
 } from '@/lib/review-model'
 import { type TimeRange, deriveCutRanges } from '@/lib/timeline-model'
 
@@ -127,8 +126,6 @@ export function useReviewSession(payload: ReviewPayload | null, videoId: string)
     }
     return map
   }, [payload])
-
-  const flags = useMemo(() => (payload ? buildReviewQueue(payload) : []), [payload])
 
   // Everything the transcript reads is a projection of the canonical ranges.
   const wordStatus = useMemo(() => buildWordStatus(words, cutRanges), [words, cutRanges])
@@ -281,7 +278,6 @@ export function useReviewSession(payload: ReviewPayload | null, videoId: string)
     wordByIdx,
     wordIndexByIdx,
     sentenceByWord,
-    flags,
     cutRanges,
     wordStatus,
     cutSet,

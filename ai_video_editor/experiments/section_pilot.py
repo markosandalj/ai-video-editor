@@ -17,7 +17,7 @@ from ai_video_editor.config.settings import SectionEditorConfig
 from ai_video_editor.duplicate.edl import EditDecisionList, build_edl
 from ai_video_editor.duplicate.section_editor import SectionHealth, detect_section_edits
 from ai_video_editor.experiments.reconstruction import derive_cached_cutting_inputs
-from ai_video_editor.llm import LangChainModelConfig, default_annotation_model_config
+from ai_video_editor.llm import LangChainModelConfig, default_section_editor_model_config
 from ai_video_editor.qa.decision_eval import (
     WordDecisionScore,
     aggregate_word_scores,
@@ -75,7 +75,7 @@ def run_section_pilot(
     names: list[str] | None = None,
     llm_config: LangChainModelConfig | None = None,
 ) -> list[FixturePilotResult]:
-    llm_config = llm_config or default_annotation_model_config(model="gemini-2.5-pro")
+    llm_config = llm_config or default_section_editor_model_config()
     target = names or DEFAULT_PILOT_FIXTURES
     cfg = _section_config(llm_config)
     output_dir.mkdir(parents=True, exist_ok=True)

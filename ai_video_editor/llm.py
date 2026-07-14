@@ -48,16 +48,35 @@ def default_cutting_model_config() -> LangChainModelConfig:
     )
 
 
-def default_annotation_model_config(
+def direct_gemini_model_config(
     *,
-    model: str = "gemini-2.5-pro",
+    model: str,
     temperature: float = 0.1,
 ) -> LangChainModelConfig:
+    """Build a direct Gemini config for an explicitly named model."""
     return LangChainModelConfig(
         id=model,
         model=model,
         temperature=temperature,
         provider_kwargs={"timeout": 180, "max_retries": 4},
+    )
+
+
+def default_section_editor_model_config() -> LangChainModelConfig:
+    """The section-editor model selected by the corpus evaluation."""
+    return LangChainModelConfig(
+        id="gpt-5.6-sol",
+        class_path="langchain_openai.ChatOpenAI",
+        model="openai/gpt-5.6-sol",
+        temperature=1.0,
+        api_key_env="OPENROUTER_API_KEY",
+        provider_kwargs={
+            "base_url": "https://openrouter.ai/api/v1",
+            "timeout": 300,
+            "max_retries": 3,
+            "max_tokens": 16_000,
+            "extra_body": {"reasoning": {"effort": "low", "exclude": True}},
+        },
     )
 
 
