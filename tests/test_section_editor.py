@@ -30,6 +30,11 @@ def test_section_editor_is_the_default_cutter() -> None:
     assert settings.section_editor.llm.provider_kwargs["base_url"] == (
         "https://openrouter.ai/api/v1"
     )
+    assert settings.section_editor.fallback_llm is not None
+    assert settings.section_editor.fallback_llm.model == "gpt-5.6-sol"
+    assert settings.section_editor.fallback_llm.api_key_env == "OPENAI_API_KEY"
+    assert "base_url" not in settings.section_editor.fallback_llm.provider_kwargs
+    assert settings.section_editor.fallback_llm.provider_kwargs["reasoning_effort"] == "low"
     assert not hasattr(settings, "enrichment")
 
 
@@ -301,6 +306,95 @@ class TestWordLevelScoring:
 
 
 class TestDetectSectionEditsEndToEnd:
+    def test_primary_failure_falls_back_to_direct_model(self, monkeypatch):
+        import ai_video_editor.duplicate.section_editor as se
+
+        sents = [
+            _sentence("Prvi pokušaj rečenice koji treba ukloniti sada", 0, 3),
+            _sentence("Ispravan pokušaj rečenice koji ostaje u videu", 4, 7),
+        ]
+
+        class PrimaryStructured:
+            def invoke(self, prompt):
+                raise TypeError("'NoneType' object is not iterable")
+
+        class PrimaryLLM:
+            def with_structured_output(self, schema):
+                return PrimaryStructured()
+
+        class FallbackStructured:
+            def invoke(self, prompt):
+                return SectionEdits(deletions=[
+                    SectionDeletion(
+                        sentence_index=0,
+                        verbatim_text="Prvi pokušaj rečenice koji treba ukloniti sada",
+                        delete_type="retake",
+                        kept_index=1,
+                    )
+                ])
+
+        class FallbackLLM:
+            def with_structured_output(self, schema):
+                return FallbackStructured()
+
+        built = []
+
+        def fake_build(cfg):
+            built.append(cfg.id)
+            return PrimaryLLM() if len(built) == 1 else FallbackLLM()
+
+        monkeypatch.setattr(se, "build_chat_model", fake_build)
+
+        health = SectionHealth()
+        flags = detect_section_edits(
+            sents,
+            SectionEditorConfig(section_max_attempts=1, section_retry_backoff_s=0),
+            health=health,
+        )
+
+        assert built == ["gpt-5.6-sol", "gpt-5.6-sol-openai-direct"]
+        assert health.sections_fallback == 1
+        assert health.sections_failed == 0
+        assert [flag.idx for flag in flags] == [0]
+
+    def test_builtin_sol_fallback_does_not_pollute_other_model_runs(self, monkeypatch):
+        import ai_video_editor.duplicate.section_editor as se
+        from ai_video_editor.llm import LangChainModelConfig
+
+        sents = [
+            _sentence("Prva korisna rečenica ostaje u videu", 0, 3),
+            _sentence("Druga korisna rečenica ostaje u videu", 4, 7),
+        ]
+
+        class BoomLLM:
+            def with_structured_output(self, schema):
+                raise RuntimeError("candidate failed")
+
+        built = []
+
+        def fake_build(cfg):
+            built.append(cfg.model)
+            return BoomLLM()
+
+        monkeypatch.setattr(se, "build_chat_model", fake_build)
+        candidate = LangChainModelConfig(
+            id="candidate",
+            model="gemini-candidate",
+            api_key_env=None,
+        )
+        health = SectionHealth()
+        flags = detect_section_edits(
+            sents,
+            SectionEditorConfig(section_max_attempts=1, section_retry_backoff_s=0),
+            llm_config=candidate,
+            health=health,
+        )
+
+        assert flags == []
+        assert built == ["gemini-candidate"]
+        assert health.sections_fallback == 0
+        assert health.sections_failed == 1
+
     def test_transient_section_failure_is_retried(self, monkeypatch):
         import ai_video_editor.duplicate.section_editor as se
 

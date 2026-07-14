@@ -672,6 +672,11 @@ def eval_section_editor(
         "-n",
         help="Fixture names to run (repeatable). Default: a curated diverse slice.",
     ),
+    all_fixtures: bool = typer.Option(
+        False,
+        "--all-fixtures",
+        help="Run every fixture with raw transcript, baseline EDL, and human transcript.",
+    ),
     manifest: Path = typer.Option(
         None,
         "--manifest",
@@ -686,7 +691,10 @@ def eval_section_editor(
     ),
 ) -> None:
     """Pilot the LLM section editor on fixtures, word-level scored vs the human edit."""
-    from ai_video_editor.experiments.section_pilot import run_section_pilot
+    from ai_video_editor.experiments.section_pilot import (
+        discover_fixture_names,
+        run_section_pilot,
+    )
     from ai_video_editor.llm import direct_gemini_model_config
 
     llm_config = None
@@ -701,8 +709,12 @@ def eval_section_editor(
     elif model is not None:
         llm_config = direct_gemini_model_config(model=model)
 
+    if all_fixtures and names:
+        logger.error("Use either --all-fixtures or --name, not both")
+        raise typer.Exit(code=1)
+    selected_names = discover_fixture_names(fixtures_dir) if all_fixtures else names or None
     results = run_section_pilot(
-        fixtures_dir, output_dir, names=names or None, llm_config=llm_config
+        fixtures_dir, output_dir, names=selected_names, llm_config=llm_config
     )
     if not results:
         logger.error("No evaluable fixtures found in {}", fixtures_dir)

@@ -8,6 +8,7 @@ and no re-transcription; the only cost is the section-editor model calls.
 from __future__ import annotations
 
 import json
+from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -68,12 +69,66 @@ def _section_config(llm_config: LangChainModelConfig) -> SectionEditorConfig:
     return cfg
 
 
+def discover_fixture_names(fixtures_dir: Path) -> list[str]:
+    """Find every fixture with the three sidecars required by this evaluator."""
+    names = []
+    suffix = "-raw.transcript.json"
+    for raw_path in sorted(fixtures_dir.glob(f"*{suffix}")):
+        name = raw_path.name.removesuffix(suffix)
+        if _load(fixtures_dir, name) is not None:
+            names.append(name)
+    return names
+
+
+def _result_from_dict(data: dict) -> FixturePilotResult:
+    def score(raw: dict) -> WordDecisionScore:
+        values = dict(raw)
+        values["wrong_cut_by_reason"] = Counter(values.get("wrong_cut_by_reason", {}))
+        values["right_cut_by_reason"] = Counter(values.get("right_cut_by_reason", {}))
+        return WordDecisionScore(**values)
+
+    return FixturePilotResult(
+        name=data["name"],
+        baseline=score(data["baseline"]),
+        section=score(data["section"]),
+        health=SectionHealth(**data.get("health", {})),
+    )
+
+
+def _write_pilot_artifacts(
+    output_dir: Path,
+    results: list[FixturePilotResult],
+    *,
+    model_id: str,
+) -> None:
+    """Atomically checkpoint after each video so long runs can resume safely."""
+    payload = [
+        {
+            "name": r.name,
+            "baseline": r.baseline.__dict__,
+            "section": r.section.__dict__,
+            "health": r.health.__dict__,
+        }
+        for r in results
+    ]
+    results_tmp = output_dir / "results.json.tmp"
+    results_tmp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    results_tmp.replace(output_dir / "results.json")
+
+    report_tmp = output_dir / "report.md.tmp"
+    report_tmp.write_text(
+        format_pilot_report(results, model_id=model_id), encoding="utf-8"
+    )
+    report_tmp.replace(output_dir / "report.md")
+
+
 def run_section_pilot(
     fixtures_dir: Path,
     output_dir: Path,
     *,
     names: list[str] | None = None,
     llm_config: LangChainModelConfig | None = None,
+    resume: bool = True,
 ) -> list[FixturePilotResult]:
     llm_config = llm_config or default_section_editor_model_config()
     target = names or DEFAULT_PILOT_FIXTURES
@@ -82,8 +137,25 @@ def run_section_pilot(
     debug_dir = output_dir / "edls"
     debug_dir.mkdir(exist_ok=True)
 
+    checkpoint_path = output_dir / "results.json"
     results: list[FixturePilotResult] = []
+    if resume and checkpoint_path.exists():
+        checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+        target_names = set(target)
+        results = [
+            result
+            for item in checkpoint
+            if (result := _result_from_dict(item)).name in target_names
+            and result.health.sections_failed == 0
+        ]
+        if results:
+            logger.info("Resuming section pilot with {} completed fixtures", len(results))
+    completed = {result.name for result in results}
+
     for name in target:
+        if name in completed:
+            logger.info("Resume: skipping completed fixture {}", name)
+            continue
         loaded = _load(fixtures_dir, name)
         if loaded is None:
             logger.warning("Skipping {} — missing sidecars", name)
@@ -116,23 +188,16 @@ def run_section_pilot(
             name, baseline_score.cut_f1, section_score.cut_f1,
             health.sections_failed, health.sections_total,
         )
+        _write_pilot_artifacts(
+            output_dir,
+            results,
+            model_id=llm_config.id or llm_config.model,
+        )
 
-    report = format_pilot_report(results, model_id=llm_config.id or llm_config.model)
-    (output_dir / "report.md").write_text(report, encoding="utf-8")
-    (output_dir / "results.json").write_text(
-        json.dumps(
-            [
-                {
-                    "name": r.name,
-                    "baseline": r.baseline.__dict__,
-                    "section": r.section.__dict__,
-                    "health": r.health.__dict__,
-                }
-                for r in results
-            ],
-            indent=2,
-        ),
-        encoding="utf-8",
+    _write_pilot_artifacts(
+        output_dir,
+        results,
+        model_id=llm_config.id or llm_config.model,
     )
     return results
 
@@ -163,6 +228,7 @@ def format_pilot_report(results: list[FixturePilotResult], *, model_id: str) -> 
     sections_total = sum(r.health.sections_total for r in results)
     sections_failed = sum(r.health.sections_failed for r in results)
     section_retries = sum(r.health.section_retries for r in results)
+    sections_fallback = sum(r.health.sections_fallback for r in results)
     proposed = sum(r.health.deletions_proposed for r in results)
     rejected = sum(
         r.health.deletions_rejected_unverifiable + r.health.deletions_rejected_guardrail
@@ -182,6 +248,7 @@ def format_pilot_report(results: list[FixturePilotResult], *, model_id: str) -> 
         f"**Health: {'OK' if healthy else 'DEGRADED'}** — "
         f"{sections_failed}/{sections_total} sections failed, "
         f"{section_retries} retries, "
+        f"{sections_fallback} direct-OpenAI fallbacks, "
         f"{rejected}/{proposed} proposed spans rejected by guardrails."
         + ("" if healthy else " Scores are NOT trustworthy — failed sections score as zero cuts."),
     ]

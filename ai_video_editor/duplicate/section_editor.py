@@ -88,6 +88,7 @@ class SectionHealth:
     sections_total: int = 0
     sections_failed: int = 0
     section_retries: int = 0
+    sections_fallback: int = 0
     deletions_proposed: int = 0
     deletions_rejected_unverifiable: int = 0
     deletions_rejected_guardrail: int = 0
@@ -413,7 +414,18 @@ def detect_section_edits(
     if len(sentences) < 2:
         return []
 
-    llm = build_chat_model(llm_config or cfg.llm)
+    primary_config = llm_config or cfg.llm
+    llm = build_chat_model(primary_config)
+    fallback_config = cfg.fallback_llm
+    if (
+        fallback_config is not None
+        and fallback_config.id == "gpt-5.6-sol-openai-direct"
+        and primary_config.model != "openai/gpt-5.6-sol"
+    ):
+        # The built-in fallback belongs specifically to the default OpenRouter
+        # Sol route. Model experiments must never silently mix in Sol results.
+        fallback_config = None
+    fallback_llm = None
     sections = _build_sections(sentences, cfg)
     health.sections_total += len(sections)
     logger.info(
@@ -425,13 +437,40 @@ def detect_section_edits(
     for si, section in enumerate(sections):
         try:
             deletions = _edit_section_with_retry(sentences, section, llm, cfg, health)
-        except Exception:
-            logger.exception(
-                "Section editor: section {}/{} ([{}–{}]) failed — skipping",
-                si + 1, len(sections), section.owned_lo, section.owned_hi - 1,
+        except Exception as primary_exc:
+            if fallback_config is None:
+                logger.exception(
+                    "Section editor: section {}/{} ([{}–{}]) failed — skipping",
+                    si + 1, len(sections), section.owned_lo, section.owned_hi - 1,
+                )
+                health.sections_failed += 1
+                continue
+
+            health.sections_fallback += 1
+            logger.warning(
+                "Section editor: primary {} failed for section {}/{} ({}: {}); "
+                "falling back to {}",
+                primary_config.id or primary_config.model,
+                si + 1,
+                len(sections),
+                type(primary_exc).__name__,
+                str(primary_exc)[:120],
+                fallback_config.id or fallback_config.model,
             )
-            health.sections_failed += 1
-            continue
+            try:
+                if fallback_llm is None:
+                    fallback_llm = build_chat_model(fallback_config)
+                deletions = _edit_section_with_retry(
+                    sentences, section, fallback_llm, cfg, health
+                )
+            except Exception:
+                logger.exception(
+                    "Section editor: primary and fallback failed for section {}/{} "
+                    "([{}–{}]) — skipping",
+                    si + 1, len(sections), section.owned_lo, section.owned_hi - 1,
+                )
+                health.sections_failed += 1
+                continue
         health.deletions_proposed += len(deletions)
         for d in deletions:
             flag = _deletion_to_flag(d, sentences, cfg, health)
@@ -444,10 +483,11 @@ def detect_section_edits(
     trims = sum(1 for f in flags if f.word_trims)
     logger.info(
         "Section editor: {} flags ({} full-sentence, {} word-trim) — "
-        "{}/{} sections failed, {} retries, {} spans rejected",
+        "{}/{} sections failed, {} retries, {} fallbacks, {} spans rejected",
         len(flags), full, trims,
         health.sections_failed, health.sections_total,
         health.section_retries,
+        health.sections_fallback,
         health.deletions_rejected_unverifiable + health.deletions_rejected_guardrail,
     )
     return flags

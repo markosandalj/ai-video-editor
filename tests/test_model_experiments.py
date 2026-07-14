@@ -23,6 +23,7 @@ from ai_video_editor.experiments.runner import (
     ExperimentRunResult,
     format_report,
 )
+from ai_video_editor.experiments.section_pilot import run_section_pilot
 from ai_video_editor.llm import LangChainModelConfig, build_chat_model
 from ai_video_editor.qa.decision_eval import _cut_reason
 from ai_video_editor.transcription.models import Sentence, Transcript, Word
@@ -240,3 +241,59 @@ def test_eval_models_cli_writes_cutting_results_without_real_apis(tmp_path: Path
     assert "First useful sentence" in fake_cls.last_prompt
     assert (output / "report.md").exists()
     assert (output / "debug" / "cut-fake" / "tiny.edl.json").exists()
+
+
+def test_section_pilot_checkpoints_and_resumes_completed_fixture(
+    tmp_path: Path, monkeypatch
+) -> None:
+    fixtures = tmp_path / "fixtures"
+    fixtures.mkdir()
+    output = tmp_path / "section-pilot"
+    raw = _transcript(
+        [
+            _sentence("First useful sentence", 0.0, 1.0),
+            _sentence("Second useful sentence", 1.0, 2.0),
+        ]
+    )
+    edl = EditDecisionList(
+        source_video="tiny-raw.mp4",
+        total_duration=2.0,
+        decisions=[
+            EditDecision(
+                start=0.0,
+                end=2.0,
+                action=EditAction.KEEP,
+                reason=EditReason.SPEECH,
+            ),
+        ],
+    )
+    gt = _transcript(raw.sentences, source="tiny-edited.mp4")
+    (fixtures / "tiny-raw.transcript.json").write_text(
+        raw.model_dump_json(), encoding="utf-8"
+    )
+    (fixtures / "tiny-raw.edl.json").write_text(
+        edl.model_dump_json(), encoding="utf-8"
+    )
+    (fixtures / "tiny-edited.qa-transcript.json").write_text(
+        gt.model_dump_json(), encoding="utf-8"
+    )
+
+    monkeypatch.setattr(
+        "ai_video_editor.experiments.section_pilot.detect_section_edits",
+        lambda *args, **kwargs: [],
+    )
+    first = run_section_pilot(fixtures, output, names=["tiny"])
+    assert len(first) == 1
+    assert (output / "results.json").exists()
+    assert (output / "report.md").exists()
+
+    def should_not_run(*args, **kwargs):
+        raise AssertionError("completed fixture should have been resumed")
+
+    monkeypatch.setattr(
+        "ai_video_editor.experiments.section_pilot.detect_section_edits",
+        should_not_run,
+    )
+    resumed = run_section_pilot(fixtures, output, names=["tiny"])
+    assert len(resumed) == 1
+    assert resumed[0].name == "tiny"

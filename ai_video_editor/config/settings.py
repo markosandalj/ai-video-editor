@@ -10,6 +10,7 @@ from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, Settings
 from ai_video_editor.llm import (
     LangChainModelConfig,
     default_cutting_model_config,
+    default_section_editor_fallback_model_config,
     default_section_editor_model_config,
 )
 
@@ -237,6 +238,13 @@ class SectionEditorConfig(BaseModel):
         description=(
             "Chat model that judges each section. The default is the GPT-5.6 Sol "
             "configuration selected by the section-editor evaluation."
+        ),
+    )
+    fallback_llm: LangChainModelConfig | None = Field(
+        default_factory=default_section_editor_fallback_model_config,
+        description=(
+            "Model used only after all primary section attempts fail. The default "
+            "keeps GPT-5.6 Sol but bypasses OpenRouter through direct OpenAI."
         ),
     )
     target_words: int = Field(

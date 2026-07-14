@@ -80,6 +80,23 @@ def default_section_editor_model_config() -> LangChainModelConfig:
     )
 
 
+def default_section_editor_fallback_model_config() -> LangChainModelConfig:
+    """Direct OpenAI fallback for the default OpenRouter Sol route."""
+    return LangChainModelConfig(
+        id="gpt-5.6-sol-openai-direct",
+        class_path="langchain_openai.ChatOpenAI",
+        model="gpt-5.6-sol",
+        temperature=1.0,
+        api_key_env="OPENAI_API_KEY",
+        provider_kwargs={
+            "timeout": 300,
+            "max_retries": 3,
+            "max_tokens": 16_000,
+            "reasoning_effort": "low",
+        },
+    )
+
+
 def import_from_path(class_path: str) -> type[Any]:
     module_name, sep, class_name = class_path.rpartition(".")
     if not sep or not module_name or not class_name:
