@@ -144,176 +144,6 @@ class Section:
         return self.owned_lo <= idx < self.owned_hi
 
 
-@dataclass(frozen=True)
-class LocalRepeatHint:
-    """An earlier span and its nearby cleaner-looking repetition."""
-
-    earlier_sentence: int
-    earlier_start: int
-    earlier_end: int  # exclusive
-    later_sentence: int
-    later_start: int
-    later_end: int  # exclusive
-
-
-def _repeat_word(text: str) -> str:
-    """Normalise a word for repeat discovery, preserving Croatian letters."""
-    return "".join(char for char in text.casefold() if char.isalnum())
-
-
-def _phrase_similarity(left: list[str], right: list[str]) -> float:
-    left_text = " ".join(part for word in left if (part := _repeat_word(word)))
-    right_text = " ".join(part for word in right if (part := _repeat_word(word)))
-    if not left_text or not right_text:
-        return 0.0
-    return SequenceMatcher(None, left_text, right_text, autojunk=False).ratio()
-
-
-def _word_similarity(left: str, right: str) -> float:
-    left_norm = _repeat_word(left)
-    right_norm = _repeat_word(right)
-    if not left_norm or not right_norm:
-        return 0.0
-    return SequenceMatcher(None, left_norm, right_norm, autojunk=False).ratio()
-
-
-def _adjacent_repeat_hint(
-    sentences: list[Sentence], earlier_index: int
-) -> LocalRepeatHint | None:
-    earlier = sentences[earlier_index]
-    later = sentences[earlier_index + 1]
-    if later.start - earlier.end < 1.0:
-        return None
-
-    best: tuple[int, float, int, int] | None = None
-    max_earlier = min(30, len(earlier.words))
-    max_later = min(30, len(later.words))
-    for earlier_length in range(3, max_earlier + 1):
-        left = [word.text for word in earlier.words[-earlier_length:]]
-        for later_length in range(3, max_later + 1):
-            right = [word.text for word in later.words[:later_length]]
-            similarity = _phrase_similarity(left, right)
-            if similarity < 0.85:
-                continue
-            # Do not grow a good match by swallowing an unrelated conjunction
-            # or trailing word merely because the longer character ratio still
-            # clears the threshold.
-            if _word_similarity(left[0], right[0]) < 0.75:
-                continue
-            if _word_similarity(left[-1], right[-1]) < 0.75:
-                continue
-            # Prefer the most informative matching span, then the cleaner match.
-            information = min(
-                len("".join(_repeat_word(word) for word in left)),
-                len("".join(_repeat_word(word) for word in right)),
-            )
-            candidate = (information, similarity, earlier_length, later_length)
-            if best is None or candidate > best:
-                best = candidate
-
-    if best is None:
-        return None
-    _, _, earlier_length, later_length = best
-    return LocalRepeatHint(
-        earlier_sentence=earlier_index,
-        earlier_start=len(earlier.words) - earlier_length,
-        earlier_end=len(earlier.words),
-        later_sentence=earlier_index + 1,
-        later_start=0,
-        later_end=later_length,
-    )
-
-
-def _within_sentence_repeat_hints(
-    sentence: Sentence, sentence_index: int
-) -> list[LocalRepeatHint]:
-    words = sentence.words
-    hints: list[LocalRepeatHint] = []
-    for split in range(2, len(words) - 1):
-        boundary = words[split - 1].text.rstrip()
-        if not (boundary.endswith(",") or "-" in boundary or "–" in boundary):
-            continue
-
-        best: tuple[int, float, int, int] | None = None
-        for earlier_length in range(2, min(6, split) + 1):
-            for later_length in range(2, min(6, len(words) - split) + 1):
-                earlier_start = split - earlier_length
-                later_end = split + later_length
-                left = [word.text for word in words[earlier_start:split]]
-                right = [word.text for word in words[split:later_end]]
-                similarity = _phrase_similarity(left, right)
-                if similarity < 0.78:
-                    continue
-                if _word_similarity(left[0], right[0]) < 0.8:
-                    continue
-                if _word_similarity(left[-1], right[-1]) < 0.75:
-                    continue
-                information = min(
-                    len("".join(_repeat_word(word) for word in left)),
-                    len("".join(_repeat_word(word) for word in right)),
-                )
-                candidate = (information, similarity, earlier_length, later_length)
-                if best is None or candidate > best:
-                    best = candidate
-
-        if best is None:
-            continue
-        _, _, earlier_length, later_length = best
-        hints.append(LocalRepeatHint(
-            earlier_sentence=sentence_index,
-            earlier_start=split - earlier_length,
-            earlier_end=split,
-            later_sentence=sentence_index,
-            later_start=split,
-            later_end=split + later_length,
-        ))
-    return hints
-
-
-def _find_local_repeat_hints(
-    sentences: list[Sentence], section: Section
-) -> list[LocalRepeatHint]:
-    """Find conservative local repeats whose earlier span is editable."""
-    hints: list[LocalRepeatHint] = []
-    for index in range(section.owned_lo, section.owned_hi):
-        hints.extend(_within_sentence_repeat_hints(sentences[index], index))
-        if index + 1 < section.ctx_hi and index + 1 < len(sentences):
-            adjacent = _adjacent_repeat_hint(sentences, index)
-            if adjacent is not None:
-                hints.append(adjacent)
-    return hints
-
-
-def _exact_word_span(sentence: Sentence, start: int, end: int) -> str:
-    return " ".join(word.text for word in sentence.words[start:end])
-
-
-def _render_local_repeat_hints(
-    sentences: list[Sentence], section: Section
-) -> str:
-    hints = _find_local_repeat_hints(sentences, section)
-    if not hints:
-        return ""
-
-    lines = [
-        "MOGUĆA LOKALNA PONAVLJANJA (strojno pronađeni tragovi):",
-        "Ovi tragovi nisu obavezna brisanja. Sam procijeni je li raniji dio napušteni pokušaj.",
-        "Zadrži namjerne prijevode, usporedbe, objašnjenja ili naglasak.",
-    ]
-    for hint in hints:
-        earlier = _exact_word_span(
-            sentences[hint.earlier_sentence], hint.earlier_start, hint.earlier_end
-        )
-        later = _exact_word_span(
-            sentences[hint.later_sentence], hint.later_start, hint.later_end
-        )
-        lines.append(
-            f'- RANIJE [{hint.earlier_sentence}]: "{earlier}"; '
-            f'KASNIJE [{hint.later_sentence}]: "{later}"'
-        )
-    return "\n".join(lines)
-
-
 SECTION_PROMPT = """Ti si iskusan video editor za edukacijske lekcije na hrvatskom. Dobivaš ODLOMAK transkripta snimke. Govornik snima u jednom dahu i često pogriješi pa ponovi — tvoj zadatak je označiti dijelove koje treba IZBACITI da montaža bude čista, a da se ne izgubi sadržaj.
 
 ODGOVOR: Vrati isključivo validan JSON prema shemi. Bez Markdowna, bez dodatnog teksta.
@@ -333,9 +163,7 @@ KLJUČNA PRAVILA:
 - Označavaj SAMO rečenice s indeksima koji su u rasponu za uređivanje: {editable_range}. Rečenice označene (kontekst) su samo za razumijevanje — NE vraćaj brisanja za njih.
 
 Odlomak (indeksi su globalni):
-{section_text}
-
-{repeat_hints}"""
+{section_text}"""
 
 
 def _build_sections(sentences: list[Sentence], cfg: SectionEditorConfig) -> list[Section]:
@@ -553,7 +381,6 @@ def _edit_section(
     prompt = SECTION_PROMPT.format(
         editable_range=f"{section.owned_lo}–{section.owned_hi - 1}",
         section_text=_render_section(sentences, section),
-        repeat_hints=_render_local_repeat_hints(sentences, section),
     )
     structured = llm.with_structured_output(SectionEdits)
     result: SectionEdits = structured.invoke(prompt)

@@ -2,9 +2,6 @@
 span mapping, guardrails, merge) plus one end-to-end run with a mocked model."""
 from __future__ import annotations
 
-import json
-from pathlib import Path
-
 import pytest
 
 from ai_video_editor.config.settings import SectionEditorConfig, Settings
@@ -13,19 +10,14 @@ from ai_video_editor.duplicate.section_editor import (
     SectionDeletion,
     SectionEdits,
     SectionHealth,
-    Section,
     SectionTrace,
     _build_sections,
     _deletion_to_flag,
-    _edit_section,
     _locate_span,
     _merge_flags,
     detect_section_edits,
 )
 from ai_video_editor.transcription.models import Sentence, Word
-
-
-FIXTURES = Path(__file__).parent / "fixtures"
 
 
 def test_section_editor_is_the_default_cutter() -> None:
@@ -97,173 +89,6 @@ class TestBuildSections:
 
     def test_empty(self):
         assert _build_sections([], SectionEditorConfig()) == []
-
-
-class TestLocalRepeatPromptHints:
-    @staticmethod
-    def _capture_prompt(sentences: list[Sentence], section: Section) -> str:
-        prompts: list[str] = []
-
-        class FakeStructured:
-            def invoke(self, prompt):
-                prompts.append(prompt)
-                return SectionEdits()
-
-        class FakeLLM:
-            def with_structured_output(self, schema):
-                return FakeStructured()
-
-        _edit_section(sentences, section, FakeLLM())
-        return prompts[0]
-
-    @staticmethod
-    def _fixture_sentences(name: str) -> list[Sentence]:
-        payload = json.loads((FIXTURES / f"{name}-raw.transcript.json").read_text())
-        return [Sentence.model_validate(item) for item in payload["sentences"]]
-
-    @pytest.mark.parametrize(
-        ("fixture", "sentence_index", "earlier", "later"),
-        [
-            (
-                "test-10",
-                87,
-                "morali bi doći točno na aritmetičku sredinu naše dvije nul točke.",
-                "Morali bi doći točno na aritmetičku sredinu naše dvije nul točke.",
-            ),
-            ("test-10", 23, "Koja se nala-,", "koja se nalazi"),
-            (
-                "test-10",
-                19,
-                "jer u ovom slučaju postoji samo jedna ta najveća vrijednost.",
-                "Jer u ovom slučaju postoji ta jedna najveća vrijednost.",
-            ),
-            ("test-11", 71, "i smjela je primiti,", "i smjeli smo primiti"),
-        ],
-    )
-    def test_surfaces_all_four_user_confirmed_restarts(
-        self, fixture: str, sentence_index: int, earlier: str, later: str
-    ) -> None:
-        sentences = self._fixture_sentences(fixture)
-        section = Section(
-            owned_lo=sentence_index,
-            owned_hi=sentence_index + 1,
-            ctx_lo=sentence_index,
-            ctx_hi=min(len(sentences), sentence_index + 2),
-        )
-
-        prompt = self._capture_prompt(sentences, section)
-
-        assert "MOGUĆA LOKALNA PONAVLJANJA" in prompt
-        assert f'RANIJE [{sentence_index}]: "{earlier}"' in prompt
-        assert f'KASNIJE [' in prompt
-        assert f'"{later}"' in prompt
-
-    def test_surfaces_every_positive_case_in_the_repeat_manifest(self) -> None:
-        manifest = json.loads(
-            (Path(__file__).parents[1] / "iterations/iter-019/repeat-cases.json").read_text()
-        )
-        for case in manifest["cases"]:
-            if case["expected"] != "cut":
-                continue
-            sentences = self._fixture_sentences(case["fixture"])
-            index = case["sentence_index"]
-            earlier = " ".join(
-                word.text
-                for word in sentences[index].words[case["start_word"]:case["end_word"]]
-            )
-            section = Section(
-                owned_lo=index,
-                owned_hi=index + 1,
-                ctx_lo=index,
-                ctx_hi=min(len(sentences), index + 2),
-            )
-
-            prompt = self._capture_prompt(sentences, section)
-
-            assert f'RANIJE [{index}]: "{earlier}"' in prompt, case["label"]
-
-    def test_uses_exact_timestamped_word_text_instead_of_sentence_text(self) -> None:
-        sentences = self._fixture_sentences("test-40")
-        section = Section(owned_lo=39, owned_hi=40, ctx_lo=39, ctx_hi=41)
-
-        prompt = self._capture_prompt(sentences, section)
-
-        assert 'RANIJE [39]: "Od tud onda nastavljamo..."' in prompt
-        assert 'KASNIJE [40]: "Od tud onda nastavljamo"' in prompt
-
-    def test_adjacent_repeat_requires_a_one_second_pause(self) -> None:
-        sentences = [
-            _sentence("Uvod prije ponovljene važne misli", 0, 2),
-            _sentence("ponovljene važne misli", 2.5, 4),
-        ]
-        section = Section(owned_lo=0, owned_hi=1, ctx_lo=0, ctx_hi=2)
-
-        prompt = self._capture_prompt(sentences, section)
-
-        assert "MOGUĆA LOKALNA PONAVLJANJA" not in prompt
-
-    def test_does_not_surface_repeat_owned_only_by_context(self) -> None:
-        sentences = [
-            _sentence("Uvod prije ponovljene važne misli", 0, 2),
-            _sentence("ponovljene važne misli", 4, 6),
-            _sentence("Nova korisna misao ostaje", 7, 9),
-        ]
-        section = Section(owned_lo=1, owned_hi=3, ctx_lo=0, ctx_hi=3)
-
-        prompt = self._capture_prompt(sentences, section)
-
-        assert "MOGUĆA LOKALNA PONAVLJANJA" not in prompt
-
-    @pytest.mark.parametrize(
-        ("fixture", "sentence_index", "start_word", "end_word"),
-        [
-            ("engleski25ljeto-listening-1", 108, 11, 15),
-            ("engleski25ljeto-listening-2", 160, 2, 4),
-            ("engleski25ljeto-reading-1", 183, 9, 12),
-            ("engleski25ljeto-reading-1", 305, 3, 7),
-            ("engleski25ljeto-reading-5", 164, 0, 3),
-            ("engleski25ljeto-reading-5", 221, 1, 4),
-            ("test-11", 22, 16, 18),
-            ("engleski25ljeto-esej", 20, 12, 14),
-            ("engleski25ljeto-esej", 150, 11, 13),
-            ("engleski25ljeto-reading-1", 353, 4, 7),
-        ],
-    )
-    def test_intentional_repeat_controls_remain_advisory_only(
-        self,
-        fixture: str,
-        sentence_index: int,
-        start_word: int,
-        end_word: int,
-    ) -> None:
-        sentences = self._fixture_sentences(fixture)
-        earlier = " ".join(
-            word.text for word in sentences[sentence_index].words[start_word:end_word]
-        )
-        section = Section(
-            owned_lo=sentence_index,
-            owned_hi=sentence_index + 1,
-            ctx_lo=sentence_index,
-            ctx_hi=min(len(sentences), sentence_index + 2),
-        )
-
-        prompt = self._capture_prompt(sentences, section)
-
-        if f'RANIJE [{sentence_index}]: "{earlier}"' in prompt:
-            assert "nisu obavezna brisanja" in prompt
-            assert "prijevode, usporedbe, objašnjenja ili naglasak" in prompt
-
-    def test_prompt_explains_that_hints_are_not_mandatory_cuts(self) -> None:
-        sentences = [
-            _sentence("Ovdje ponavljamo jednu vrlo važnu misao", 0, 3),
-            _sentence("jednu vrlo važnu misao", 5, 7),
-        ]
-        section = Section(owned_lo=0, owned_hi=1, ctx_lo=0, ctx_hi=2)
-
-        prompt = self._capture_prompt(sentences, section)
-
-        assert "nisu obavezna brisanja" in prompt
-        assert "prijevode, usporedbe, objašnjenja ili naglasak" in prompt
 
 
 class TestLocateSpan:
