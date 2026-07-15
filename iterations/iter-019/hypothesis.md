@@ -138,3 +138,50 @@ Aggregate precision was unchanged within noise (0.791→0.790), recall fell
 Candidate 2 was reverted in `71b5ce5`. The bilingual rule is still a valid
 domain statement, but a global prompt addition did not produce a measurable,
 safe improvement.
+
+## Candidate 3 — multi-attempt correction chains
+
+### Problem
+
+Some corrections are spread over two to four sentences. The clean result is a
+stitch: keep an early clean prefix, remove an abandoned or repeated middle, and
+keep the later completed wording. The current prompt describes one false start
+followed by one completion, so Sol often cleans only the obvious short fragment
+and misses another repeated clause in the same chain.
+
+The five user-observed spans are represented directly in
+`candidate-3-cases.json`: two spans in `engleski25ljeto-esej` and three in
+`engleski25ljeto-listening-1` (the previously measured embedded English repeat
+is one of them). Every partial case requires the rest of its sentence to remain
+kept. The manifest also requires the later standalone English sentence and the
+final complete take to remain kept.
+
+### Hypothesis
+
+If the existing prompt explicitly teaches Sol to treat two-to-four connected
+attempts as one correction chain and to return only the exact abandoned spans,
+it will remove these obvious missed cuts without the hundreds of noisy detector
+hints used by candidate 1.
+
+### Single change
+
+Add one compact multi-attempt-chain rule and one synthetic example to
+`SECTION_PROMPT`. There is no detector, automatic cut, additional model call,
+schema change, EDL change, or bilingual rule in this candidate.
+
+### Candidate-3 gates
+
+Against the same fresh 15-video baseline, candidate 3 must:
+
+- have zero failed sections;
+- catch at least four of the five user-observed chain spans;
+- preserve every required remainder and both later-take controls;
+- catch at least 5/16 total positive repeat cases;
+- keep every control the baseline currently keeps (at least 13/17); the four
+  pre-existing bilingual-control failures are tracked but are not candidate 3's
+  hypothesis;
+- improve recall by at least 0.005 and reduce missed-cut words by at least 25;
+- lose no more than 0.005 precision, never lower F1, and add no more than ten
+  overcut words overall;
+- avoid an F1 loss greater than 0.03 or more than ten new overcut words on any
+  video.

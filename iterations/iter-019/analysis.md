@@ -193,3 +193,27 @@ attempts, not as deletion solely due to cross-language equivalence. The prompt
 rule therefore did not constrain the decisions that caused those measured
 overcuts. Candidate 2 was reverted in `71b5ce5`; its artifacts remain under
 `output/qa-iteration-19/candidate-2-15`.
+
+## Candidate-3 measurement
+
+The new examples are correction chains rather than simple adjacent repeats:
+
+- `engleski25ljeto-esej` [40–43] keeps the first three words from [40], drops
+  its abandoned completion and two intervening fragments, then keeps [43] only
+  after its doubled seven-word start;
+- `engleski25ljeto-listening-1` [16–18] keeps the first six words from [16],
+  drops its obsolete explanation, keeps the Croatian portion of [17], drops
+  the embedded English copy, and keeps the standalone English sentence [18];
+- `engleski25ljeto-listening-1` [148–150] drops the first full take and the
+  intervening false start, then keeps the final complete take.
+
+This explains why candidate 1's adjacent suffix/prefix hints were insufficient.
+It also sharpens the required granularity: cutting a whole mixed sentence is a
+failure even if it removes the target words.
+
+On the unchanged baseline, the expanded manifest scores 1/16 positive spans and
+13/17 keep controls. None of the five user-observed chain spans passes. The two
+new later-take controls ([18] and [150]) are already kept. Candidate 3 therefore
+must add at least four exact chain-span successes without losing any of the 13
+baseline-passing controls; it is not expected to solve candidate 2's four
+pre-existing bilingual failures.
