@@ -9,7 +9,22 @@
 |---:|---:|---:|---:|---:|---:|
 | 0.797 | 0.674 | 0.730 | 10,687 | 2,726 | 5,166 | 0/120 |
 
-## False positives: pipeline kept, human cut
+## Fresh 15-video baseline
+
+The unchanged section editor completed all 29 sections without retries or
+fallbacks:
+
+| Cut precision | Cut recall | Cut F1 | True cut words | Overcut words | Missed-cut words | Failed sections |
+|---:|---:|---:|---:|---:|---:|---:|
+| 0.791 | 0.687 | 0.736 | 4,382 | 1,158 | 1,992 | 0/29 |
+
+It cuts only 2 of the 12 explicit positive repeat cases. One is the truncated
+“Koja se nala-” restart and the other is a full repeat in `test-13`. It leaves
+all ten intentional-repeat controls untouched. This gives iteration 19 a clean,
+reproducible starting point and confirms that the target is mostly still
+missing from the current model output.
+
+## False negatives: pipeline kept, human cut
 
 The user identified four source-timeline misses in `test-10` and `test-11`:
 
@@ -30,7 +45,7 @@ Clear within-sentence misses also include:
 - “i pogledajmo opciju pod B, i pogledajmo opciju pod B”
 - “U formulama nam, u formulama nam...”
 
-## False negatives: pipeline cut, human kept
+## False positives: pipeline cut, human kept
 
 Local word repetition is not automatically an editing error. The corpus also
 contains many intentional repetitions used for:
