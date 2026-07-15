@@ -158,6 +158,7 @@ ODGOVOR: Vrati isključivo validan JSON prema shemi. Bez Markdowna, bez dodatnog
 KLJUČNA PRAVILA:
 - verbatim_text MORA biti točno prepisan iz rečenice (može biti dio rečenice za djelomično izbacivanje).
 - Za zamuckivanje/lažni početak izbaci samo pogrešni dio, ne cijelu rečenicu.
+- U lekcijama engleskog, engleski izvorni tekst ili citat i njegov hrvatski prijevod ili objašnjenje NISU retake niti redundant samo zato što znače isto. Zadrži OBA jer imaju različitu nastavnu svrhu. Smiješ izbaciti samo zasebno prekinut, zamuckan ili napušten pokušaj — nikada jedan jezik zato što drugi prenosi isto značenje.
 - Ako govornik ponovi kratku frazu radi naglaska ili se vraća temi kao PODSJETNIKU (velik vremenski razmak), NE briši — to nije retake.
 - Kad nisi siguran, radije NE briši (montažer lakše doda cut nego što vrati izgubljen sadržaj).
 - Označavaj SAMO rečenice s indeksima koji su u rasponu za uređivanje: {editable_range}. Rečenice označene (kontekst) su samo za razumijevanje — NE vraćaj brisanja za njih.

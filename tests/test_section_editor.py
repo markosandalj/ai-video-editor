@@ -335,6 +335,40 @@ class TestWordLevelScoring:
 
 
 class TestDetectSectionEditsEndToEnd:
+    def test_prompt_protects_english_source_and_croatian_explanation(
+        self, monkeypatch
+    ):
+        import ai_video_editor.duplicate.section_editor as se
+
+        sents = [
+            _sentence(
+                "She was disappointed because of unrewarding jobs.", 0, 3
+            ),
+            _sentence(
+                "Dakle bila je razočarana zbog nezahvalnih poslova", 4, 7
+            ),
+        ]
+        prompts: list[str] = []
+
+        class FakeStructured:
+            def invoke(self, prompt):
+                prompts.append(prompt)
+                return SectionEdits()
+
+        class FakeLLM:
+            def with_structured_output(self, schema):
+                return FakeStructured()
+
+        monkeypatch.setattr(se, "build_chat_model", lambda cfg: FakeLLM())
+
+        detect_section_edits(sents, SectionEditorConfig())
+
+        assert len(prompts) == 1
+        assert "engleski izvorni tekst" in prompts[0]
+        assert "hrvatski prijevod ili objašnjenje" in prompts[0]
+        assert "NISU retake niti redundant" in prompts[0]
+        assert "Zadrži OBA" in prompts[0]
+
     def test_trace_records_every_proposal_and_outcome(self, monkeypatch):
         import ai_video_editor.duplicate.section_editor as se
 
