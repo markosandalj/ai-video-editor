@@ -1,7 +1,7 @@
 # Iteration 019 — Local repeat hints
 
 **Date:** 2026-07-15  
-**Status:** Candidates 1–4 failed and reverted; candidate 5 in analysis
+**Status:** Candidates 1–5 failed and reverted; candidate 6 in analysis
 
 ## Problem
 
@@ -313,3 +313,21 @@ If that passes, apply candidate 4's full cohort gates: at least 4/16 positives,
 no loss among the 13 baseline-passing controls, recall +0.005, at least 25 fewer
 missed-cut words, precision loss no worse than 0.005, no F1 decrease, no more
 than ten new aggregate overcuts, and the existing per-video safety limits.
+
+### Candidate-5 outcome
+
+The two-video micro-pilot passed the core exact-span gate: essay [40] 3:12,
+essay [43] 0:7, and listening [148] 0:21 were all cut with their required
+remainders kept. The first 15-video expansion was invalid because a DNS outage
+made both OpenRouter and direct OpenAI fail all 29 sections. After connectivity
+returned, OpenRouter stalled before fallback, so the valid cohort was rerun
+through the same Sol model on direct OpenAI.
+
+The healthy direct run again passed all three exact spans and kept the canonical
+bilingual control [174]. It scored 5/16 positives and 14/17 controls. However,
+official aggregate precision fell 0.791→0.784 and F1 fell 0.736→0.728. Among
+the five videos whose prompts actually changed, precision improved 0.788→0.795
+but recall fell 0.701→0.688 and F1 fell 0.742→0.738. The affected reading-1
+video lost 0.038 F1, and both affected listening videos exceeded the overcut
+limit. The exact-boundary hypothesis worked, but prompt perturbation remained
+unsafe. Candidate 5 was reverted in `61b18f2`.

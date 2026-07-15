@@ -317,3 +317,34 @@ candidate 4's 37 hints in 21 videos to 26 hints in 18 videos. In the 15-video
 cohort it drops from 15 hints in eight videos to nine hints in five videos. A
 two-video micro-pilot will test the three exact source spans before another full
 cohort spend.
+
+## Candidate-5 result
+
+The micro-pilot established that the derived boundaries are correct and usable
+by Sol. All three target spans passed exactly. One micro-run side effect cut
+bilingual control [174] by incorrectly claiming it was a retake of unrelated
+sentence [177], but that stochastic proposal did not recur in the full run.
+
+The first full cohort artifact at `candidate-5-15` is invalid outage evidence:
+DNS failure caused 29/29 sections to fail on both providers. It must never be
+used for model-quality conclusions. A later OpenRouter request stalled inside
+provider retries before application fallback, so the valid cohort was run as
+`candidate-5-15-direct` with direct OpenAI as primary.
+
+| Run | Cut precision | Cut recall | Cut F1 | True cut words | Overcut words | Missed-cut words | Explicit positives | Keep controls |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Baseline | 0.791 | 0.687 | 0.736 | 4,382 | 1,158 | 1,992 | 1/16 | 13/17 |
+| Candidate 5 direct | 0.784 | 0.680 | 0.728 | 4,335 | 1,197 | 2,039 | 5/16 | 14/17 |
+| Change | -0.007 | -0.007 | -0.008 | -47 | +39 | +47 | +4 | +1 |
+
+The healthy run completed all 29 sections without retries. All three core
+source spans passed exactly, and [174] remained kept. Official safety still
+failed. On the five actually affected videos, aggregate P/R/F1 changed
+0.788/0.701/0.742→0.795/0.688/0.738: fewer overcuts but more missed cuts and a
+small F1 loss. Reading-1 lost 0.038 F1, while the two listening videos gained 12
+and 16 overcut words.
+
+Candidate 5 proves the deterministic boundary derivation, not the prompt-based
+delivery mechanism. The next candidate should evaluate the derived spans as
+isolated deterministic additions to a fixed baseline EDL, avoiding any rerun of
+unrelated Sol decisions. This can be projected offline before another paid call.

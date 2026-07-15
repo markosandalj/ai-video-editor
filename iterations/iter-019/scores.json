@@ -20,18 +20,18 @@
     },
     "section": {
       "name": "engleski25ljeto-listening-1",
-      "tp": 226,
-      "fp": 88,
-      "fn": 109,
-      "tn": 3070,
+      "tp": 242,
+      "fp": 106,
+      "fn": 93,
+      "tn": 3052,
       "wrong_cut_by_reason": {
-        "duplicate": 49,
-        "false_start": 39
+        "false_start": 52,
+        "duplicate": 54
       },
       "right_cut_by_reason": {
-        "false_start": 82,
-        "": 2,
-        "duplicate": 142
+        "duplicate": 171,
+        "false_start": 69,
+        "": 2
       }
     },
     "health": {
@@ -39,10 +39,10 @@
       "sections_failed": 0,
       "section_retries": 0,
       "sections_fallback": 0,
-      "deletions_proposed": 60,
+      "deletions_proposed": 65,
       "deletions_rejected_unverifiable": 1,
       "deletions_rejected_guardrail": 0,
-      "flags_emitted": 55
+      "flags_emitted": 61
     }
   },
   {
@@ -66,18 +66,18 @@
     },
     "section": {
       "name": "engleski25ljeto-listening-2",
-      "tp": 522,
-      "fp": 150,
-      "fn": 227,
-      "tn": 4880,
+      "tp": 510,
+      "fp": 183,
+      "fn": 239,
+      "tn": 4847,
       "wrong_cut_by_reason": {
-        "false_start": 70,
-        "duplicate": 79,
+        "false_start": 90,
+        "duplicate": 92,
         "": 1
       },
       "right_cut_by_reason": {
-        "false_start": 181,
-        "duplicate": 341
+        "duplicate": 366,
+        "false_start": 144
       }
     },
     "health": {
@@ -85,10 +85,10 @@
       "sections_failed": 0,
       "section_retries": 0,
       "sections_fallback": 0,
-      "deletions_proposed": 117,
+      "deletions_proposed": 106,
       "deletions_rejected_unverifiable": 6,
-      "deletions_rejected_guardrail": 4,
-      "flags_emitted": 103
+      "deletions_rejected_guardrail": 5,
+      "flags_emitted": 89
     }
   },
   {
@@ -112,17 +112,17 @@
     },
     "section": {
       "name": "engleski25ljeto-reading-1",
-      "tp": 1082,
-      "fp": 309,
-      "fn": 571,
-      "tn": 6463,
+      "tp": 1061,
+      "fp": 219,
+      "fn": 592,
+      "tn": 6553,
       "wrong_cut_by_reason": {
-        "false_start": 106,
-        "duplicate": 203
+        "false_start": 72,
+        "duplicate": 147
       },
       "right_cut_by_reason": {
-        "false_start": 441,
-        "duplicate": 641
+        "false_start": 508,
+        "duplicate": 553
       }
     },
     "health": {
@@ -130,10 +130,10 @@
       "sections_failed": 0,
       "section_retries": 0,
       "sections_fallback": 0,
-      "deletions_proposed": 165,
-      "deletions_rejected_unverifiable": 3,
-      "deletions_rejected_guardrail": 6,
-      "flags_emitted": 153
+      "deletions_proposed": 144,
+      "deletions_rejected_unverifiable": 2,
+      "deletions_rejected_guardrail": 3,
+      "flags_emitted": 138
     }
   },
   {
@@ -157,19 +157,19 @@
     },
     "section": {
       "name": "engleski25ljeto-reading-5",
-      "tp": 228,
-      "fp": 101,
-      "fn": 262,
-      "tn": 3207,
+      "tp": 258,
+      "fp": 106,
+      "fn": 232,
+      "tn": 3202,
       "wrong_cut_by_reason": {
         "false_start": 52,
-        "duplicate": 48,
+        "duplicate": 53,
         "": 1
       },
       "right_cut_by_reason": {
-        "duplicate": 98,
-        "": 2,
-        "false_start": 128
+        "duplicate": 127,
+        "false_start": 130,
+        "": 1
       }
     },
     "health": {
@@ -177,10 +177,10 @@
       "sections_failed": 0,
       "section_retries": 0,
       "sections_fallback": 0,
-      "deletions_proposed": 85,
+      "deletions_proposed": 83,
       "deletions_rejected_unverifiable": 7,
-      "deletions_rejected_guardrail": 2,
-      "flags_emitted": 72
+      "deletions_rejected_guardrail": 4,
+      "flags_emitted": 69
     }
   },
   {
@@ -203,12 +203,12 @@
     "section": {
       "name": "test-1",
       "tp": 104,
-      "fp": 31,
+      "fp": 56,
       "fn": 31,
-      "tn": 1316,
+      "tn": 1291,
       "wrong_cut_by_reason": {
-        "false_start": 26,
-        "duplicate": 5
+        "false_start": 45,
+        "duplicate": 11
       },
       "right_cut_by_reason": {
         "false_start": 104
@@ -221,8 +221,8 @@
       "sections_fallback": 0,
       "deletions_proposed": 28,
       "deletions_rejected_unverifiable": 0,
-      "deletions_rejected_guardrail": 1,
-      "flags_emitted": 27
+      "deletions_rejected_guardrail": 0,
+      "flags_emitted": 28
     }
   },
   {
@@ -246,17 +246,17 @@
     },
     "section": {
       "name": "test-9",
-      "tp": 103,
-      "fp": 51,
-      "fn": 72,
-      "tn": 1080,
+      "tp": 98,
+      "fp": 52,
+      "fn": 77,
+      "tn": 1079,
       "wrong_cut_by_reason": {
-        "duplicate": 35,
-        "false_start": 16
+        "false_start": 27,
+        "duplicate": 25
       },
       "right_cut_by_reason": {
-        "duplicate": 55,
-        "false_start": 48
+        "false_start": 87,
+        "duplicate": 11
       }
     },
     "health": {
@@ -264,10 +264,10 @@
       "sections_failed": 0,
       "section_retries": 0,
       "sections_fallback": 0,
-      "deletions_proposed": 17,
+      "deletions_proposed": 18,
       "deletions_rejected_unverifiable": 0,
       "deletions_rejected_guardrail": 1,
-      "flags_emitted": 16
+      "flags_emitted": 17
     }
   },
   {
@@ -290,17 +290,17 @@
     },
     "section": {
       "name": "test-10",
-      "tp": 252,
-      "fp": 34,
-      "fn": 52,
-      "tn": 1401,
+      "tp": 251,
+      "fp": 102,
+      "fn": 53,
+      "tn": 1333,
       "wrong_cut_by_reason": {
-        "false_start": 19,
-        "duplicate": 15
+        "false_start": 48,
+        "duplicate": 54
       },
       "right_cut_by_reason": {
-        "false_start": 165,
-        "duplicate": 87
+        "false_start": 179,
+        "duplicate": 72
       }
     },
     "health": {
@@ -308,10 +308,10 @@
       "sections_failed": 0,
       "section_retries": 0,
       "sections_fallback": 0,
-      "deletions_proposed": 40,
+      "deletions_proposed": 41,
       "deletions_rejected_unverifiable": 0,
-      "deletions_rejected_guardrail": 2,
-      "flags_emitted": 38
+      "deletions_rejected_guardrail": 1,
+      "flags_emitted": 40
     }
   },
   {
@@ -334,17 +334,17 @@
     },
     "section": {
       "name": "test-11",
-      "tp": 116,
-      "fp": 31,
-      "fn": 39,
-      "tn": 1049,
+      "tp": 110,
+      "fp": 30,
+      "fn": 45,
+      "tn": 1050,
       "wrong_cut_by_reason": {
-        "duplicate": 28,
-        "false_start": 3
+        "false_start": 11,
+        "duplicate": 19
       },
       "right_cut_by_reason": {
-        "duplicate": 52,
-        "false_start": 64
+        "duplicate": 53,
+        "false_start": 57
       }
     },
     "health": {
@@ -352,10 +352,10 @@
       "sections_failed": 0,
       "section_retries": 0,
       "sections_fallback": 0,
-      "deletions_proposed": 20,
+      "deletions_proposed": 24,
       "deletions_rejected_unverifiable": 0,
       "deletions_rejected_guardrail": 0,
-      "flags_emitted": 20
+      "flags_emitted": 24
     }
   },
   {
@@ -378,17 +378,17 @@
     },
     "section": {
       "name": "test-13",
-      "tp": 92,
-      "fp": 13,
-      "fn": 27,
-      "tn": 630,
+      "tp": 97,
+      "fp": 17,
+      "fn": 22,
+      "tn": 626,
       "wrong_cut_by_reason": {
         "false_start": 8,
-        "duplicate": 5
+        "duplicate": 9
       },
       "right_cut_by_reason": {
         "false_start": 76,
-        "duplicate": 16
+        "duplicate": 21
       }
     },
     "health": {
@@ -396,10 +396,10 @@
       "sections_failed": 0,
       "section_retries": 0,
       "sections_fallback": 0,
-      "deletions_proposed": 14,
+      "deletions_proposed": 15,
       "deletions_rejected_unverifiable": 0,
       "deletions_rejected_guardrail": 0,
-      "flags_emitted": 14
+      "flags_emitted": 15
     }
   },
   {
@@ -423,12 +423,12 @@
     "section": {
       "name": "test-34",
       "tp": 125,
-      "fp": 38,
+      "fp": 54,
       "fn": 29,
-      "tn": 643,
+      "tn": 627,
       "wrong_cut_by_reason": {
         "false_start": 22,
-        "duplicate": 16
+        "duplicate": 32
       },
       "right_cut_by_reason": {
         "duplicate": 23,
@@ -441,10 +441,10 @@
       "sections_failed": 0,
       "section_retries": 0,
       "sections_fallback": 0,
-      "deletions_proposed": 15,
+      "deletions_proposed": 16,
       "deletions_rejected_unverifiable": 0,
       "deletions_rejected_guardrail": 0,
-      "flags_emitted": 15
+      "flags_emitted": 16
     }
   },
   {
@@ -468,17 +468,17 @@
     },
     "section": {
       "name": "test-40",
-      "tp": 180,
-      "fp": 31,
-      "fn": 113,
-      "tn": 1268,
+      "tp": 203,
+      "fp": 39,
+      "fn": 90,
+      "tn": 1260,
       "wrong_cut_by_reason": {
-        "false_start": 15,
-        "duplicate": 16
+        "false_start": 13,
+        "duplicate": 26
       },
       "right_cut_by_reason": {
-        "duplicate": 68,
-        "false_start": 112
+        "duplicate": 163,
+        "false_start": 40
       }
     },
     "health": {
@@ -486,10 +486,10 @@
       "sections_failed": 0,
       "section_retries": 0,
       "sections_fallback": 0,
-      "deletions_proposed": 33,
+      "deletions_proposed": 34,
       "deletions_rejected_unverifiable": 3,
       "deletions_rejected_guardrail": 0,
-      "flags_emitted": 30
+      "flags_emitted": 31
     }
   },
   {
@@ -513,17 +513,17 @@
     },
     "section": {
       "name": "test-41",
-      "tp": 277,
-      "fp": 45,
-      "fn": 160,
-      "tn": 1924,
+      "tp": 302,
+      "fp": 48,
+      "fn": 135,
+      "tn": 1921,
       "wrong_cut_by_reason": {
-        "false_start": 29,
-        "duplicate": 16
+        "duplicate": 19,
+        "false_start": 29
       },
       "right_cut_by_reason": {
-        "duplicate": 113,
-        "false_start": 164
+        "duplicate": 125,
+        "false_start": 177
       }
     },
     "health": {
@@ -531,10 +531,10 @@
       "sections_failed": 0,
       "section_retries": 0,
       "sections_fallback": 0,
-      "deletions_proposed": 46,
+      "deletions_proposed": 50,
       "deletions_rejected_unverifiable": 1,
       "deletions_rejected_guardrail": 1,
-      "flags_emitted": 44
+      "flags_emitted": 48
     }
   },
   {
@@ -558,17 +558,17 @@
     },
     "section": {
       "name": "test-46",
-      "tp": 298,
-      "fp": 31,
-      "fn": 112,
-      "tn": 2011,
+      "tp": 278,
+      "fp": 28,
+      "fn": 132,
+      "tn": 2014,
       "wrong_cut_by_reason": {
-        "false_start": 23,
-        "duplicate": 8
+        "false_start": 16,
+        "duplicate": 12
       },
       "right_cut_by_reason": {
-        "false_start": 201,
-        "duplicate": 97
+        "false_start": 131,
+        "duplicate": 147
       }
     },
     "health": {
@@ -576,10 +576,10 @@
       "sections_failed": 0,
       "section_retries": 0,
       "sections_fallback": 0,
-      "deletions_proposed": 34,
+      "deletions_proposed": 31,
       "deletions_rejected_unverifiable": 1,
       "deletions_rejected_guardrail": 0,
-      "flags_emitted": 33
+      "flags_emitted": 30
     }
   },
   {
@@ -603,17 +603,17 @@
     },
     "section": {
       "name": "test-47",
-      "tp": 349,
-      "fp": 81,
-      "fn": 186,
-      "tn": 2967,
+      "tp": 332,
+      "fp": 90,
+      "fn": 203,
+      "tn": 2958,
       "wrong_cut_by_reason": {
-        "false_start": 54,
-        "duplicate": 27
+        "false_start": 55,
+        "duplicate": 35
       },
       "right_cut_by_reason": {
-        "false_start": 231,
-        "duplicate": 118
+        "false_start": 200,
+        "duplicate": 132
       }
     },
     "health": {
@@ -621,9 +621,9 @@
       "sections_failed": 0,
       "section_retries": 0,
       "sections_fallback": 0,
-      "deletions_proposed": 68,
+      "deletions_proposed": 65,
       "deletions_rejected_unverifiable": 0,
-      "deletions_rejected_guardrail": 3,
+      "deletions_rejected_guardrail": 0,
       "flags_emitted": 65
     }
   },
@@ -648,17 +648,17 @@
     },
     "section": {
       "name": "engleski25ljeto-esej",
-      "tp": 341,
-      "fp": 73,
-      "fn": 89,
-      "tn": 2743,
+      "tp": 364,
+      "fp": 67,
+      "fn": 66,
+      "tn": 2749,
       "wrong_cut_by_reason": {
-        "false_start": 67,
-        "duplicate": 6
+        "duplicate": 31,
+        "false_start": 36
       },
       "right_cut_by_reason": {
-        "duplicate": 93,
-        "false_start": 248
+        "duplicate": 112,
+        "false_start": 252
       }
     },
     "health": {
@@ -666,10 +666,10 @@
       "sections_failed": 0,
       "section_retries": 0,
       "sections_fallback": 0,
-      "deletions_proposed": 57,
+      "deletions_proposed": 84,
       "deletions_rejected_unverifiable": 0,
       "deletions_rejected_guardrail": 1,
-      "flags_emitted": 53
+      "flags_emitted": 73
     }
   }
 ]
