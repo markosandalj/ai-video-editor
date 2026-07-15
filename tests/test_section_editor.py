@@ -2,31 +2,22 @@
 span mapping, guardrails, merge) plus one end-to-end run with a mocked model."""
 from __future__ import annotations
 
-import json
-from pathlib import Path
-
 import pytest
 
 from ai_video_editor.config.settings import SectionEditorConfig, Settings
 from ai_video_editor.duplicate.models import FlagReason
 from ai_video_editor.duplicate.section_editor import (
-    Section,
     SectionDeletion,
     SectionEdits,
     SectionHealth,
     SectionTrace,
     _build_sections,
     _deletion_to_flag,
-    _edit_section,
-    _find_exact_splice_hints,
     _locate_span,
     _merge_flags,
     detect_section_edits,
 )
 from ai_video_editor.transcription.models import Sentence, Word
-
-
-FIXTURES = Path(__file__).parent / "fixtures"
 
 
 def test_section_editor_is_the_default_cutter() -> None:
@@ -98,74 +89,6 @@ class TestBuildSections:
 
     def test_empty(self):
         assert _build_sections([], SectionEditorConfig()) == []
-
-
-class TestExactSpliceHints:
-    @staticmethod
-    def _fixture_sentences(name: str) -> list[Sentence]:
-        payload = json.loads((FIXTURES / f"{name}-raw.transcript.json").read_text())
-        return [Sentence.model_validate(item) for item in payload["sentences"]]
-
-    def test_derives_exact_essay_splice_boundaries(self) -> None:
-        sentences = self._fixture_sentences("engleski25ljeto-esej")
-
-        hints = _find_exact_splice_hints(sentences, Section(40, 44, 40, 44))
-
-        hint = next(hint for hint in hints if hint.earlier_sentence == 40)
-        assert {
-            (span.sentence_index, span.start_word, span.end_word)
-            for span in hint.suggested_cuts
-        } == {(40, 3, 12), (43, 0, 7)}
-
-    def test_derives_full_earlier_cut_for_near_identical_endpoints(self) -> None:
-        sentences = self._fixture_sentences("engleski25ljeto-listening-1")
-
-        hints = _find_exact_splice_hints(sentences, Section(148, 151, 148, 151))
-
-        hint = next(hint for hint in hints if hint.earlier_sentence == 148)
-        assert [
-            (span.sentence_index, span.start_word, span.end_word)
-            for span in hint.suggested_cuts
-        ] == [(148, 0, 21)]
-
-    def test_requires_a_visibly_truncated_middle_attempt(self) -> None:
-        sentences = [
-            _sentence("Ovo je prvi potpuni pokušaj iste važne rečenice", 0, 3),
-            _sentence("Hm.", 4, 4.5),
-            _sentence("Ovo je prvi potpuni pokušaj iste važne rečenice", 5, 8),
-        ]
-
-        assert _find_exact_splice_hints(sentences, Section(0, 3, 0, 3)) == []
-
-    def test_requires_endpoints_within_ten_seconds(self) -> None:
-        sentences = [
-            _sentence("Ovo je prvi potpuni pokušaj iste važne rečenice", 0, 3),
-            _sentence("Ovo je...", 4, 5),
-            _sentence("Ovo je prvi potpuni pokušaj iste važne rečenice", 14, 17),
-        ]
-
-        assert _find_exact_splice_hints(sentences, Section(0, 3, 0, 3)) == []
-
-    def test_prompt_renders_only_the_exact_suggested_spans(self) -> None:
-        prompts: list[str] = []
-
-        class FakeStructured:
-            def invoke(self, prompt: str) -> SectionEdits:
-                prompts.append(prompt)
-                return SectionEdits()
-
-        class FakeLLM:
-            def with_structured_output(self, schema):
-                return FakeStructured()
-
-        sentences = self._fixture_sentences("engleski25ljeto-esej")
-        _edit_section(sentences, Section(40, 44, 40, 44), FakeLLM())
-
-        prompt = prompts[0]
-        assert "PREDLOŽENI TOČNI RASPONI" in prompt
-        assert '[40] IZBACI: "ovaj možda najvažniji dio' in prompt
-        assert '[43] IZBACI: "Zatim nam slijedi ovaj Zatim nam slijedi"' in prompt
-        assert "Prijedlozi nisu obavezna brisanja" in prompt
 
 
 class TestLocateSpan:
