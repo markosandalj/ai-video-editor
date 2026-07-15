@@ -213,6 +213,99 @@ class TestDeletionToFlag:
         )
         assert _deletion_to_flag(d, sents, SectionEditorConfig()) is None
 
+    def test_full_false_start_without_later_take_is_rejected_when_required(self):
+        sents = self._sents()
+        deletion = SectionDeletion(
+            sentence_index=0,
+            verbatim_text="Dakle danas cemo raditi na projektu za web aplikaciju",
+            delete_type="false_start",
+        )
+        assert _deletion_to_flag(
+            deletion,
+            sents,
+            SectionEditorConfig(require_full_false_start_kept_index=True),
+        ) is None
+
+    def test_full_false_start_with_earlier_take_is_rejected_when_required(self):
+        sents = self._sents()
+        deletion = SectionDeletion(
+            sentence_index=2,
+            verbatim_text="Dakle danas cemo raditi na projektu za web aplikaciju",
+            delete_type="false_start",
+            kept_index=0,
+        )
+        assert _deletion_to_flag(
+            deletion,
+            sents,
+            SectionEditorConfig(require_full_false_start_kept_index=True),
+        ) is None
+
+    def test_full_false_start_with_out_of_range_take_is_rejected_when_required(self):
+        sents = self._sents()
+        deletion = SectionDeletion(
+            sentence_index=0,
+            verbatim_text="Dakle danas cemo raditi na projektu za web aplikaciju",
+            delete_type="false_start",
+            kept_index=99,
+        )
+        assert _deletion_to_flag(
+            deletion,
+            sents,
+            SectionEditorConfig(require_full_false_start_kept_index=True),
+        ) is None
+
+    def test_full_false_start_with_distant_take_is_rejected_when_required(self):
+        sents = [
+            _sentence("Danas govorimo o zakonu očuvanja energije", 0, 4),
+            _sentence("Prijelazna rečenica s dovoljno riječi za kontekst", 50, 54),
+            _sentence("Danas govorimo o zakonu očuvanja energije", 100, 104),
+        ]
+        deletion = SectionDeletion(
+            sentence_index=0,
+            verbatim_text="Danas govorimo o zakonu očuvanja energije",
+            delete_type="false_start",
+            kept_index=2,
+        )
+        assert _deletion_to_flag(
+            deletion,
+            sents,
+            SectionEditorConfig(
+                require_full_false_start_kept_index=True,
+                retake_max_gap_s=60,
+            ),
+        ) is None
+
+    def test_full_false_start_with_valid_later_take_is_accepted_when_required(self):
+        sents = self._sents()
+        deletion = SectionDeletion(
+            sentence_index=0,
+            verbatim_text="Dakle danas cemo raditi na projektu za web aplikaciju",
+            delete_type="false_start",
+            kept_index=2,
+        )
+        flag = _deletion_to_flag(
+            deletion,
+            sents,
+            SectionEditorConfig(require_full_false_start_kept_index=True),
+        )
+        assert flag is not None
+        assert flag.reason == FlagReason.FALSE_START
+
+    def test_partial_false_start_does_not_require_later_take(self):
+        sents = self._sents()
+        deletion = SectionDeletion(
+            sentence_index=0,
+            verbatim_text="Dakle danas",
+            delete_type="false_start",
+        )
+        flag = _deletion_to_flag(
+            deletion,
+            sents,
+            SectionEditorConfig(require_full_false_start_kept_index=True),
+        )
+        assert flag is not None
+        assert flag.word_trims
+
 class TestMergeFlags:
     def test_full_sentence_subsumes_trims(self):
         sents = [_sentence("jedan dva tri cetiri pet sest sedam osam", 0, 4)]
@@ -335,6 +428,33 @@ class TestWordLevelScoring:
 
 
 class TestDetectSectionEditsEndToEnd:
+    def test_false_start_evidence_prompt_is_candidate_only(self, monkeypatch):
+        import ai_video_editor.duplicate.section_editor as se
+
+        sents = [
+            _sentence("Prva korisna rečenica ostaje u videu", 0, 3),
+            _sentence("Druga korisna rečenica ostaje u videu", 4, 7),
+        ]
+        prompts = []
+
+        class FakeStructured:
+            def invoke(self, prompt):
+                prompts.append(prompt)
+                return SectionEdits(deletions=[])
+
+        class FakeLLM:
+            def with_structured_output(self, schema):
+                return FakeStructured()
+
+        monkeypatch.setattr(se, "build_chat_model", lambda cfg: FakeLLM())
+        detect_section_edits(sents, SectionEditorConfig())
+        detect_section_edits(
+            sents,
+            SectionEditorConfig(require_full_false_start_kept_index=True),
+        )
+        assert "CIJELU rečenicu" not in prompts[0]
+        assert "CIJELU rečenicu" in prompts[1]
+
     def test_trace_records_every_proposal_and_outcome(self, monkeypatch):
         import ai_video_editor.duplicate.section_editor as se
 

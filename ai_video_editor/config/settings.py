@@ -322,6 +322,14 @@ class SectionEditorConfig(BaseModel):
             "median 10s from their twin; wrong ones 25s with a long tail."
         ),
     )
+    require_full_false_start_kept_index: bool = Field(
+        default=False,
+        description=(
+            "Experimental safety rule: require a whole-sentence false start to "
+            "identify a valid later completed take before it can be auto-cut. "
+            "Partial false starts and stutters are unaffected."
+        ),
+    )
     reject_types: list[str] = Field(
         default_factory=lambda: ["redundant"],
         description=(

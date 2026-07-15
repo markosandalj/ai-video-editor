@@ -68,7 +68,10 @@ class SectionDeletion(BaseModel):
     reason: str = Field(default="", description="Short justification in Croatian")
     kept_index: int | None = Field(
         default=None,
-        description="For retake: the [n] index of the surviving version of this thought",
+        description=(
+            "For a retake or whole-sentence false_start: the [n] index of the "
+            "later surviving version of this thought"
+        ),
     )
 
 
@@ -154,6 +157,7 @@ ODGOVOR: Vrati isključivo validan JSON prema shemi. Bez Markdowna, bez dodatnog
 - "stutter": ponovljene/zamuckane riječi UNUTAR rečenice ("Firstly, youngsters s- Firstly, youngsters spend..."). Izbaci SAMO zamuckani dio, ne cijelu rečenicu.
 - "filler": prazne poštapalice bez sadržaja ("znači", "evo", "ovaj" same za sebe).
 - "redundant": rečenica koja ne dodaje NIŠTA novo jer je sadržaj već rečen (npr. suvišno prepričavanje). Budi OPREZAN — ovo je najrizičnije.
+{false_start_evidence_rule}
 
 KLJUČNA PRAVILA:
 - verbatim_text MORA biti točno prepisan iz rečenice (može biti dio rečenice za djelomično izbacivanje).
@@ -164,6 +168,9 @@ KLJUČNA PRAVILA:
 
 Odlomak (indeksi su globalni):
 {section_text}"""
+
+FALSE_START_EVIDENCE_RULE = """DODATNO SIGURNOSNO PRAVILO:
+- Ako izbacuješ CIJELU rečenicu kao false_start, u kept_index OBAVEZNO navedi indeks kasnije potpune verzije. Za djelomično izbacivanje unutar iste rečenice kept_index nije potreban."""
 
 
 def _build_sections(sentences: list[Sentence], cfg: SectionEditorConfig) -> list[Section]:
@@ -322,6 +329,45 @@ def _deletion_to_flag(
         health.deletions_rejected_guardrail += 1
         return None
 
+    if (
+        cfg.require_full_false_start_kept_index
+        and full_sentence
+        and deletion.delete_type == "false_start"
+    ):
+        kept = deletion.kept_index
+        if kept is None:
+            logger.info(
+                "Section editor: rejecting sentence {} — whole false start has no later take",
+                idx,
+            )
+            health.deletions_rejected_guardrail += 1
+            return None
+        if kept >= len(sentences):
+            logger.info(
+                "Section editor: rejecting sentence {} — false-start take {} is out of range",
+                idx,
+                kept,
+            )
+            health.deletions_rejected_guardrail += 1
+            return None
+        if kept <= idx:
+            logger.info(
+                "Section editor: rejecting sentence {} — false-start take {} is not later",
+                idx,
+                kept,
+            )
+            health.deletions_rejected_guardrail += 1
+            return None
+        gap = sentences[kept].start - sentences[idx].start
+        if gap > cfg.retake_max_gap_s:
+            logger.info(
+                "Section editor: rejecting sentence {} — false-start take is {:.0f}s away",
+                idx,
+                gap,
+            )
+            health.deletions_rejected_guardrail += 1
+            return None
+
     word_trims: list[WordTrim] = []
     if not full_sentence:
         word_trims = [
@@ -377,10 +423,16 @@ def _edit_section(
     sentences: list[Sentence],
     section: Section,
     llm,
+    cfg: SectionEditorConfig,
 ) -> list[SectionDeletion]:
     prompt = SECTION_PROMPT.format(
         editable_range=f"{section.owned_lo}–{section.owned_hi - 1}",
         section_text=_render_section(sentences, section),
+        false_start_evidence_rule=(
+            FALSE_START_EVIDENCE_RULE
+            if cfg.require_full_false_start_kept_index
+            else ""
+        ),
     )
     structured = llm.with_structured_output(SectionEdits)
     result: SectionEdits = structured.invoke(prompt)
@@ -398,7 +450,7 @@ def _edit_section_with_retry(
     """Retry structured-output failures that occur after a successful HTTP response."""
     for attempt in range(1, cfg.section_max_attempts + 1):
         try:
-            return _edit_section(sentences, section, llm)
+            return _edit_section(sentences, section, llm, cfg)
         except Exception as exc:
             if attempt >= cfg.section_max_attempts:
                 raise
