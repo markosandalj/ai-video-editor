@@ -7,12 +7,14 @@ import pytest
 from ai_video_editor.config.settings import SectionEditorConfig, Settings
 from ai_video_editor.duplicate.models import FlagReason
 from ai_video_editor.duplicate.section_editor import (
+    Section,
     SectionDeletion,
     SectionEdits,
     SectionHealth,
     SectionTrace,
     _build_sections,
     _deletion_to_flag,
+    _edit_section,
     _locate_span,
     _merge_flags,
     detect_section_edits,
@@ -89,6 +91,33 @@ class TestBuildSections:
 
     def test_empty(self):
         assert _build_sections([], SectionEditorConfig()) == []
+
+
+def test_prompt_teaches_exact_multi_attempt_chain_stitching() -> None:
+    prompts: list[str] = []
+
+    class FakeStructured:
+        def invoke(self, prompt: str) -> SectionEdits:
+            prompts.append(prompt)
+            return SectionEdits()
+
+    class FakeLLM:
+        def with_structured_output(self, schema):
+            return FakeStructured()
+
+    sentences = [
+        _sentence("Ona je zapela u rutinu i onda navodi razlog", 0, 3),
+        _sentence("Na kraju navodi razlog: English quote", 4, 7),
+        _sentence("English quote", 8, 9),
+    ]
+
+    _edit_section(sentences, Section(0, 3, 0, 3), FakeLLM())
+
+    prompt = prompts[0]
+    assert "2–4 povezane rečenice" in prompt
+    assert "zadrži čisti prefiks" in prompt
+    assert "NIKADA ne briši cijelu miješanu rečenicu" in prompt
+    assert "English quote" in prompt
 
 
 class TestLocateSpan:
