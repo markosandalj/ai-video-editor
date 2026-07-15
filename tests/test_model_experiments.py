@@ -277,12 +277,35 @@ def test_section_pilot_checkpoints_and_resumes_completed_fixture(
     (fixtures / "tiny-edited.qa-transcript.json").write_text(
         gt.model_dump_json(), encoding="utf-8"
     )
+    repeat_cases = tmp_path / "repeat-cases.json"
+    repeat_cases.write_text(
+        json.dumps(
+            {
+                "cases": [
+                    {
+                        "fixture": "tiny",
+                        "sentence_index": 0,
+                        "start_word": 0,
+                        "end_word": 1,
+                        "expected": "keep",
+                        "label": "control",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
 
     monkeypatch.setattr(
         "ai_video_editor.experiments.section_pilot.detect_section_edits",
         lambda *args, **kwargs: [],
     )
-    first = run_section_pilot(fixtures, output, names=["tiny"])
+    first = run_section_pilot(
+        fixtures,
+        output,
+        names=["tiny"],
+        repeat_cases_path=repeat_cases,
+    )
     assert len(first) == 1
     assert (output / "results.json").exists()
     assert (output / "report.md").exists()
@@ -292,6 +315,11 @@ def test_section_pilot_checkpoints_and_resumes_completed_fixture(
     run_manifest = json.loads((output / "run.json").read_text())
     assert run_manifest["model_id"] == "gpt-5.6-sol"
     assert run_manifest["fixtures"] == ["tiny"]
+    assert run_manifest["repeat_cases"] == str(repeat_cases)
+    assert "Explicit local-repeat cases" in (output / "report.md").read_text()
+    repeat_results = json.loads((output / "repeat-results.json").read_text())
+    assert repeat_results["control_cases"] == 1
+    assert repeat_results["control_passed"] == 1
     candidate_output = tmp_path / "section-candidate"
     run_section_pilot(
         fixtures,
@@ -301,7 +329,7 @@ def test_section_pilot_checkpoints_and_resumes_completed_fixture(
     )
     candidate_report = (candidate_output / "report.md").read_text()
     assert "Reference comparison" in candidate_report
-    assert "Candidate gate:" in candidate_report
+    assert "Safety gate:" in candidate_report
 
     def should_not_run(*args, **kwargs):
         raise AssertionError("completed fixture should have been resumed")
@@ -315,7 +343,7 @@ def test_section_pilot_checkpoints_and_resumes_completed_fixture(
     assert resumed[0].name == "tiny"
 
 
-def test_section_candidate_gate_rewards_safer_cuts() -> None:
+def test_section_comparison_uses_generic_safety_gates() -> None:
     from ai_video_editor.duplicate.section_editor import SectionHealth
     from ai_video_editor.experiments.section_pilot import (
         FixturePilotResult,
@@ -326,17 +354,17 @@ def test_section_candidate_gate_rewards_safer_cuts() -> None:
 
     reference = [
         FixturePilotResult(
-            name="test-18",
-            baseline=WordDecisionScore(name="test-18"),
-            section=WordDecisionScore(name="test-18", tp=100, fp=20, fn=30),
+            name="ordinary-fixture",
+            baseline=WordDecisionScore(name="ordinary-fixture"),
+            section=WordDecisionScore(name="ordinary-fixture", tp=100, fp=20, fn=30),
             health=SectionHealth(sections_total=1),
         )
     ]
     candidate = [
         FixturePilotResult(
-            name="test-18",
-            baseline=WordDecisionScore(name="test-18"),
-            section=WordDecisionScore(name="test-18", tp=99, fp=15, fn=31),
+            name="ordinary-fixture",
+            baseline=WordDecisionScore(name="ordinary-fixture"),
+            section=WordDecisionScore(name="ordinary-fixture", tp=99, fp=15, fn=31),
             health=SectionHealth(sections_total=1),
         )
     ]
@@ -351,5 +379,110 @@ def test_section_candidate_gate_rewards_safer_cuts() -> None:
         reference_results=reference,
     )
     assert "Reference comparison" in report
-    assert "Candidate gate: PASS" in report
-    assert "test-18" in report
+    assert "Safety gate: PASS" in report
+    assert "ordinary-fixture" in report
+
+
+def test_section_safety_gate_allows_an_unchanged_candidate() -> None:
+    from ai_video_editor.duplicate.section_editor import SectionHealth
+    from ai_video_editor.experiments.section_pilot import (
+        FixturePilotResult,
+        evaluate_candidate_gates,
+    )
+    from ai_video_editor.qa.decision_eval import WordDecisionScore
+
+    score = WordDecisionScore(name="control", tp=100, fp=20, fn=30)
+    reference = [
+        FixturePilotResult(
+            name="control",
+            baseline=WordDecisionScore(name="control"),
+            section=score,
+            health=SectionHealth(sections_total=1),
+        )
+    ]
+    candidate = [
+        FixturePilotResult(
+            name="control",
+            baseline=WordDecisionScore(name="control"),
+            section=score,
+            health=SectionHealth(sections_total=1),
+        )
+    ]
+
+    gate = evaluate_candidate_gates(candidate, reference)
+
+    assert gate.passed is True
+    assert gate.failures == []
+
+
+def test_repeat_case_evaluator_scores_explicit_source_spans(tmp_path: Path) -> None:
+    from ai_video_editor.experiments.repeat_eval import evaluate_repeat_cases
+
+    fixtures = tmp_path / "fixtures"
+    edls = tmp_path / "edls"
+    fixtures.mkdir()
+    edls.mkdir()
+    transcript = _transcript(
+        [
+            _sentence("raniji ponovljeni dio ostali sadržaj", 0.0, 5.0),
+            _sentence("namjerna usporedba ostaje cijela", 6.0, 10.0),
+        ]
+    )
+    (fixtures / "tiny-raw.transcript.json").write_text(
+        transcript.model_dump_json(), encoding="utf-8"
+    )
+    edl = EditDecisionList(
+        source_video="tiny-raw.mp4",
+        total_duration=10.0,
+        decisions=[
+            EditDecision(
+                start=0.0,
+                end=2.0,
+                action=EditAction.CUT,
+                reason=EditReason.FALSE_START,
+            ),
+            EditDecision(
+                start=2.0,
+                end=10.0,
+                action=EditAction.KEEP,
+                reason=EditReason.SPEECH,
+            ),
+        ],
+    )
+    (edls / "tiny.edl.json").write_text(edl.model_dump_json(), encoding="utf-8")
+    manifest = tmp_path / "repeat-cases.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "cases": [
+                    {
+                        "fixture": "tiny",
+                        "sentence_index": 0,
+                        "start_word": 0,
+                        "end_word": 2,
+                        "expected": "cut",
+                        "preserve_sentence_remainder": True,
+                        "label": "confirmed restart",
+                    },
+                    {
+                        "fixture": "tiny",
+                        "sentence_index": 1,
+                        "start_word": 0,
+                        "end_word": 2,
+                        "expected": "keep",
+                        "label": "intentional repetition control",
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    summary = evaluate_repeat_cases(fixtures, edls, manifest)
+
+    assert summary.positive_cases == 1
+    assert summary.positive_passed == 1
+    assert summary.control_cases == 1
+    assert summary.control_passed == 1
+    assert summary.results[0].passed is True
+    assert summary.results[0].remainder_preserved is True

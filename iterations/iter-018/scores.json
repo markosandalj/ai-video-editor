@@ -1,0 +1,671 @@
+[
+  {
+    "name": "engleski25ljeto-reading-1",
+    "baseline": {
+      "name": "engleski25ljeto-reading-1",
+      "tp": 1051,
+      "fp": 1580,
+      "fn": 602,
+      "tn": 5192,
+      "wrong_cut_by_reason": {
+        "duplicate": 732,
+        "false_start": 810,
+        "silence": 38
+      },
+      "right_cut_by_reason": {
+        "false_start": 332,
+        "duplicate": 664,
+        "silence": 55
+      }
+    },
+    "section": {
+      "name": "engleski25ljeto-reading-1",
+      "tp": 1141,
+      "fp": 294,
+      "fn": 512,
+      "tn": 6478,
+      "wrong_cut_by_reason": {
+        "false_start": 155,
+        "duplicate": 139
+      },
+      "right_cut_by_reason": {
+        "false_start": 733,
+        "duplicate": 408
+      }
+    },
+    "health": {
+      "sections_total": 5,
+      "sections_failed": 0,
+      "section_retries": 0,
+      "sections_fallback": 0,
+      "deletions_proposed": 158,
+      "deletions_rejected_unverifiable": 3,
+      "deletions_rejected_guardrail": 1,
+      "flags_emitted": 152
+    }
+  },
+  {
+    "name": "engleski25ljeto-listening-2",
+    "baseline": {
+      "name": "engleski25ljeto-listening-2",
+      "tp": 465,
+      "fp": 769,
+      "fn": 284,
+      "tn": 4261,
+      "wrong_cut_by_reason": {
+        "false_start": 527,
+        "duplicate": 208,
+        "silence": 34
+      },
+      "right_cut_by_reason": {
+        "duplicate": 379,
+        "false_start": 73,
+        "silence": 13
+      }
+    },
+    "section": {
+      "name": "engleski25ljeto-listening-2",
+      "tp": 521,
+      "fp": 154,
+      "fn": 228,
+      "tn": 4876,
+      "wrong_cut_by_reason": {
+        "false_start": 96,
+        "duplicate": 57,
+        "": 1
+      },
+      "right_cut_by_reason": {
+        "false_start": 252,
+        "duplicate": 269
+      }
+    },
+    "health": {
+      "sections_total": 4,
+      "sections_failed": 0,
+      "section_retries": 0,
+      "sections_fallback": 0,
+      "deletions_proposed": 134,
+      "deletions_rejected_unverifiable": 6,
+      "deletions_rejected_guardrail": 6,
+      "flags_emitted": 111
+    }
+  },
+  {
+    "name": "engleski25ljeto-reading-2",
+    "baseline": {
+      "name": "engleski25ljeto-reading-2",
+      "tp": 462,
+      "fp": 738,
+      "fn": 340,
+      "tn": 2777,
+      "wrong_cut_by_reason": {
+        "false_start": 464,
+        "duplicate": 257,
+        "silence": 17
+      },
+      "right_cut_by_reason": {
+        "duplicate": 291,
+        "silence": 64,
+        "false_start": 107
+      }
+    },
+    "section": {
+      "name": "engleski25ljeto-reading-2",
+      "tp": 523,
+      "fp": 98,
+      "fn": 279,
+      "tn": 3417,
+      "wrong_cut_by_reason": {
+        "false_start": 61,
+        "duplicate": 37
+      },
+      "right_cut_by_reason": {
+        "false_start": 315,
+        "duplicate": 208
+      }
+    },
+    "health": {
+      "sections_total": 3,
+      "sections_failed": 0,
+      "section_retries": 0,
+      "sections_fallback": 0,
+      "deletions_proposed": 72,
+      "deletions_rejected_unverifiable": 2,
+      "deletions_rejected_guardrail": 2,
+      "flags_emitted": 67
+    }
+  },
+  {
+    "name": "test-47",
+    "baseline": {
+      "name": "test-47",
+      "tp": 258,
+      "fp": 286,
+      "fn": 277,
+      "tn": 2762,
+      "wrong_cut_by_reason": {
+        "duplicate": 145,
+        "false_start": 136,
+        "silence": 5
+      },
+      "right_cut_by_reason": {
+        "duplicate": 165,
+        "false_start": 62,
+        "silence": 31
+      }
+    },
+    "section": {
+      "name": "test-47",
+      "tp": 345,
+      "fp": 103,
+      "fn": 190,
+      "tn": 2945,
+      "wrong_cut_by_reason": {
+        "false_start": 66,
+        "duplicate": 37
+      },
+      "right_cut_by_reason": {
+        "false_start": 232,
+        "duplicate": 113
+      }
+    },
+    "health": {
+      "sections_total": 2,
+      "sections_failed": 0,
+      "section_retries": 0,
+      "sections_fallback": 0,
+      "deletions_proposed": 66,
+      "deletions_rejected_unverifiable": 0,
+      "deletions_rejected_guardrail": 0,
+      "flags_emitted": 66
+    }
+  },
+  {
+    "name": "engleski25ljeto-reading-5",
+    "baseline": {
+      "name": "engleski25ljeto-reading-5",
+      "tp": 285,
+      "fp": 593,
+      "fn": 205,
+      "tn": 2715,
+      "wrong_cut_by_reason": {
+        "duplicate": 203,
+        "false_start": 351,
+        "silence": 39
+      },
+      "right_cut_by_reason": {
+        "duplicate": 197,
+        "false_start": 61,
+        "silence": 27
+      }
+    },
+    "section": {
+      "name": "engleski25ljeto-reading-5",
+      "tp": 247,
+      "fp": 116,
+      "fn": 243,
+      "tn": 3192,
+      "wrong_cut_by_reason": {
+        "false_start": 92,
+        "duplicate": 23,
+        "": 1
+      },
+      "right_cut_by_reason": {
+        "duplicate": 102,
+        "false_start": 144,
+        "": 1
+      }
+    },
+    "health": {
+      "sections_total": 3,
+      "sections_failed": 0,
+      "section_retries": 2,
+      "sections_fallback": 0,
+      "deletions_proposed": 88,
+      "deletions_rejected_unverifiable": 6,
+      "deletions_rejected_guardrail": 1,
+      "flags_emitted": 76
+    }
+  },
+  {
+    "name": "test-45",
+    "baseline": {
+      "name": "test-45",
+      "tp": 325,
+      "fp": 185,
+      "fn": 246,
+      "tn": 1725,
+      "wrong_cut_by_reason": {
+        "false_start": 79,
+        "silence": 22,
+        "duplicate": 84
+      },
+      "right_cut_by_reason": {
+        "false_start": 87,
+        "duplicate": 233,
+        "silence": 5
+      }
+    },
+    "section": {
+      "name": "test-45",
+      "tp": 311,
+      "fp": 58,
+      "fn": 260,
+      "tn": 1852,
+      "wrong_cut_by_reason": {
+        "duplicate": 29,
+        "false_start": 29
+      },
+      "right_cut_by_reason": {
+        "false_start": 99,
+        "duplicate": 212
+      }
+    },
+    "health": {
+      "sections_total": 2,
+      "sections_failed": 0,
+      "section_retries": 0,
+      "sections_fallback": 0,
+      "deletions_proposed": 45,
+      "deletions_rejected_unverifiable": 1,
+      "deletions_rejected_guardrail": 2,
+      "flags_emitted": 42
+    }
+  },
+  {
+    "name": "engleski25ljeto-listening-1",
+    "baseline": {
+      "name": "engleski25ljeto-listening-1",
+      "tp": 228,
+      "fp": 665,
+      "fn": 107,
+      "tn": 2493,
+      "wrong_cut_by_reason": {
+        "duplicate": 207,
+        "false_start": 384,
+        "silence": 74
+      },
+      "right_cut_by_reason": {
+        "false_start": 38,
+        "duplicate": 183,
+        "silence": 7
+      }
+    },
+    "section": {
+      "name": "engleski25ljeto-listening-1",
+      "tp": 206,
+      "fp": 83,
+      "fn": 129,
+      "tn": 3075,
+      "wrong_cut_by_reason": {
+        "duplicate": 48,
+        "false_start": 35
+      },
+      "right_cut_by_reason": {
+        "duplicate": 150,
+        "false_start": 54,
+        "": 2
+      }
+    },
+    "health": {
+      "sections_total": 2,
+      "sections_failed": 0,
+      "section_retries": 0,
+      "sections_fallback": 0,
+      "deletions_proposed": 57,
+      "deletions_rejected_unverifiable": 1,
+      "deletions_rejected_guardrail": 0,
+      "flags_emitted": 52
+    }
+  },
+  {
+    "name": "engleski25ljeto-reading-3",
+    "baseline": {
+      "name": "engleski25ljeto-reading-3",
+      "tp": 353,
+      "fp": 558,
+      "fn": 163,
+      "tn": 2825,
+      "wrong_cut_by_reason": {
+        "silence": 16,
+        "false_start": 426,
+        "duplicate": 116
+      },
+      "right_cut_by_reason": {
+        "duplicate": 158,
+        "false_start": 170,
+        "silence": 25
+      }
+    },
+    "section": {
+      "name": "engleski25ljeto-reading-3",
+      "tp": 394,
+      "fp": 90,
+      "fn": 122,
+      "tn": 3293,
+      "wrong_cut_by_reason": {
+        "false_start": 72,
+        "duplicate": 18
+      },
+      "right_cut_by_reason": {
+        "false_start": 224,
+        "duplicate": 170
+      }
+    },
+    "health": {
+      "sections_total": 3,
+      "sections_failed": 0,
+      "section_retries": 0,
+      "sections_fallback": 0,
+      "deletions_proposed": 77,
+      "deletions_rejected_unverifiable": 2,
+      "deletions_rejected_guardrail": 0,
+      "flags_emitted": 70
+    }
+  },
+  {
+    "name": "engleski25ljeto-reading-4",
+    "baseline": {
+      "name": "engleski25ljeto-reading-4",
+      "tp": 321,
+      "fp": 342,
+      "fn": 168,
+      "tn": 2544,
+      "wrong_cut_by_reason": {
+        "false_start": 197,
+        "silence": 8,
+        "duplicate": 137
+      },
+      "right_cut_by_reason": {
+        "false_start": 135,
+        "duplicate": 177,
+        "silence": 9
+      }
+    },
+    "section": {
+      "name": "engleski25ljeto-reading-4",
+      "tp": 318,
+      "fp": 59,
+      "fn": 171,
+      "tn": 2827,
+      "wrong_cut_by_reason": {
+        "false_start": 59
+      },
+      "right_cut_by_reason": {
+        "false_start": 174,
+        "duplicate": 144
+      }
+    },
+    "health": {
+      "sections_total": 2,
+      "sections_failed": 0,
+      "section_retries": 0,
+      "sections_fallback": 0,
+      "deletions_proposed": 44,
+      "deletions_rejected_unverifiable": 2,
+      "deletions_rejected_guardrail": 0,
+      "flags_emitted": 42
+    }
+  },
+  {
+    "name": "test-41",
+    "baseline": {
+      "name": "test-41",
+      "tp": 302,
+      "fp": 199,
+      "fn": 135,
+      "tn": 1770,
+      "wrong_cut_by_reason": {
+        "duplicate": 57,
+        "false_start": 140,
+        "silence": 2
+      },
+      "right_cut_by_reason": {
+        "duplicate": 156,
+        "false_start": 131,
+        "silence": 15
+      }
+    },
+    "section": {
+      "name": "test-41",
+      "tp": 266,
+      "fp": 33,
+      "fn": 171,
+      "tn": 1936,
+      "wrong_cut_by_reason": {
+        "false_start": 33
+      },
+      "right_cut_by_reason": {
+        "duplicate": 64,
+        "false_start": 202
+      }
+    },
+    "health": {
+      "sections_total": 2,
+      "sections_failed": 0,
+      "section_retries": 0,
+      "sections_fallback": 0,
+      "deletions_proposed": 47,
+      "deletions_rejected_unverifiable": 1,
+      "deletions_rejected_guardrail": 2,
+      "flags_emitted": 44
+    }
+  },
+  {
+    "name": "test-18",
+    "baseline": {
+      "name": "test-18",
+      "tp": 136,
+      "fp": 126,
+      "fn": 38,
+      "tn": 836,
+      "wrong_cut_by_reason": {
+        "duplicate": 9,
+        "false_start": 117
+      },
+      "right_cut_by_reason": {
+        "false_start": 39,
+        "duplicate": 88,
+        "silence": 9
+      }
+    },
+    "section": {
+      "name": "test-18",
+      "tp": 125,
+      "fp": 103,
+      "fn": 49,
+      "tn": 859,
+      "wrong_cut_by_reason": {
+        "false_start": 18,
+        "duplicate": 85
+      },
+      "right_cut_by_reason": {
+        "false_start": 62,
+        "duplicate": 63
+      }
+    },
+    "health": {
+      "sections_total": 1,
+      "sections_failed": 0,
+      "section_retries": 0,
+      "sections_fallback": 0,
+      "deletions_proposed": 29,
+      "deletions_rejected_unverifiable": 0,
+      "deletions_rejected_guardrail": 2,
+      "flags_emitted": 27
+    }
+  },
+  {
+    "name": "test-17",
+    "baseline": {
+      "name": "test-17",
+      "tp": 78,
+      "fp": 151,
+      "fn": 42,
+      "tn": 764,
+      "wrong_cut_by_reason": {
+        "false_start": 102,
+        "duplicate": 40,
+        "silence": 9
+      },
+      "right_cut_by_reason": {
+        "duplicate": 22,
+        "false_start": 56
+      }
+    },
+    "section": {
+      "name": "test-17",
+      "tp": 59,
+      "fp": 45,
+      "fn": 61,
+      "tn": 870,
+      "wrong_cut_by_reason": {
+        "false_start": 38,
+        "duplicate": 7
+      },
+      "right_cut_by_reason": {
+        "false_start": 37,
+        "duplicate": 22
+      }
+    },
+    "health": {
+      "sections_total": 1,
+      "sections_failed": 0,
+      "section_retries": 0,
+      "sections_fallback": 0,
+      "deletions_proposed": 20,
+      "deletions_rejected_unverifiable": 0,
+      "deletions_rejected_guardrail": 0,
+      "flags_emitted": 20
+    }
+  },
+  {
+    "name": "test-13",
+    "baseline": {
+      "name": "test-13",
+      "tp": 101,
+      "fp": 26,
+      "fn": 18,
+      "tn": 617,
+      "wrong_cut_by_reason": {
+        "false_start": 3,
+        "duplicate": 23
+      },
+      "right_cut_by_reason": {
+        "duplicate": 73,
+        "false_start": 24,
+        "silence": 4
+      }
+    },
+    "section": {
+      "name": "test-13",
+      "tp": 92,
+      "fp": 13,
+      "fn": 27,
+      "tn": 630,
+      "wrong_cut_by_reason": {
+        "false_start": 8,
+        "duplicate": 5
+      },
+      "right_cut_by_reason": {
+        "false_start": 82,
+        "duplicate": 10
+      }
+    },
+    "health": {
+      "sections_total": 1,
+      "sections_failed": 0,
+      "section_retries": 0,
+      "sections_fallback": 0,
+      "deletions_proposed": 14,
+      "deletions_rejected_unverifiable": 0,
+      "deletions_rejected_guardrail": 0,
+      "flags_emitted": 14
+    }
+  },
+  {
+    "name": "fizika25ljeto-002",
+    "baseline": {
+      "name": "fizika25ljeto-002",
+      "tp": 9,
+      "fp": 48,
+      "fn": 15,
+      "tn": 436,
+      "wrong_cut_by_reason": {
+        "false_start": 22,
+        "silence": 26
+      },
+      "right_cut_by_reason": {
+        "false_start": 9
+      }
+    },
+    "section": {
+      "name": "fizika25ljeto-002",
+      "tp": 1,
+      "fp": 10,
+      "fn": 23,
+      "tn": 474,
+      "wrong_cut_by_reason": {
+        "false_start": 10
+      },
+      "right_cut_by_reason": {
+        "false_start": 1
+      }
+    },
+    "health": {
+      "sections_total": 1,
+      "sections_failed": 0,
+      "section_retries": 0,
+      "sections_fallback": 0,
+      "deletions_proposed": 3,
+      "deletions_rejected_unverifiable": 0,
+      "deletions_rejected_guardrail": 0,
+      "flags_emitted": 3
+    }
+  },
+  {
+    "name": "engleski25ljeto-esej",
+    "baseline": {
+      "name": "engleski25ljeto-esej",
+      "tp": 328,
+      "fp": 758,
+      "fn": 102,
+      "tn": 2058,
+      "wrong_cut_by_reason": {
+        "false_start": 298,
+        "duplicate": 386,
+        "silence": 74
+      },
+      "right_cut_by_reason": {
+        "false_start": 52,
+        "duplicate": 259,
+        "silence": 17
+      }
+    },
+    "section": {
+      "name": "engleski25ljeto-esej",
+      "tp": 355,
+      "fp": 106,
+      "fn": 75,
+      "tn": 2710,
+      "wrong_cut_by_reason": {
+        "false_start": 76,
+        "duplicate": 30
+      },
+      "right_cut_by_reason": {
+        "duplicate": 18,
+        "false_start": 337
+      }
+    },
+    "health": {
+      "sections_total": 2,
+      "sections_failed": 0,
+      "section_retries": 0,
+      "sections_fallback": 0,
+      "deletions_proposed": 82,
+      "deletions_rejected_unverifiable": 0,
+      "deletions_rejected_guardrail": 1,
+      "flags_emitted": 72
+    }
+  }
+]

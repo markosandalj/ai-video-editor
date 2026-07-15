@@ -38,3 +38,11 @@ may therefore preserve genuine flubs and lower cut recall.
 - No more than 1 percentage point recall loss.
 - No more than 0.5 percentage points F1 loss.
 - Fewer overcut words in `test-18` without material per-video regressions.
+
+## Outcome
+
+**Rejected and reverted.** The candidate completed without pipeline failures,
+but cut precision fell from 0.784 to 0.782, recall fell from 0.673 to 0.659,
+and F1 fell from 0.724 to 0.715. It saved 13 overcut words while introducing
+104 additional missed-cut words. The narrow benefit on `test-18` did not
+compensate for regressions elsewhere.
