@@ -8,6 +8,7 @@ and no re-transcription; the only cost is the section-editor model calls.
 from __future__ import annotations
 
 import json
+from hashlib import sha256
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -16,7 +17,12 @@ from loguru import logger
 
 from ai_video_editor.config.settings import SectionEditorConfig
 from ai_video_editor.duplicate.edl import EditDecisionList, build_edl
-from ai_video_editor.duplicate.section_editor import SectionHealth, detect_section_edits
+from ai_video_editor.duplicate.section_editor import (
+    SECTION_PROMPT,
+    SectionHealth,
+    SectionTrace,
+    detect_section_edits,
+)
 from ai_video_editor.experiments.reconstruction import derive_cached_cutting_inputs
 from ai_video_editor.llm import LangChainModelConfig, default_section_editor_model_config
 from ai_video_editor.qa.decision_eval import (
@@ -50,6 +56,80 @@ class FixturePilotResult:
     health: SectionHealth = field(default_factory=SectionHealth)
 
 
+@dataclass
+class CandidateGateResult:
+    passed: bool
+    failures: list[str] = field(default_factory=list)
+
+
+def evaluate_candidate_gates(
+    candidate: list[FixturePilotResult],
+    reference: list[FixturePilotResult],
+) -> CandidateGateResult:
+    """Apply the safety-first promotion gates to two comparable runs."""
+    failures: list[str] = []
+    candidate_by_name = {result.name: result for result in candidate}
+    reference_by_name = {result.name: result for result in reference}
+    if candidate_by_name.keys() != reference_by_name.keys():
+        missing = sorted(reference_by_name.keys() - candidate_by_name.keys())
+        extra = sorted(candidate_by_name.keys() - reference_by_name.keys())
+        failures.append(f"fixture mismatch (missing={missing}, extra={extra})")
+
+    common = sorted(candidate_by_name.keys() & reference_by_name.keys())
+    candidate_agg = aggregate_word_scores(
+        [candidate_by_name[name].section for name in common]
+    )
+    reference_agg = aggregate_word_scores(
+        [reference_by_name[name].section for name in common]
+    )
+
+    failed_sections = sum(result.health.sections_failed for result in candidate)
+    if failed_sections:
+        failures.append(f"{failed_sections} section(s) failed")
+    if candidate_agg.cut_precision < reference_agg.cut_precision + 0.005:
+        failures.append(
+            "cut precision did not improve by at least 0.005 "
+            f"({reference_agg.cut_precision:.3f} → {candidate_agg.cut_precision:.3f})"
+        )
+    max_overcuts = reference_agg.fp * 0.95
+    if candidate_agg.fp > max_overcuts:
+        failures.append(
+            "overcut words did not decrease by at least 5% "
+            f"({reference_agg.fp} → {candidate_agg.fp})"
+        )
+    if candidate_agg.cut_recall < reference_agg.cut_recall - 0.01:
+        failures.append(
+            "cut recall dropped by more than 0.010 "
+            f"({reference_agg.cut_recall:.3f} → {candidate_agg.cut_recall:.3f})"
+        )
+    if candidate_agg.cut_f1 < reference_agg.cut_f1 - 0.005:
+        failures.append(
+            "cut F1 dropped by more than 0.005 "
+            f"({reference_agg.cut_f1:.3f} → {candidate_agg.cut_f1:.3f})"
+        )
+
+    if "test-18" in common:
+        old_fp = reference_by_name["test-18"].section.fp
+        new_fp = candidate_by_name["test-18"].section.fp
+        if new_fp >= old_fp:
+            failures.append(f"test-18 overcuts did not decrease ({old_fp} → {new_fp})")
+
+    for name in common:
+        old = reference_by_name[name].section
+        new = candidate_by_name[name].section
+        if new.cut_f1 < old.cut_f1 - 0.03:
+            failures.append(
+                f"{name} lost more than 0.030 cut F1 "
+                f"({old.cut_f1:.3f} → {new.cut_f1:.3f})"
+            )
+        if new.fp > old.fp + 10:
+            failures.append(
+                f"{name} gained more than 10 overcut words ({old.fp} → {new.fp})"
+            )
+
+    return CandidateGateResult(passed=not failures, failures=failures)
+
+
 def _load(fixtures_dir: Path, name: str):
     raw_p = fixtures_dir / f"{name}-raw.transcript.json"
     edl_p = fixtures_dir / f"{name}-raw.edl.json"
@@ -62,7 +142,9 @@ def _load(fixtures_dir: Path, name: str):
     return raw, edl, gt
 
 
-def _section_config(llm_config: LangChainModelConfig) -> SectionEditorConfig:
+def _section_config(
+    llm_config: LangChainModelConfig,
+) -> SectionEditorConfig:
     cfg = SectionEditorConfig()
     cfg.enabled = True
     cfg.llm = llm_config
@@ -100,6 +182,7 @@ def _write_pilot_artifacts(
     results: list[FixturePilotResult],
     *,
     model_id: str,
+    reference_results: list[FixturePilotResult] | None = None,
 ) -> None:
     """Atomically checkpoint after each video so long runs can resume safely."""
     payload = [
@@ -117,7 +200,12 @@ def _write_pilot_artifacts(
 
     report_tmp = output_dir / "report.md.tmp"
     report_tmp.write_text(
-        format_pilot_report(results, model_id=model_id), encoding="utf-8"
+        format_pilot_report(
+            results,
+            model_id=model_id,
+            reference_results=reference_results,
+        ),
+        encoding="utf-8",
     )
     report_tmp.replace(output_dir / "report.md")
 
@@ -129,13 +217,36 @@ def run_section_pilot(
     names: list[str] | None = None,
     llm_config: LangChainModelConfig | None = None,
     resume: bool = True,
+    compare_to: Path | None = None,
 ) -> list[FixturePilotResult]:
     llm_config = llm_config or default_section_editor_model_config()
     target = names or DEFAULT_PILOT_FIXTURES
     cfg = _section_config(llm_config)
+    reference_results: list[FixturePilotResult] | None = None
+    if compare_to is not None:
+        reference_path = compare_to / "results.json" if compare_to.is_dir() else compare_to
+        reference_results = [
+            _result_from_dict(item)
+            for item in json.loads(reference_path.read_text(encoding="utf-8"))
+        ]
     output_dir.mkdir(parents=True, exist_ok=True)
     debug_dir = output_dir / "edls"
     debug_dir.mkdir(exist_ok=True)
+    traces_dir = output_dir / "traces"
+    traces_dir.mkdir(exist_ok=True)
+    (output_dir / "run.json").write_text(
+        json.dumps(
+            {
+                "model_id": llm_config.id or llm_config.model,
+                "model": llm_config.public_dict(),
+                "fixtures": list(target),
+                "prompt_sha256": sha256(SECTION_PROMPT.encode("utf-8")).hexdigest(),
+                "compare_to": str(compare_to) if compare_to is not None else None,
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
 
     checkpoint_path = output_dir / "results.json"
     results: list[FixturePilotResult] = []
@@ -164,13 +275,21 @@ def run_section_pilot(
         keeps, _silences = derive_cached_cutting_inputs(baseline_edl)
 
         health = SectionHealth()
+        trace = SectionTrace()
         try:
             flags = detect_section_edits(
-                raw.sentences, cfg, llm_config=llm_config, health=health
+                raw.sentences,
+                cfg,
+                llm_config=llm_config,
+                health=health,
+                trace=trace,
             )
         except Exception:
             logger.exception("Section editor failed for {} — skipping", name)
             continue
+        (traces_dir / f"{name}.json").write_text(
+            trace.model_dump_json(indent=2), encoding="utf-8"
+        )
         section_edl = build_edl(raw, keeps, flags)
         (debug_dir / f"{name}.edl.json").write_text(
             section_edl.model_dump_json(indent=2), encoding="utf-8"
@@ -192,17 +311,24 @@ def run_section_pilot(
             output_dir,
             results,
             model_id=llm_config.id or llm_config.model,
+            reference_results=reference_results,
         )
 
     _write_pilot_artifacts(
         output_dir,
         results,
         model_id=llm_config.id or llm_config.model,
+        reference_results=reference_results,
     )
     return results
 
 
-def format_pilot_report(results: list[FixturePilotResult], *, model_id: str) -> str:
+def format_pilot_report(
+    results: list[FixturePilotResult],
+    *,
+    model_id: str,
+    reference_results: list[FixturePilotResult] | None = None,
+) -> str:
     lines = [
         "# Section-editor pilot (word-level cut scoring vs human)",
         "",
@@ -252,4 +378,34 @@ def format_pilot_report(results: list[FixturePilotResult], *, model_id: str) -> 
         f"{rejected}/{proposed} proposed spans rejected by guardrails."
         + ("" if healthy else " Scores are NOT trustworthy — failed sections score as zero cuts."),
     ]
+    if reference_results is not None:
+        reference_by_name = {result.name: result for result in reference_results}
+        current_by_name = {result.name: result for result in results}
+        common = sorted(reference_by_name.keys() & current_by_name.keys())
+        gate = evaluate_candidate_gates(results, reference_results)
+        lines += [
+            "",
+            "## Reference comparison",
+            "",
+            f"**Candidate gate: {'PASS' if gate.passed else 'FAIL'}**",
+            "",
+            "| fixture | ref P | cand P | ΔP | ref R | cand R | ΔR | ref F1 | cand F1 | ΔF1 | ΔFP | verdict |",
+            "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|",
+        ]
+        for name in common:
+            old = reference_by_name[name].section
+            new = current_by_name[name].section
+            delta_f1 = new.cut_f1 - old.cut_f1
+            delta_fp = new.fp - old.fp
+            regressed = delta_f1 < -0.03 or delta_fp > 10
+            lines.append(
+                f"| {name} | {old.cut_precision:.3f} | {new.cut_precision:.3f} | "
+                f"{new.cut_precision - old.cut_precision:+.3f} | {old.cut_recall:.3f} | "
+                f"{new.cut_recall:.3f} | {new.cut_recall - old.cut_recall:+.3f} | "
+                f"{old.cut_f1:.3f} | {new.cut_f1:.3f} | {delta_f1:+.3f} | "
+                f"{delta_fp:+d} | {'REGRESSION' if regressed else 'OK'} |"
+            )
+        if gate.failures:
+            lines += ["", "Gate failures:"]
+            lines.extend(f"- {failure}" for failure in gate.failures)
     return "\n".join(lines)

@@ -10,6 +10,7 @@ from ai_video_editor.duplicate.section_editor import (
     SectionDeletion,
     SectionEdits,
     SectionHealth,
+    SectionTrace,
     _build_sections,
     _deletion_to_flag,
     _locate_span,
@@ -212,7 +213,6 @@ class TestDeletionToFlag:
         )
         assert _deletion_to_flag(d, sents, SectionEditorConfig()) is None
 
-
 class TestMergeFlags:
     def test_full_sentence_subsumes_trims(self):
         sents = [_sentence("jedan dva tri cetiri pet sest sedam osam", 0, 4)]
@@ -241,6 +241,35 @@ class TestMergeFlags:
         merged = _merge_flags([p1, p2])
         assert len(merged) == 1
         assert len(merged[0].word_trims) == 2
+
+    def test_partial_trims_with_different_reasons_keep_separate_provenance(self):
+        sents = [_sentence("aa bb cc dd ee ff gg hh ii jj kk ll", 0, 6)]
+        cfg = SectionEditorConfig()
+        stutter = _deletion_to_flag(
+            SectionDeletion(
+                sentence_index=0,
+                verbatim_text="aa bb",
+                delete_type="stutter",
+            ),
+            sents,
+            cfg,
+        )
+        filler = _deletion_to_flag(
+            SectionDeletion(
+                sentence_index=0,
+                verbatim_text="kk ll",
+                delete_type="filler",
+            ),
+            sents,
+            cfg,
+        )
+
+        merged = _merge_flags([stutter, filler])
+
+        assert [(flag.reason, len(flag.word_trims)) for flag in merged] == [
+            (FlagReason.STUTTER, 1),
+            (FlagReason.FILLER, 1),
+        ]
 
 
 class TestWordLevelScoring:
@@ -306,6 +335,47 @@ class TestWordLevelScoring:
 
 
 class TestDetectSectionEditsEndToEnd:
+    def test_trace_records_every_proposal_and_outcome(self, monkeypatch):
+        import ai_video_editor.duplicate.section_editor as se
+
+        sents = [
+            _sentence("Prvi pokušaj rečenice koji treba ukloniti sada", 0, 3),
+            _sentence("Ispravan pokušaj rečenice koji ostaje u videu", 4, 7),
+        ]
+
+        class FakeStructured:
+            def invoke(self, prompt):
+                return SectionEdits(deletions=[
+                    SectionDeletion(
+                        sentence_index=0,
+                        verbatim_text="Prvi pokušaj rečenice koji treba ukloniti sada",
+                        delete_type="retake",
+                        kept_index=1,
+                    ),
+                    SectionDeletion(
+                        sentence_index=0,
+                        verbatim_text="tekst koji ne postoji",
+                        delete_type="filler",
+                    ),
+                ])
+
+        class FakeLLM:
+            def with_structured_output(self, schema):
+                return FakeStructured()
+
+        monkeypatch.setattr(se, "build_chat_model", lambda cfg: FakeLLM())
+        trace = SectionTrace()
+
+        flags = detect_section_edits(sents, SectionEditorConfig(), trace=trace)
+
+        assert [flag.idx for flag in flags] == [0]
+        assert [proposal.disposition for proposal in trace.proposals] == [
+            "accepted",
+            "rejected_unverifiable",
+        ]
+        assert trace.proposals[0].flag is not None
+        assert trace.proposals[1].flag is None
+
     def test_primary_failure_falls_back_to_direct_model(self, monkeypatch):
         import ai_video_editor.duplicate.section_editor as se
 

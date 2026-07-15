@@ -11,6 +11,7 @@ from ai_video_editor.duplicate.models import (
     DuplicatePair,
     FlagReason,
     SimilarityScore,
+    WordTrim,
 )
 from ai_video_editor.duplicate.semantic import compute_semantic_similarity
 from ai_video_editor.duplicate.stutter import detect_stutters
@@ -155,6 +156,76 @@ class TestEditDecisionList:
             assert not (kd.start <= 0.0 and kd.end >= 2.0), (
                 "Flagged sentence [0] (0.0-2.0) should not be in a keep segment"
             )
+
+    def test_partial_trim_preserves_source_metadata(self):
+        sentence = Sentence(
+            text="Firstly youngsters s Firstly youngsters spend more time",
+            start=0.0,
+            end=4.0,
+            words=[
+                Word(text=text, start=i * 0.5, end=(i + 1) * 0.5)
+                for i, text in enumerate(
+                    "Firstly youngsters s Firstly youngsters spend more time".split()
+                )
+            ],
+        )
+        transcript = _make_transcript([sentence])
+        flag = DuplicateFlag(
+            idx=0,
+            reason=FlagReason.STUTTER,
+            confidence=0.73,
+            note="Ponavljanje na početku rečenice",
+            word_trims=[WordTrim(start=0.0, end=1.5)],
+        )
+
+        edl = build_edl(
+            transcript,
+            [KeepRegion(start=0.0, end=4.0)],
+            [flag],
+        )
+
+        cut = next(d for d in edl.decisions if d.action == EditAction.CUT)
+        assert (cut.start, cut.end) == pytest.approx((0.0, 1.5))
+        assert cut.reason == EditReason.FALSE_START
+        assert cut.confidence == pytest.approx(0.73)
+        assert cut.note == "Ponavljanje na početku rečenice"
+
+    def test_mixed_gap_separates_flagged_speech_from_real_silence(self):
+        sentences = [
+            Sentence(
+                text=text,
+                start=start,
+                end=end,
+                words=[Word(text=text, start=start, end=end)],
+            )
+            for text, start, end in [
+                ("Prva", 0.0, 1.0),
+                ("Pogrešna", 2.0, 3.0),
+                ("Zadnja", 4.0, 5.0),
+            ]
+        ]
+        transcript = _make_transcript(sentences)
+        flag = DuplicateFlag(
+            idx=1,
+            reason=FlagReason.DUPLICATE,
+            confidence=0.81,
+            note="Ponovljena misao",
+        )
+
+        edl = build_edl(
+            transcript,
+            [KeepRegion(start=0.0, end=5.0)],
+            [flag],
+        )
+
+        cuts = [d for d in edl.decisions if d.action == EditAction.CUT]
+        assert [
+            (d.start, d.end, d.reason, d.confidence, d.note) for d in cuts
+        ] == [
+            (1.0, 2.0, EditReason.SILENCE, 1.0, ""),
+            (2.0, 3.0, EditReason.DUPLICATE, 0.81, "Ponovljena misao"),
+            (3.0, 4.0, EditReason.SILENCE, 1.0, ""),
+        ]
 
     def test_serializable_to_json(self, simple_duplicate_pair):
         transcript = _make_transcript(simple_duplicate_pair)

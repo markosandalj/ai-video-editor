@@ -286,6 +286,22 @@ def test_section_pilot_checkpoints_and_resumes_completed_fixture(
     assert len(first) == 1
     assert (output / "results.json").exists()
     assert (output / "report.md").exists()
+    assert json.loads((output / "traces" / "tiny.json").read_text()) == {
+        "proposals": []
+    }
+    run_manifest = json.loads((output / "run.json").read_text())
+    assert run_manifest["model_id"] == "gpt-5.6-sol"
+    assert run_manifest["fixtures"] == ["tiny"]
+    candidate_output = tmp_path / "section-candidate"
+    run_section_pilot(
+        fixtures,
+        candidate_output,
+        names=["tiny"],
+        compare_to=output / "results.json",
+    )
+    candidate_report = (candidate_output / "report.md").read_text()
+    assert "Reference comparison" in candidate_report
+    assert "Candidate gate:" in candidate_report
 
     def should_not_run(*args, **kwargs):
         raise AssertionError("completed fixture should have been resumed")
@@ -297,3 +313,43 @@ def test_section_pilot_checkpoints_and_resumes_completed_fixture(
     resumed = run_section_pilot(fixtures, output, names=["tiny"])
     assert len(resumed) == 1
     assert resumed[0].name == "tiny"
+
+
+def test_section_candidate_gate_rewards_safer_cuts() -> None:
+    from ai_video_editor.duplicate.section_editor import SectionHealth
+    from ai_video_editor.experiments.section_pilot import (
+        FixturePilotResult,
+        evaluate_candidate_gates,
+        format_pilot_report,
+    )
+    from ai_video_editor.qa.decision_eval import WordDecisionScore
+
+    reference = [
+        FixturePilotResult(
+            name="test-18",
+            baseline=WordDecisionScore(name="test-18"),
+            section=WordDecisionScore(name="test-18", tp=100, fp=20, fn=30),
+            health=SectionHealth(sections_total=1),
+        )
+    ]
+    candidate = [
+        FixturePilotResult(
+            name="test-18",
+            baseline=WordDecisionScore(name="test-18"),
+            section=WordDecisionScore(name="test-18", tp=99, fp=15, fn=31),
+            health=SectionHealth(sections_total=1),
+        )
+    ]
+
+    gate = evaluate_candidate_gates(candidate, reference)
+
+    assert gate.passed is True
+    assert gate.failures == []
+    report = format_pilot_report(
+        candidate,
+        model_id="candidate-model",
+        reference_results=reference,
+    )
+    assert "Reference comparison" in report
+    assert "Candidate gate: PASS" in report
+    assert "test-18" in report

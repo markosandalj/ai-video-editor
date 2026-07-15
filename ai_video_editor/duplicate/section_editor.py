@@ -77,6 +77,22 @@ class SectionEdits(BaseModel):
     deletions: list[SectionDeletion] = Field(default_factory=list)
 
 
+class SectionProposalTrace(BaseModel):
+    """One model proposal and the deterministic disposition it received."""
+
+    deletion: SectionDeletion
+    disposition: Literal[
+        "accepted", "rejected_unverifiable", "rejected_guardrail"
+    ]
+    flag: DuplicateFlag | None = None
+
+
+class SectionTrace(BaseModel):
+    """Durable evidence for every proposal made during one video run."""
+
+    proposals: list[SectionProposalTrace] = Field(default_factory=list)
+
+
 @dataclass
 class SectionHealth:
     """Plumbing telemetry for one section-editor run.
@@ -340,13 +356,20 @@ def _merge_flags(flags: list[DuplicateFlag]) -> list[DuplicateFlag]:
         if full:
             merged.append(max(full, key=lambda f: f.confidence))
             continue
-        trims: list[WordTrim] = []
-        for f in group:
-            trims.extend(f.word_trims)
-        trims.sort(key=lambda t: t.start)
-        base = max(group, key=lambda f: f.confidence)
-        merged.append(base.model_copy(update={"word_trims": trims}))
-    merged.sort(key=lambda f: f.idx)
+        by_reason: dict[FlagReason, list[DuplicateFlag]] = {}
+        for flag in group:
+            by_reason.setdefault(flag.reason, []).append(flag)
+        for reason_group in by_reason.values():
+            trims = sorted(
+                (trim for flag in reason_group for trim in flag.word_trims),
+                key=lambda trim: trim.start,
+            )
+            base = max(reason_group, key=lambda flag: flag.confidence)
+            merged.append(base.model_copy(update={"word_trims": trims}))
+    merged.sort(key=lambda flag: (
+        flag.idx,
+        flag.word_trims[0].start if flag.word_trims else float("-inf"),
+    ))
     return merged
 
 
@@ -401,6 +424,7 @@ def detect_section_edits(
     *,
     llm_config: LangChainModelConfig | None = None,
     health: SectionHealth | None = None,
+    trace: SectionTrace | None = None,
 ) -> list[DuplicateFlag]:
     """Run the section editor and return removal flags (same contract as
     ``detect_duplicates``). Best-effort per section: a failed section is logged
@@ -473,7 +497,20 @@ def detect_section_edits(
                 continue
         health.deletions_proposed += len(deletions)
         for d in deletions:
+            unverifiable_before = health.deletions_rejected_unverifiable
             flag = _deletion_to_flag(d, sentences, cfg, health)
+            if trace is not None:
+                if flag is not None:
+                    disposition = "accepted"
+                elif health.deletions_rejected_unverifiable > unverifiable_before:
+                    disposition = "rejected_unverifiable"
+                else:
+                    disposition = "rejected_guardrail"
+                trace.proposals.append(SectionProposalTrace(
+                    deletion=d,
+                    disposition=disposition,
+                    flag=flag,
+                ))
             if flag is not None:
                 raw_flags.append(flag)
 
