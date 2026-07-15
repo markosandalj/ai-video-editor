@@ -200,3 +200,56 @@ The total explicit score rose 1/16→5/16 and controls rose 13/17→14/17, but
 reverted in `2ec1beb`. Its useful result is narrower than its prompt: Sol can
 follow an exact adjacent-chain example, but the global rule did not make it find
 non-adjacent first takes on its own.
+
+## Candidate 4 — sparse sandwich hints
+
+### Problem
+
+Candidate 3 proved that Sol can perform exact partial trimming after it notices
+a chain, but it did not notice [40]→[43] or [148]→[150]. Candidate 1's detector
+was too broad: it injected 305 adjacent/within-sentence hints across 71 of 98
+videos and perturbed unrelated decisions.
+
+### Hypothesis
+
+If Sol is shown only high-confidence non-adjacent "sandwich" chains—an earlier
+take, one or two visibly truncated middle attempts, and a later similar
+completion—it will notice the missing first take while leaving sections without
+such evidence byte-for-byte prompt-identical to the baseline.
+
+### Single change
+
+Before each existing Sol call, mechanically search only two- or three-sentence
+gaps. A hint is eligible when:
+
+- at least one intervening sentence visibly ends in `...`, `-`, or `–`;
+- the later take starts no more than ten seconds after the earlier take ends;
+- both endpoint sentences contain at least seven words;
+- endpoint similarity is either at least 98%, or at least 65% with at least 85%
+  similarity across their first four words.
+
+Render the exact earlier, intervening, and later text plus the candidate-3 exact
+span instruction only when a section owns an eligible earlier sentence. Sol
+still decides every cut. There is no automatic cut, extra model call, output
+schema change, EDL change, or hint in an unaffected section.
+
+The measured detector surface is 37 hints across 21/98 fixture videos, compared
+with candidate 1's 305 hints across 71/98. On the 15-video cohort it produces 15
+hints across eight videos and includes both user-supplied non-adjacent chains.
+
+### Candidate-4 gates
+
+Against the same fresh 15-video baseline, candidate 4 must:
+
+- have zero failed sections;
+- cut all three still-missed non-adjacent source spans: essay [40] 3:12, essay
+  [43] 0:7, and listening [148] 0:21;
+- preserve the required partial-sentence remainders and the final takes [18]
+  and [150];
+- catch at least 4/16 total positive cases and lose none of the 13 controls the
+  baseline keeps;
+- improve recall by at least 0.005 and reduce missed-cut words by at least 25;
+- lose no more than 0.005 precision, never lower F1, and add no more than ten
+  overcut words overall;
+- avoid an F1 loss greater than 0.03 or more than ten new overcut words on any
+  video.

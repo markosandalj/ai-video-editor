@@ -248,3 +248,21 @@ make Sol discover the non-adjacent [40]→[43] or [148]→[150] relationship. Th
 next analysis therefore tests whether a very sparse two-to-three-sentence
 "sandwich" hint can expose only those chains without reintroducing candidate
 1's 305 broad repeat hints.
+
+## Candidate-4 detector analysis
+
+A fixture-wide dry scan found a useful structural separator. Requiring a
+visibly truncated intervening attempt, at most a ten-second endpoint gap, and
+strong endpoint similarity finds 37 candidate chains in 21 of 98 videos. The
+same scan finds 15 chains in eight of the 15 cohort videos. It includes both
+missed non-adjacent examples:
+
+- essay [40]→[43]: exact opening frame plus a truncated `a...` in the middle;
+- listening [148]→[150]: 98.9% endpoint similarity plus the truncated `our...`
+  middle attempt.
+
+This is 81% fewer hints and touches 70% fewer videos than candidate 1. It still
+does not authorize a cut: the detector only makes the relationship explicit in
+the existing Sol prompt. Sections with no eligible chain must receive the
+unchanged baseline prompt so their model behavior is not intentionally
+perturbed.
