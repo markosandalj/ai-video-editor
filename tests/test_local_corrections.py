@@ -74,8 +74,8 @@ def test_section_editor_merges_deterministic_corrections_after_sol(monkeypatch) 
     assert {flag.idx for flag in flags} == {40, 43}
 
 
-@pytest.mark.parametrize("fixture", ["test-6", "test-44"])
-def test_rejects_endpoint_expansions_from_full_corpus(fixture: str) -> None:
+@pytest.mark.parametrize("fixture", ["test-6", "test-44", "test-45"])
+def test_rejects_known_full_corpus_controls(fixture: str) -> None:
     assert detect_local_corrections(_transcript(fixture).sentences) == []
 
 

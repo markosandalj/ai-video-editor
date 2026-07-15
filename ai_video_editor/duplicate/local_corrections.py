@@ -16,6 +16,7 @@ _MIN_ENDPOINT_WORDS = 7
 _MAX_ENDPOINT_GAP_SECONDS = 10.0
 _MIN_NEAR_IDENTICAL_SIMILARITY = 98.0
 _MIN_ENDPOINT_LENGTH_RATIO = 0.8
+_MIN_MIDDLE_CONTINUATION_WORDS = 3
 _MIN_SPLICE_SIMILARITY = 65.0
 _MIN_PREFIX_SIMILARITY = 85.0
 
@@ -103,10 +104,17 @@ def _derive_chain_flags(
     length_ratio = min(len(earlier_tokens), len(later_tokens)) / max(
         len(earlier_tokens), len(later_tokens)
     )
+    endpoint_vocabulary = set(earlier_tokens) & set(later_tokens)
+    middle_continuation_words = sum(
+        token in endpoint_vocabulary
+        for sentence in sentences[earlier_index + 1:later_index]
+        for _, token in _indexed_tokens(sentence)
+    )
 
     if (
         overall >= _MIN_NEAR_IDENTICAL_SIMILARITY
         and length_ratio >= _MIN_ENDPOINT_LENGTH_RATIO
+        and middle_continuation_words >= _MIN_MIDDLE_CONTINUATION_WORDS
     ):
         return [DuplicateFlag(
             idx=earlier_index,
