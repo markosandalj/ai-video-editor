@@ -24,6 +24,7 @@ from typing import Literal
 
 from loguru import logger
 from pydantic import BaseModel, Field
+from rapidfuzz import fuzz
 
 from ai_video_editor.config.settings import SectionEditorConfig
 from ai_video_editor.duplicate.models import DuplicateFlag, FlagReason, WordTrim
@@ -142,6 +143,174 @@ class Section:
 
     def owns(self, idx: int) -> bool:
         return self.owned_lo <= idx < self.owned_hi
+
+
+@dataclass(frozen=True)
+class SuggestedCutSpan:
+    sentence_index: int
+    start_word: int
+    end_word: int  # exclusive
+
+
+@dataclass(frozen=True)
+class ExactSpliceHint:
+    earlier_sentence: int
+    later_sentence: int
+    suggested_cuts: tuple[SuggestedCutSpan, ...]
+
+
+def _indexed_repeat_tokens(sentence: Sentence) -> list[tuple[int, str]]:
+    indexed: list[tuple[int, str]] = []
+    for word_index, word in enumerate(sentence.words):
+        token = "".join(char for char in word.text.casefold() if char.isalnum())
+        if token:
+            indexed.append((word_index, token))
+    return indexed
+
+
+def _visibly_truncated(sentence: Sentence) -> bool:
+    text = sentence.text.strip()
+    if text.endswith(("...", "-", "–")):
+        return True
+    return any(
+        word.text.rstrip(".,;:!?").endswith(("-", "–"))
+        for word in sentence.words
+    )
+
+
+def _endpoint_similarity(
+    earlier_tokens: list[str], later_tokens: list[str]
+) -> tuple[float, float]:
+    earlier_text = " ".join(earlier_tokens)
+    later_text = " ".join(later_tokens)
+    overall = max(
+        fuzz.partial_ratio(earlier_text, later_text),
+        fuzz.token_set_ratio(earlier_text, later_text),
+    )
+    prefix = fuzz.ratio(
+        " ".join(earlier_tokens[:4]),
+        " ".join(later_tokens[:4]),
+    )
+    return overall, prefix
+
+
+def _find_restarted_opening(
+    earlier_tokens: list[str], later_tokens: list[str]
+) -> tuple[int, int] | None:
+    """Return ``(phrase_length, second_start)`` for a doubled opening."""
+    max_length = min(6, len(earlier_tokens), len(later_tokens))
+    for phrase_length in range(max_length, 1, -1):
+        phrase = earlier_tokens[:phrase_length]
+        if later_tokens[:phrase_length] != phrase:
+            continue
+        last_second_start = min(
+            phrase_length + 3,
+            len(later_tokens) - phrase_length,
+        )
+        for second_start in range(phrase_length, last_second_start + 1):
+            if later_tokens[second_start:second_start + phrase_length] != phrase:
+                continue
+            if second_start + phrase_length < len(later_tokens):
+                return phrase_length, second_start
+    return None
+
+
+def _derive_exact_splice_hint(
+    sentences: list[Sentence], earlier_index: int, later_index: int
+) -> ExactSpliceHint | None:
+    earlier = sentences[earlier_index]
+    later = sentences[later_index]
+    earlier_indexed = _indexed_repeat_tokens(earlier)
+    later_indexed = _indexed_repeat_tokens(later)
+    if len(earlier_indexed) < 7 or len(later_indexed) < 7:
+        return None
+
+    earlier_tokens = [token for _, token in earlier_indexed]
+    later_tokens = [token for _, token in later_indexed]
+    overall, prefix = _endpoint_similarity(earlier_tokens, later_tokens)
+    if overall >= 98.0:
+        return ExactSpliceHint(
+            earlier_sentence=earlier_index,
+            later_sentence=later_index,
+            suggested_cuts=(SuggestedCutSpan(
+                sentence_index=earlier_index,
+                start_word=0,
+                end_word=len(earlier.words),
+            ),),
+        )
+
+    restarted = _find_restarted_opening(earlier_tokens, later_tokens)
+    if overall < 65.0 or prefix < 85.0 or restarted is None:
+        return None
+    phrase_length, second_start = restarted
+    earlier_cut_start = earlier_indexed[phrase_length - 1][0] + 1
+    later_cut_end = later_indexed[second_start + phrase_length - 1][0] + 1
+    return ExactSpliceHint(
+        earlier_sentence=earlier_index,
+        later_sentence=later_index,
+        suggested_cuts=(
+            SuggestedCutSpan(
+                sentence_index=earlier_index,
+                start_word=earlier_cut_start,
+                end_word=len(earlier.words),
+            ),
+            SuggestedCutSpan(
+                sentence_index=later_index,
+                start_word=0,
+                end_word=later_cut_end,
+            ),
+        ),
+    )
+
+
+def _find_exact_splice_hints(
+    sentences: list[Sentence], section: Section
+) -> list[ExactSpliceHint]:
+    hints: list[ExactSpliceHint] = []
+    for earlier_index in range(section.owned_lo, section.owned_hi):
+        earlier = sentences[earlier_index]
+        for distance in (2, 3):
+            later_index = earlier_index + distance
+            if later_index >= section.ctx_hi or later_index >= len(sentences):
+                continue
+            later = sentences[later_index]
+            if later.start - earlier.end > 10.0:
+                continue
+            if not any(
+                _visibly_truncated(sentence)
+                for sentence in sentences[earlier_index + 1:later_index]
+            ):
+                continue
+            hint = _derive_exact_splice_hint(sentences, earlier_index, later_index)
+            if hint is not None:
+                hints.append(hint)
+    return hints
+
+
+def _exact_word_span(sentence: Sentence, start_word: int, end_word: int) -> str:
+    return " ".join(word.text for word in sentence.words[start_word:end_word])
+
+
+def _render_exact_splice_hints(sentences: list[Sentence], section: Section) -> str:
+    hints = _find_exact_splice_hints(sentences, section)
+    if not hints:
+        return ""
+
+    lines = [
+        "PREDLOŽENI TOČNI RASPONI ZA LANCE ISPRAVAKA:",
+        "Prijedlozi nisu obavezna brisanja. Provjeri da je riječ o napuštenom pokušaju, a ne namjernom objašnjenju ili naglasku.",
+        "Ako prihvatiš prijedlog, vrati TOČNO navedeni verbatim_text. Ne širi brisanje na ostatak miješane rečenice.",
+    ]
+    for hint in hints:
+        lines.append(
+            f'LANAC [{hint.earlier_sentence}]→[{hint.later_sentence}]'
+        )
+        for span in hint.suggested_cuts:
+            exact_text = _exact_word_span(
+                sentences[span.sentence_index], span.start_word, span.end_word
+            )
+            lines.append(f'[{span.sentence_index}] IZBACI: "{exact_text}"')
+    return "\n".join(lines)
 
 
 SECTION_PROMPT = """Ti si iskusan video editor za edukacijske lekcije na hrvatskom. Dobivaš ODLOMAK transkripta snimke. Govornik snima u jednom dahu i često pogriješi pa ponovi — tvoj zadatak je označiti dijelove koje treba IZBACITI da montaža bude čista, a da se ne izgubi sadržaj.
@@ -382,6 +551,9 @@ def _edit_section(
         editable_range=f"{section.owned_lo}–{section.owned_hi - 1}",
         section_text=_render_section(sentences, section),
     )
+    splice_hints = _render_exact_splice_hints(sentences, section)
+    if splice_hints:
+        prompt = f"{prompt}\n\n{splice_hints}"
     structured = llm.with_structured_output(SectionEdits)
     result: SectionEdits = structured.invoke(prompt)
     # Only accept deletions the section owns — dedups the overlap context.
