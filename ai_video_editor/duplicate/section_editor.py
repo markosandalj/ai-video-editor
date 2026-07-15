@@ -24,6 +24,7 @@ from typing import Literal
 
 from loguru import logger
 from pydantic import BaseModel, Field
+from rapidfuzz import fuzz
 
 from ai_video_editor.config.settings import SectionEditorConfig
 from ai_video_editor.duplicate.models import DuplicateFlag, FlagReason, WordTrim
@@ -142,6 +143,108 @@ class Section:
 
     def owns(self, idx: int) -> bool:
         return self.owned_lo <= idx < self.owned_hi
+
+
+@dataclass(frozen=True)
+class SandwichRepeatHint:
+    """A similar earlier/later take separated by a visibly broken attempt."""
+
+    earlier_sentence: int
+    later_sentence: int
+
+
+def _repeat_token(text: str) -> str:
+    return "".join(char for char in text.casefold() if char.isalnum())
+
+
+def _repeat_tokens(sentence: Sentence) -> list[str]:
+    return [token for word in sentence.words if (token := _repeat_token(word.text))]
+
+
+def _visibly_truncated(sentence: Sentence) -> bool:
+    text = sentence.text.strip()
+    if text.endswith(("...", "-", "–")):
+        return True
+    return any(
+        word.text.rstrip(".,;:!?").endswith(("-", "–"))
+        for word in sentence.words
+    )
+
+
+def _sandwich_endpoints_match(earlier: Sentence, later: Sentence) -> bool:
+    earlier_tokens = _repeat_tokens(earlier)
+    later_tokens = _repeat_tokens(later)
+    if len(earlier_tokens) < 7 or len(later_tokens) < 7:
+        return False
+
+    earlier_text = " ".join(earlier_tokens)
+    later_text = " ".join(later_tokens)
+    overall = max(
+        fuzz.partial_ratio(earlier_text, later_text),
+        fuzz.token_set_ratio(earlier_text, later_text),
+    )
+    prefix = fuzz.ratio(
+        " ".join(earlier_tokens[:4]),
+        " ".join(later_tokens[:4]),
+    )
+    return overall >= 98.0 or (overall >= 65.0 and prefix >= 85.0)
+
+
+def _find_sandwich_repeat_hints(
+    sentences: list[Sentence], section: Section
+) -> list[SandwichRepeatHint]:
+    """Find sparse non-adjacent retake chains whose earlier take is editable."""
+    hints: list[SandwichRepeatHint] = []
+    for earlier_index in range(section.owned_lo, section.owned_hi):
+        earlier = sentences[earlier_index]
+        for distance in (2, 3):
+            later_index = earlier_index + distance
+            if later_index >= section.ctx_hi or later_index >= len(sentences):
+                continue
+            later = sentences[later_index]
+            middle = sentences[earlier_index + 1:later_index]
+            if not any(_visibly_truncated(sentence) for sentence in middle):
+                continue
+            if later.start - earlier.end > 10.0:
+                continue
+            if not _sandwich_endpoints_match(earlier, later):
+                continue
+            hints.append(SandwichRepeatHint(
+                earlier_sentence=earlier_index,
+                later_sentence=later_index,
+            ))
+    return hints
+
+
+def _render_sandwich_repeat_hints(
+    sentences: list[Sentence], section: Section
+) -> str:
+    hints = _find_sandwich_repeat_hints(sentences, section)
+    if not hints:
+        return ""
+
+    lines = [
+        "MOGUĆI LANCI ISPRAVAKA (strojno pronađeni tragovi):",
+        "Ovi tragovi nisu obavezna brisanja. Sam procijeni je li riječ o napuštenim pokušajima.",
+        "Lanac može imati 2–4 povezane rečenice: zadrži čisti prefiks i najkasniji čisti dovršetak, a izbaci samo točne napuštene ili ponovljene dijelove.",
+        "Ako rečenica sadrži i sadržaj koji ostaje, NIKADA ne briši cijelu miješanu rečenicu — vrati samo točan verbatim_text za brisanje.",
+    ]
+    for hint in hints:
+        lines.append(
+            f'[{hint.earlier_sentence}] RANIJE: '
+            f'"{sentences[hint.earlier_sentence].text}"'
+        )
+        for middle_index in range(
+            hint.earlier_sentence + 1, hint.later_sentence
+        ):
+            lines.append(
+                f'[{middle_index}] IZMEĐU: "{sentences[middle_index].text}"'
+            )
+        lines.append(
+            f'[{hint.later_sentence}] KASNIJE: '
+            f'"{sentences[hint.later_sentence].text}"'
+        )
+    return "\n".join(lines)
 
 
 SECTION_PROMPT = """Ti si iskusan video editor za edukacijske lekcije na hrvatskom. Dobivaš ODLOMAK transkripta snimke. Govornik snima u jednom dahu i često pogriješi pa ponovi — tvoj zadatak je označiti dijelove koje treba IZBACITI da montaža bude čista, a da se ne izgubi sadržaj.
@@ -382,6 +485,9 @@ def _edit_section(
         editable_range=f"{section.owned_lo}–{section.owned_hi - 1}",
         section_text=_render_section(sentences, section),
     )
+    sandwich_hints = _render_sandwich_repeat_hints(sentences, section)
+    if sandwich_hints:
+        prompt = f"{prompt}\n\n{sandwich_hints}"
     structured = llm.with_structured_output(SectionEdits)
     result: SectionEdits = structured.invoke(prompt)
     # Only accept deletions the section owns — dedups the overlap context.
