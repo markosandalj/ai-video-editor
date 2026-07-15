@@ -1,0 +1,2211 @@
+{
+  "method": "fixed-edl deterministic projection",
+  "fixtures": 98,
+  "baseline_source": "output/qa-sol-fallback/full-98/edls",
+  "baseline": {
+    "tp": 10687,
+    "fp": 2726,
+    "fn": 5166,
+    "tn": 104802,
+    "cut_precision": 0.7967643331096698,
+    "cut_recall": 0.6741310792909859,
+    "cut_f1": 0.7303355429508644
+  },
+  "candidate": {
+    "tp": 10720,
+    "fp": 2726,
+    "fn": 5133,
+    "tn": 104802,
+    "cut_precision": 0.7972631265803957,
+    "cut_recall": 0.6762127042200214,
+    "cut_f1": 0.7317655892692584
+  },
+  "delta": {
+    "tp": 33,
+    "fp": 0,
+    "fn": -33,
+    "tn": 0,
+    "cut_precision": 0.0004987934707259001,
+    "cut_recall": 0.0020816249290355193,
+    "cut_f1": 0.0014300463183939405
+  },
+  "standalone_detector": {
+    "tp": 79,
+    "fp": 0,
+    "cut_precision": 1.0
+  },
+  "changed_videos": [
+    {
+      "name": "engleski25ljeto-esej",
+      "baseline": {
+        "tp": 353,
+        "fp": 73,
+        "fn": 77,
+        "tn": 2743,
+        "cut_precision": 0.8286384976525821,
+        "cut_recall": 0.8209302325581396,
+        "cut_f1": 0.8247663551401869
+      },
+      "candidate": {
+        "tp": 365,
+        "fp": 73,
+        "fn": 65,
+        "tn": 2743,
+        "cut_precision": 0.8333333333333334,
+        "cut_recall": 0.8488372093023255,
+        "cut_f1": 0.8410138248847927
+      }
+    },
+    {
+      "name": "engleski25ljeto-listening-1",
+      "baseline": {
+        "tp": 205,
+        "fp": 102,
+        "fn": 130,
+        "tn": 3056,
+        "cut_precision": 0.6677524429967426,
+        "cut_recall": 0.6119402985074627,
+        "cut_f1": 0.6386292834890965
+      },
+      "candidate": {
+        "tp": 226,
+        "fp": 102,
+        "fn": 109,
+        "tn": 3056,
+        "cut_precision": 0.6890243902439024,
+        "cut_recall": 0.6746268656716418,
+        "cut_f1": 0.6817496229260934
+      }
+    }
+  ],
+  "detector_flags": {
+    "engleski25ljeto-esej": [
+      {
+        "idx": 40,
+        "reason": "false_start",
+        "confidence": 0.99,
+        "related_pair": null,
+        "note": "Mehanički prepoznat ponovljeni početak u lokalnom lancu ispravka; dovršena verzija je rečenica [43].",
+        "word_trims": [
+          {
+            "start": 428.378,
+            "end": 432.118
+          }
+        ]
+      },
+      {
+        "idx": 43,
+        "reason": "false_start",
+        "confidence": 0.99,
+        "related_pair": null,
+        "note": "Mehanički prepoznat ponovljeni početak u lokalnom lancu ispravka; dovršena verzija je rečenica [43].",
+        "word_trims": [
+          {
+            "start": 439.528,
+            "end": 443.198
+          }
+        ]
+      }
+    ],
+    "engleski25ljeto-listening-1": [
+      {
+        "idx": 148,
+        "reason": "duplicate",
+        "confidence": 0.99,
+        "related_pair": null,
+        "note": "Mehanički prepoznat raniji potpuni pokušaj u lokalnom lancu ispravka; dovršena verzija je rečenica [150].",
+        "word_trims": []
+      }
+    ],
+    "engleski25ljeto-reading-1": [
+      {
+        "idx": 402,
+        "reason": "duplicate",
+        "confidence": 0.99,
+        "related_pair": null,
+        "note": "Mehanički prepoznat raniji potpuni pokušaj u lokalnom lancu ispravka; dovršena verzija je rečenica [404].",
+        "word_trims": []
+      }
+    ],
+    "engleski25ljeto-reading-2": [
+      {
+        "idx": 86,
+        "reason": "duplicate",
+        "confidence": 0.99,
+        "related_pair": null,
+        "note": "Mehanički prepoznat raniji potpuni pokušaj u lokalnom lancu ispravka; dovršena verzija je rečenica [88].",
+        "word_trims": []
+      }
+    ],
+    "test-39": [
+      {
+        "idx": 33,
+        "reason": "duplicate",
+        "confidence": 0.99,
+        "related_pair": null,
+        "note": "Mehanički prepoznat raniji potpuni pokušaj u lokalnom lancu ispravka; dovršena verzija je rečenica [36].",
+        "word_trims": []
+      }
+    ]
+  },
+  "per_video": [
+    {
+      "name": "engleski25ljeto-esej",
+      "baseline": {
+        "tp": 353,
+        "fp": 73,
+        "fn": 77,
+        "tn": 2743,
+        "cut_precision": 0.8286384976525821,
+        "cut_recall": 0.8209302325581396,
+        "cut_f1": 0.8247663551401869
+      },
+      "candidate": {
+        "tp": 365,
+        "fp": 73,
+        "fn": 65,
+        "tn": 2743,
+        "cut_precision": 0.8333333333333334,
+        "cut_recall": 0.8488372093023255,
+        "cut_f1": 0.8410138248847927
+      }
+    },
+    {
+      "name": "engleski25ljeto-listening-1",
+      "baseline": {
+        "tp": 205,
+        "fp": 102,
+        "fn": 130,
+        "tn": 3056,
+        "cut_precision": 0.6677524429967426,
+        "cut_recall": 0.6119402985074627,
+        "cut_f1": 0.6386292834890965
+      },
+      "candidate": {
+        "tp": 226,
+        "fp": 102,
+        "fn": 109,
+        "tn": 3056,
+        "cut_precision": 0.6890243902439024,
+        "cut_recall": 0.6746268656716418,
+        "cut_f1": 0.6817496229260934
+      }
+    },
+    {
+      "name": "engleski25ljeto-listening-2",
+      "baseline": {
+        "tp": 457,
+        "fp": 137,
+        "fn": 292,
+        "tn": 4893,
+        "cut_precision": 0.7693602693602694,
+        "cut_recall": 0.6101468624833111,
+        "cut_f1": 0.680565897244974
+      },
+      "candidate": {
+        "tp": 457,
+        "fp": 137,
+        "fn": 292,
+        "tn": 4893,
+        "cut_precision": 0.7693602693602694,
+        "cut_recall": 0.6101468624833111,
+        "cut_f1": 0.680565897244974
+      }
+    },
+    {
+      "name": "engleski25ljeto-reading-1",
+      "baseline": {
+        "tp": 1140,
+        "fp": 218,
+        "fn": 513,
+        "tn": 6554,
+        "cut_precision": 0.8394698085419735,
+        "cut_recall": 0.6896551724137931,
+        "cut_f1": 0.7572235137827964
+      },
+      "candidate": {
+        "tp": 1140,
+        "fp": 218,
+        "fn": 513,
+        "tn": 6554,
+        "cut_precision": 0.8394698085419735,
+        "cut_recall": 0.6896551724137931,
+        "cut_f1": 0.7572235137827964
+      }
+    },
+    {
+      "name": "engleski25ljeto-reading-2",
+      "baseline": {
+        "tp": 523,
+        "fp": 143,
+        "fn": 279,
+        "tn": 3372,
+        "cut_precision": 0.7852852852852853,
+        "cut_recall": 0.6521197007481296,
+        "cut_f1": 0.7125340599455041
+      },
+      "candidate": {
+        "tp": 523,
+        "fp": 143,
+        "fn": 279,
+        "tn": 3372,
+        "cut_precision": 0.7852852852852853,
+        "cut_recall": 0.6521197007481296,
+        "cut_f1": 0.7125340599455041
+      }
+    },
+    {
+      "name": "engleski25ljeto-reading-3",
+      "baseline": {
+        "tp": 388,
+        "fp": 88,
+        "fn": 128,
+        "tn": 3295,
+        "cut_precision": 0.8151260504201681,
+        "cut_recall": 0.751937984496124,
+        "cut_f1": 0.782258064516129
+      },
+      "candidate": {
+        "tp": 388,
+        "fp": 88,
+        "fn": 128,
+        "tn": 3295,
+        "cut_precision": 0.8151260504201681,
+        "cut_recall": 0.751937984496124,
+        "cut_f1": 0.782258064516129
+      }
+    },
+    {
+      "name": "engleski25ljeto-reading-4",
+      "baseline": {
+        "tp": 339,
+        "fp": 53,
+        "fn": 150,
+        "tn": 2833,
+        "cut_precision": 0.8647959183673469,
+        "cut_recall": 0.6932515337423313,
+        "cut_f1": 0.7695800227014755
+      },
+      "candidate": {
+        "tp": 339,
+        "fp": 53,
+        "fn": 150,
+        "tn": 2833,
+        "cut_precision": 0.8647959183673469,
+        "cut_recall": 0.6932515337423313,
+        "cut_f1": 0.7695800227014755
+      }
+    },
+    {
+      "name": "engleski25ljeto-reading-5",
+      "baseline": {
+        "tp": 283,
+        "fp": 65,
+        "fn": 207,
+        "tn": 3243,
+        "cut_precision": 0.8132183908045977,
+        "cut_recall": 0.5775510204081633,
+        "cut_f1": 0.6754176610978521
+      },
+      "candidate": {
+        "tp": 283,
+        "fp": 65,
+        "fn": 207,
+        "tn": 3243,
+        "cut_precision": 0.8132183908045977,
+        "cut_recall": 0.5775510204081633,
+        "cut_f1": 0.6754176610978521
+      }
+    },
+    {
+      "name": "fizika25ljeto-001",
+      "baseline": {
+        "tp": 0,
+        "fp": 2,
+        "fn": 4,
+        "tn": 442,
+        "cut_precision": 0.0,
+        "cut_recall": 0.0,
+        "cut_f1": 0.0
+      },
+      "candidate": {
+        "tp": 0,
+        "fp": 2,
+        "fn": 4,
+        "tn": 442,
+        "cut_precision": 0.0,
+        "cut_recall": 0.0,
+        "cut_f1": 0.0
+      }
+    },
+    {
+      "name": "fizika25ljeto-002",
+      "baseline": {
+        "tp": 1,
+        "fp": 14,
+        "fn": 23,
+        "tn": 470,
+        "cut_precision": 0.06666666666666667,
+        "cut_recall": 0.041666666666666664,
+        "cut_f1": 0.05128205128205127
+      },
+      "candidate": {
+        "tp": 1,
+        "fp": 14,
+        "fn": 23,
+        "tn": 470,
+        "cut_precision": 0.06666666666666667,
+        "cut_recall": 0.041666666666666664,
+        "cut_f1": 0.05128205128205127
+      }
+    },
+    {
+      "name": "fizika25ljeto-003",
+      "baseline": {
+        "tp": 3,
+        "fp": 2,
+        "fn": 8,
+        "tn": 725,
+        "cut_precision": 0.6,
+        "cut_recall": 0.2727272727272727,
+        "cut_f1": 0.37499999999999994
+      },
+      "candidate": {
+        "tp": 3,
+        "fp": 2,
+        "fn": 8,
+        "tn": 725,
+        "cut_precision": 0.6,
+        "cut_recall": 0.2727272727272727,
+        "cut_f1": 0.37499999999999994
+      }
+    },
+    {
+      "name": "fizika25ljeto-004",
+      "baseline": {
+        "tp": 4,
+        "fp": 0,
+        "fn": 2,
+        "tn": 502,
+        "cut_precision": 1.0,
+        "cut_recall": 0.6666666666666666,
+        "cut_f1": 0.8
+      },
+      "candidate": {
+        "tp": 4,
+        "fp": 0,
+        "fn": 2,
+        "tn": 502,
+        "cut_precision": 1.0,
+        "cut_recall": 0.6666666666666666,
+        "cut_f1": 0.8
+      }
+    },
+    {
+      "name": "fizika25ljeto-005",
+      "baseline": {
+        "tp": 0,
+        "fp": 1,
+        "fn": 3,
+        "tn": 429,
+        "cut_precision": 0.0,
+        "cut_recall": 0.0,
+        "cut_f1": 0.0
+      },
+      "candidate": {
+        "tp": 0,
+        "fp": 1,
+        "fn": 3,
+        "tn": 429,
+        "cut_precision": 0.0,
+        "cut_recall": 0.0,
+        "cut_f1": 0.0
+      }
+    },
+    {
+      "name": "fizika25ljeto-006",
+      "baseline": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "tn": 265,
+        "cut_precision": 1.0,
+        "cut_recall": 1.0,
+        "cut_f1": 1.0
+      },
+      "candidate": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "tn": 265,
+        "cut_precision": 1.0,
+        "cut_recall": 1.0,
+        "cut_f1": 1.0
+      }
+    },
+    {
+      "name": "fizika25ljeto-007",
+      "baseline": {
+        "tp": 2,
+        "fp": 0,
+        "fn": 21,
+        "tn": 494,
+        "cut_precision": 1.0,
+        "cut_recall": 0.08695652173913043,
+        "cut_f1": 0.16
+      },
+      "candidate": {
+        "tp": 2,
+        "fp": 0,
+        "fn": 21,
+        "tn": 494,
+        "cut_precision": 1.0,
+        "cut_recall": 0.08695652173913043,
+        "cut_f1": 0.16
+      }
+    },
+    {
+      "name": "fizika25ljeto-008",
+      "baseline": {
+        "tp": 2,
+        "fp": 6,
+        "fn": 1,
+        "tn": 498,
+        "cut_precision": 0.25,
+        "cut_recall": 0.6666666666666666,
+        "cut_f1": 0.36363636363636365
+      },
+      "candidate": {
+        "tp": 2,
+        "fp": 6,
+        "fn": 1,
+        "tn": 498,
+        "cut_precision": 0.25,
+        "cut_recall": 0.6666666666666666,
+        "cut_f1": 0.36363636363636365
+      }
+    },
+    {
+      "name": "fizika25ljeto-009",
+      "baseline": {
+        "tp": 1,
+        "fp": 11,
+        "fn": 11,
+        "tn": 372,
+        "cut_precision": 0.08333333333333333,
+        "cut_recall": 0.08333333333333333,
+        "cut_f1": 0.08333333333333333
+      },
+      "candidate": {
+        "tp": 1,
+        "fp": 11,
+        "fn": 11,
+        "tn": 372,
+        "cut_precision": 0.08333333333333333,
+        "cut_recall": 0.08333333333333333,
+        "cut_f1": 0.08333333333333333
+      }
+    },
+    {
+      "name": "fizika25ljeto-010",
+      "baseline": {
+        "tp": 0,
+        "fp": 4,
+        "fn": 3,
+        "tn": 585,
+        "cut_precision": 0.0,
+        "cut_recall": 0.0,
+        "cut_f1": 0.0
+      },
+      "candidate": {
+        "tp": 0,
+        "fp": 4,
+        "fn": 3,
+        "tn": 585,
+        "cut_precision": 0.0,
+        "cut_recall": 0.0,
+        "cut_f1": 0.0
+      }
+    },
+    {
+      "name": "fizika25ljeto-025",
+      "baseline": {
+        "tp": 0,
+        "fp": 3,
+        "fn": 30,
+        "tn": 396,
+        "cut_precision": 0.0,
+        "cut_recall": 0.0,
+        "cut_f1": 0.0
+      },
+      "candidate": {
+        "tp": 0,
+        "fp": 3,
+        "fn": 30,
+        "tn": 396,
+        "cut_precision": 0.0,
+        "cut_recall": 0.0,
+        "cut_f1": 0.0
+      }
+    },
+    {
+      "name": "fizika25ljeto-026",
+      "baseline": {
+        "tp": 0,
+        "fp": 6,
+        "fn": 3,
+        "tn": 307,
+        "cut_precision": 0.0,
+        "cut_recall": 0.0,
+        "cut_f1": 0.0
+      },
+      "candidate": {
+        "tp": 0,
+        "fp": 6,
+        "fn": 3,
+        "tn": 307,
+        "cut_precision": 0.0,
+        "cut_recall": 0.0,
+        "cut_f1": 0.0
+      }
+    },
+    {
+      "name": "fizika25ljeto-027",
+      "baseline": {
+        "tp": 0,
+        "fp": 2,
+        "fn": 2,
+        "tn": 849,
+        "cut_precision": 0.0,
+        "cut_recall": 0.0,
+        "cut_f1": 0.0
+      },
+      "candidate": {
+        "tp": 0,
+        "fp": 2,
+        "fn": 2,
+        "tn": 849,
+        "cut_precision": 0.0,
+        "cut_recall": 0.0,
+        "cut_f1": 0.0
+      }
+    },
+    {
+      "name": "fizika25ljeto-028",
+      "baseline": {
+        "tp": 0,
+        "fp": 2,
+        "fn": 1,
+        "tn": 714,
+        "cut_precision": 0.0,
+        "cut_recall": 0.0,
+        "cut_f1": 0.0
+      },
+      "candidate": {
+        "tp": 0,
+        "fp": 2,
+        "fn": 1,
+        "tn": 714,
+        "cut_precision": 0.0,
+        "cut_recall": 0.0,
+        "cut_f1": 0.0
+      }
+    },
+    {
+      "name": "fizika25ljeto-029",
+      "baseline": {
+        "tp": 16,
+        "fp": 1,
+        "fn": 7,
+        "tn": 674,
+        "cut_precision": 0.9411764705882353,
+        "cut_recall": 0.6956521739130435,
+        "cut_f1": 0.7999999999999999
+      },
+      "candidate": {
+        "tp": 16,
+        "fp": 1,
+        "fn": 7,
+        "tn": 674,
+        "cut_precision": 0.9411764705882353,
+        "cut_recall": 0.6956521739130435,
+        "cut_f1": 0.7999999999999999
+      }
+    },
+    {
+      "name": "fizika25ljeto-030",
+      "baseline": {
+        "tp": 4,
+        "fp": 1,
+        "fn": 23,
+        "tn": 1098,
+        "cut_precision": 0.8,
+        "cut_recall": 0.14814814814814814,
+        "cut_f1": 0.25
+      },
+      "candidate": {
+        "tp": 4,
+        "fp": 1,
+        "fn": 23,
+        "tn": 1098,
+        "cut_precision": 0.8,
+        "cut_recall": 0.14814814814814814,
+        "cut_f1": 0.25
+      }
+    },
+    {
+      "name": "fizika25ljeto-033",
+      "baseline": {
+        "tp": 1,
+        "fp": 8,
+        "fn": 17,
+        "tn": 881,
+        "cut_precision": 0.1111111111111111,
+        "cut_recall": 0.05555555555555555,
+        "cut_f1": 0.07407407407407407
+      },
+      "candidate": {
+        "tp": 1,
+        "fp": 8,
+        "fn": 17,
+        "tn": 881,
+        "cut_precision": 0.1111111111111111,
+        "cut_recall": 0.05555555555555555,
+        "cut_f1": 0.07407407407407407
+      }
+    },
+    {
+      "name": "fizika25ljeto-034",
+      "baseline": {
+        "tp": 0,
+        "fp": 15,
+        "fn": 1,
+        "tn": 682,
+        "cut_precision": 0.0,
+        "cut_recall": 0.0,
+        "cut_f1": 0.0
+      },
+      "candidate": {
+        "tp": 0,
+        "fp": 15,
+        "fn": 1,
+        "tn": 682,
+        "cut_precision": 0.0,
+        "cut_recall": 0.0,
+        "cut_f1": 0.0
+      }
+    },
+    {
+      "name": "fizika25ljeto-035",
+      "baseline": {
+        "tp": 0,
+        "fp": 2,
+        "fn": 4,
+        "tn": 486,
+        "cut_precision": 0.0,
+        "cut_recall": 0.0,
+        "cut_f1": 0.0
+      },
+      "candidate": {
+        "tp": 0,
+        "fp": 2,
+        "fn": 4,
+        "tn": 486,
+        "cut_precision": 0.0,
+        "cut_recall": 0.0,
+        "cut_f1": 0.0
+      }
+    },
+    {
+      "name": "hrvatski25ljeto-sazetak-ljeto-24-25",
+      "baseline": {
+        "tp": 15,
+        "fp": 17,
+        "fn": 28,
+        "tn": 2125,
+        "cut_precision": 0.46875,
+        "cut_recall": 0.3488372093023256,
+        "cut_f1": 0.4000000000000001
+      },
+      "candidate": {
+        "tp": 15,
+        "fp": 17,
+        "fn": 28,
+        "tn": 2125,
+        "cut_precision": 0.46875,
+        "cut_recall": 0.3488372093023256,
+        "cut_f1": 0.4000000000000001
+      }
+    },
+    {
+      "name": "hrvatski25ljeto-tekst-1",
+      "baseline": {
+        "tp": 10,
+        "fp": 24,
+        "fn": 18,
+        "tn": 1053,
+        "cut_precision": 0.29411764705882354,
+        "cut_recall": 0.35714285714285715,
+        "cut_f1": 0.3225806451612903
+      },
+      "candidate": {
+        "tp": 10,
+        "fp": 24,
+        "fn": 18,
+        "tn": 1053,
+        "cut_precision": 0.29411764705882354,
+        "cut_recall": 0.35714285714285715,
+        "cut_f1": 0.3225806451612903
+      }
+    },
+    {
+      "name": "hrvatski25ljeto-tekst-2",
+      "baseline": {
+        "tp": 6,
+        "fp": 13,
+        "fn": 31,
+        "tn": 1039,
+        "cut_precision": 0.3157894736842105,
+        "cut_recall": 0.16216216216216217,
+        "cut_f1": 0.21428571428571427
+      },
+      "candidate": {
+        "tp": 6,
+        "fp": 13,
+        "fn": 31,
+        "tn": 1039,
+        "cut_precision": 0.3157894736842105,
+        "cut_recall": 0.16216216216216217,
+        "cut_f1": 0.21428571428571427
+      }
+    },
+    {
+      "name": "hrvatski25ljeto-tekst-3",
+      "baseline": {
+        "tp": 0,
+        "fp": 5,
+        "fn": 33,
+        "tn": 1268,
+        "cut_precision": 0.0,
+        "cut_recall": 0.0,
+        "cut_f1": 0.0
+      },
+      "candidate": {
+        "tp": 0,
+        "fp": 5,
+        "fn": 33,
+        "tn": 1268,
+        "cut_precision": 0.0,
+        "cut_recall": 0.0,
+        "cut_f1": 0.0
+      }
+    },
+    {
+      "name": "hrvatski25ljeto-zad-53",
+      "baseline": {
+        "tp": 1,
+        "fp": 17,
+        "fn": 0,
+        "tn": 387,
+        "cut_precision": 0.05555555555555555,
+        "cut_recall": 1.0,
+        "cut_f1": 0.10526315789473684
+      },
+      "candidate": {
+        "tp": 1,
+        "fp": 17,
+        "fn": 0,
+        "tn": 387,
+        "cut_precision": 0.05555555555555555,
+        "cut_recall": 1.0,
+        "cut_f1": 0.10526315789473684
+      }
+    },
+    {
+      "name": "hrvatski25ljeto-zad-54",
+      "baseline": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "tn": 150,
+        "cut_precision": 1.0,
+        "cut_recall": 1.0,
+        "cut_f1": 1.0
+      },
+      "candidate": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "tn": 150,
+        "cut_precision": 1.0,
+        "cut_recall": 1.0,
+        "cut_f1": 1.0
+      }
+    },
+    {
+      "name": "hrvatski25ljeto-zad-56",
+      "baseline": {
+        "tp": 1,
+        "fp": 7,
+        "fn": 1,
+        "tn": 313,
+        "cut_precision": 0.125,
+        "cut_recall": 0.5,
+        "cut_f1": 0.2
+      },
+      "candidate": {
+        "tp": 1,
+        "fp": 7,
+        "fn": 1,
+        "tn": 313,
+        "cut_precision": 0.125,
+        "cut_recall": 0.5,
+        "cut_f1": 0.2
+      }
+    },
+    {
+      "name": "hrvatski25ljeto-zad-58",
+      "baseline": {
+        "tp": 2,
+        "fp": 16,
+        "fn": 10,
+        "tn": 1349,
+        "cut_precision": 0.1111111111111111,
+        "cut_recall": 0.16666666666666666,
+        "cut_f1": 0.13333333333333333
+      },
+      "candidate": {
+        "tp": 2,
+        "fp": 16,
+        "fn": 10,
+        "tn": 1349,
+        "cut_precision": 0.1111111111111111,
+        "cut_recall": 0.16666666666666666,
+        "cut_f1": 0.13333333333333333
+      }
+    },
+    {
+      "name": "kemija25ljeto-k1-1",
+      "baseline": {
+        "tp": 7,
+        "fp": 16,
+        "fn": 12,
+        "tn": 103,
+        "cut_precision": 0.30434782608695654,
+        "cut_recall": 0.3684210526315789,
+        "cut_f1": 0.3333333333333333
+      },
+      "candidate": {
+        "tp": 7,
+        "fp": 16,
+        "fn": 12,
+        "tn": 103,
+        "cut_precision": 0.30434782608695654,
+        "cut_recall": 0.3684210526315789,
+        "cut_f1": 0.3333333333333333
+      }
+    },
+    {
+      "name": "kemija25ljeto-k1-10",
+      "baseline": {
+        "tp": 49,
+        "fp": 17,
+        "fn": 18,
+        "tn": 519,
+        "cut_precision": 0.7424242424242424,
+        "cut_recall": 0.7313432835820896,
+        "cut_f1": 0.736842105263158
+      },
+      "candidate": {
+        "tp": 49,
+        "fp": 17,
+        "fn": 18,
+        "tn": 519,
+        "cut_precision": 0.7424242424242424,
+        "cut_recall": 0.7313432835820896,
+        "cut_f1": 0.736842105263158
+      }
+    },
+    {
+      "name": "kemija25ljeto-k1-2",
+      "baseline": {
+        "tp": 20,
+        "fp": 1,
+        "fn": 0,
+        "tn": 85,
+        "cut_precision": 0.9523809523809523,
+        "cut_recall": 1.0,
+        "cut_f1": 0.975609756097561
+      },
+      "candidate": {
+        "tp": 20,
+        "fp": 1,
+        "fn": 0,
+        "tn": 85,
+        "cut_precision": 0.9523809523809523,
+        "cut_recall": 1.0,
+        "cut_f1": 0.975609756097561
+      }
+    },
+    {
+      "name": "kemija25ljeto-k1-3",
+      "baseline": {
+        "tp": 106,
+        "fp": 22,
+        "fn": 22,
+        "tn": 458,
+        "cut_precision": 0.828125,
+        "cut_recall": 0.828125,
+        "cut_f1": 0.828125
+      },
+      "candidate": {
+        "tp": 106,
+        "fp": 22,
+        "fn": 22,
+        "tn": 458,
+        "cut_precision": 0.828125,
+        "cut_recall": 0.828125,
+        "cut_f1": 0.828125
+      }
+    },
+    {
+      "name": "kemija25ljeto-k1-4",
+      "baseline": {
+        "tp": 73,
+        "fp": 5,
+        "fn": 12,
+        "tn": 283,
+        "cut_precision": 0.9358974358974359,
+        "cut_recall": 0.8588235294117647,
+        "cut_f1": 0.8957055214723926
+      },
+      "candidate": {
+        "tp": 73,
+        "fp": 5,
+        "fn": 12,
+        "tn": 283,
+        "cut_precision": 0.9358974358974359,
+        "cut_recall": 0.8588235294117647,
+        "cut_f1": 0.8957055214723926
+      }
+    },
+    {
+      "name": "kemija25ljeto-k1-5",
+      "baseline": {
+        "tp": 36,
+        "fp": 2,
+        "fn": 5,
+        "tn": 437,
+        "cut_precision": 0.9473684210526315,
+        "cut_recall": 0.8780487804878049,
+        "cut_f1": 0.9113924050632912
+      },
+      "candidate": {
+        "tp": 36,
+        "fp": 2,
+        "fn": 5,
+        "tn": 437,
+        "cut_precision": 0.9473684210526315,
+        "cut_recall": 0.8780487804878049,
+        "cut_f1": 0.9113924050632912
+      }
+    },
+    {
+      "name": "kemija25ljeto-k1-6",
+      "baseline": {
+        "tp": 69,
+        "fp": 1,
+        "fn": 3,
+        "tn": 278,
+        "cut_precision": 0.9857142857142858,
+        "cut_recall": 0.9583333333333334,
+        "cut_f1": 0.971830985915493
+      },
+      "candidate": {
+        "tp": 69,
+        "fp": 1,
+        "fn": 3,
+        "tn": 278,
+        "cut_precision": 0.9857142857142858,
+        "cut_recall": 0.9583333333333334,
+        "cut_f1": 0.971830985915493
+      }
+    },
+    {
+      "name": "kemija25ljeto-k1-7",
+      "baseline": {
+        "tp": 42,
+        "fp": 18,
+        "fn": 9,
+        "tn": 293,
+        "cut_precision": 0.7,
+        "cut_recall": 0.8235294117647058,
+        "cut_f1": 0.7567567567567567
+      },
+      "candidate": {
+        "tp": 42,
+        "fp": 18,
+        "fn": 9,
+        "tn": 293,
+        "cut_precision": 0.7,
+        "cut_recall": 0.8235294117647058,
+        "cut_f1": 0.7567567567567567
+      }
+    },
+    {
+      "name": "kemija25ljeto-k1-8",
+      "baseline": {
+        "tp": 0,
+        "fp": 3,
+        "fn": 5,
+        "tn": 133,
+        "cut_precision": 0.0,
+        "cut_recall": 0.0,
+        "cut_f1": 0.0
+      },
+      "candidate": {
+        "tp": 0,
+        "fp": 3,
+        "fn": 5,
+        "tn": 133,
+        "cut_precision": 0.0,
+        "cut_recall": 0.0,
+        "cut_f1": 0.0
+      }
+    },
+    {
+      "name": "kemija25ljeto-k1-9",
+      "baseline": {
+        "tp": 6,
+        "fp": 35,
+        "fn": 15,
+        "tn": 325,
+        "cut_precision": 0.14634146341463414,
+        "cut_recall": 0.2857142857142857,
+        "cut_f1": 0.1935483870967742
+      },
+      "candidate": {
+        "tp": 6,
+        "fp": 35,
+        "fn": 15,
+        "tn": 325,
+        "cut_precision": 0.14634146341463414,
+        "cut_recall": 0.2857142857142857,
+        "cut_f1": 0.1935483870967742
+      }
+    },
+    {
+      "name": "kemija25ljeto-k2-40",
+      "baseline": {
+        "tp": 29,
+        "fp": 0,
+        "fn": 29,
+        "tn": 348,
+        "cut_precision": 1.0,
+        "cut_recall": 0.5,
+        "cut_f1": 0.6666666666666666
+      },
+      "candidate": {
+        "tp": 29,
+        "fp": 0,
+        "fn": 29,
+        "tn": 348,
+        "cut_precision": 1.0,
+        "cut_recall": 0.5,
+        "cut_f1": 0.6666666666666666
+      }
+    },
+    {
+      "name": "kemija25ljeto-k2-41",
+      "baseline": {
+        "tp": 83,
+        "fp": 19,
+        "fn": 21,
+        "tn": 596,
+        "cut_precision": 0.8137254901960784,
+        "cut_recall": 0.7980769230769231,
+        "cut_f1": 0.8058252427184466
+      },
+      "candidate": {
+        "tp": 83,
+        "fp": 19,
+        "fn": 21,
+        "tn": 596,
+        "cut_precision": 0.8137254901960784,
+        "cut_recall": 0.7980769230769231,
+        "cut_f1": 0.8058252427184466
+      }
+    },
+    {
+      "name": "kemija25ljeto-k2-42",
+      "baseline": {
+        "tp": 63,
+        "fp": 23,
+        "fn": 87,
+        "tn": 880,
+        "cut_precision": 0.7325581395348837,
+        "cut_recall": 0.42,
+        "cut_f1": 0.5338983050847457
+      },
+      "candidate": {
+        "tp": 63,
+        "fp": 23,
+        "fn": 87,
+        "tn": 880,
+        "cut_precision": 0.7325581395348837,
+        "cut_recall": 0.42,
+        "cut_f1": 0.5338983050847457
+      }
+    },
+    {
+      "name": "kemija25ljeto-k2-43",
+      "baseline": {
+        "tp": 60,
+        "fp": 23,
+        "fn": 36,
+        "tn": 348,
+        "cut_precision": 0.7228915662650602,
+        "cut_recall": 0.625,
+        "cut_f1": 0.6703910614525139
+      },
+      "candidate": {
+        "tp": 60,
+        "fp": 23,
+        "fn": 36,
+        "tn": 348,
+        "cut_precision": 0.7228915662650602,
+        "cut_recall": 0.625,
+        "cut_f1": 0.6703910614525139
+      }
+    },
+    {
+      "name": "kemija25ljeto-k2-44",
+      "baseline": {
+        "tp": 82,
+        "fp": 13,
+        "fn": 30,
+        "tn": 429,
+        "cut_precision": 0.8631578947368421,
+        "cut_recall": 0.7321428571428571,
+        "cut_f1": 0.792270531400966
+      },
+      "candidate": {
+        "tp": 82,
+        "fp": 13,
+        "fn": 30,
+        "tn": 429,
+        "cut_precision": 0.8631578947368421,
+        "cut_recall": 0.7321428571428571,
+        "cut_f1": 0.792270531400966
+      }
+    },
+    {
+      "name": "kemija25ljeto-k2-45",
+      "baseline": {
+        "tp": 55,
+        "fp": 24,
+        "fn": 17,
+        "tn": 636,
+        "cut_precision": 0.6962025316455697,
+        "cut_recall": 0.7638888888888888,
+        "cut_f1": 0.7284768211920529
+      },
+      "candidate": {
+        "tp": 55,
+        "fp": 24,
+        "fn": 17,
+        "tn": 636,
+        "cut_precision": 0.6962025316455697,
+        "cut_recall": 0.7638888888888888,
+        "cut_f1": 0.7284768211920529
+      }
+    },
+    {
+      "name": "kemija25ljeto-k2-46",
+      "baseline": {
+        "tp": 71,
+        "fp": 46,
+        "fn": 54,
+        "tn": 963,
+        "cut_precision": 0.6068376068376068,
+        "cut_recall": 0.568,
+        "cut_f1": 0.5867768595041322
+      },
+      "candidate": {
+        "tp": 71,
+        "fp": 46,
+        "fn": 54,
+        "tn": 963,
+        "cut_precision": 0.6068376068376068,
+        "cut_recall": 0.568,
+        "cut_f1": 0.5867768595041322
+      }
+    },
+    {
+      "name": "kemija25ljeto-k2-47",
+      "baseline": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 8,
+        "tn": 558,
+        "cut_precision": 1.0,
+        "cut_recall": 0.1111111111111111,
+        "cut_f1": 0.19999999999999998
+      },
+      "candidate": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 8,
+        "tn": 558,
+        "cut_precision": 1.0,
+        "cut_recall": 0.1111111111111111,
+        "cut_f1": 0.19999999999999998
+      }
+    },
+    {
+      "name": "test-1",
+      "baseline": {
+        "tp": 104,
+        "fp": 50,
+        "fn": 31,
+        "tn": 1297,
+        "cut_precision": 0.6753246753246753,
+        "cut_recall": 0.7703703703703704,
+        "cut_f1": 0.7197231833910035
+      },
+      "candidate": {
+        "tp": 104,
+        "fp": 50,
+        "fn": 31,
+        "tn": 1297,
+        "cut_precision": 0.6753246753246753,
+        "cut_recall": 0.7703703703703704,
+        "cut_f1": 0.7197231833910035
+      }
+    },
+    {
+      "name": "test-10",
+      "baseline": {
+        "tp": 251,
+        "fp": 18,
+        "fn": 53,
+        "tn": 1417,
+        "cut_precision": 0.9330855018587361,
+        "cut_recall": 0.8256578947368421,
+        "cut_f1": 0.8760907504363002
+      },
+      "candidate": {
+        "tp": 251,
+        "fp": 18,
+        "fn": 53,
+        "tn": 1417,
+        "cut_precision": 0.9330855018587361,
+        "cut_recall": 0.8256578947368421,
+        "cut_f1": 0.8760907504363002
+      }
+    },
+    {
+      "name": "test-11",
+      "baseline": {
+        "tp": 117,
+        "fp": 46,
+        "fn": 38,
+        "tn": 1034,
+        "cut_precision": 0.7177914110429447,
+        "cut_recall": 0.7548387096774194,
+        "cut_f1": 0.7358490566037735
+      },
+      "candidate": {
+        "tp": 117,
+        "fp": 46,
+        "fn": 38,
+        "tn": 1034,
+        "cut_precision": 0.7177914110429447,
+        "cut_recall": 0.7548387096774194,
+        "cut_f1": 0.7358490566037735
+      }
+    },
+    {
+      "name": "test-12",
+      "baseline": {
+        "tp": 117,
+        "fp": 22,
+        "fn": 32,
+        "tn": 918,
+        "cut_precision": 0.841726618705036,
+        "cut_recall": 0.785234899328859,
+        "cut_f1": 0.8124999999999999
+      },
+      "candidate": {
+        "tp": 117,
+        "fp": 22,
+        "fn": 32,
+        "tn": 918,
+        "cut_precision": 0.841726618705036,
+        "cut_recall": 0.785234899328859,
+        "cut_f1": 0.8124999999999999
+      }
+    },
+    {
+      "name": "test-13",
+      "baseline": {
+        "tp": 82,
+        "fp": 25,
+        "fn": 37,
+        "tn": 618,
+        "cut_precision": 0.7663551401869159,
+        "cut_recall": 0.6890756302521008,
+        "cut_f1": 0.7256637168141592
+      },
+      "candidate": {
+        "tp": 82,
+        "fp": 25,
+        "fn": 37,
+        "tn": 618,
+        "cut_precision": 0.7663551401869159,
+        "cut_recall": 0.6890756302521008,
+        "cut_f1": 0.7256637168141592
+      }
+    },
+    {
+      "name": "test-14",
+      "baseline": {
+        "tp": 96,
+        "fp": 17,
+        "fn": 37,
+        "tn": 1036,
+        "cut_precision": 0.8495575221238938,
+        "cut_recall": 0.7218045112781954,
+        "cut_f1": 0.7804878048780488
+      },
+      "candidate": {
+        "tp": 96,
+        "fp": 17,
+        "fn": 37,
+        "tn": 1036,
+        "cut_precision": 0.8495575221238938,
+        "cut_recall": 0.7218045112781954,
+        "cut_f1": 0.7804878048780488
+      }
+    },
+    {
+      "name": "test-15",
+      "baseline": {
+        "tp": 66,
+        "fp": 36,
+        "fn": 47,
+        "tn": 980,
+        "cut_precision": 0.6470588235294118,
+        "cut_recall": 0.584070796460177,
+        "cut_f1": 0.6139534883720931
+      },
+      "candidate": {
+        "tp": 66,
+        "fp": 36,
+        "fn": 47,
+        "tn": 980,
+        "cut_precision": 0.6470588235294118,
+        "cut_recall": 0.584070796460177,
+        "cut_f1": 0.6139534883720931
+      }
+    },
+    {
+      "name": "test-16",
+      "baseline": {
+        "tp": 125,
+        "fp": 17,
+        "fn": 25,
+        "tn": 578,
+        "cut_precision": 0.8802816901408451,
+        "cut_recall": 0.8333333333333334,
+        "cut_f1": 0.8561643835616439
+      },
+      "candidate": {
+        "tp": 125,
+        "fp": 17,
+        "fn": 25,
+        "tn": 578,
+        "cut_precision": 0.8802816901408451,
+        "cut_recall": 0.8333333333333334,
+        "cut_f1": 0.8561643835616439
+      }
+    },
+    {
+      "name": "test-17",
+      "baseline": {
+        "tp": 37,
+        "fp": 34,
+        "fn": 83,
+        "tn": 881,
+        "cut_precision": 0.5211267605633803,
+        "cut_recall": 0.30833333333333335,
+        "cut_f1": 0.387434554973822
+      },
+      "candidate": {
+        "tp": 37,
+        "fp": 34,
+        "fn": 83,
+        "tn": 881,
+        "cut_precision": 0.5211267605633803,
+        "cut_recall": 0.30833333333333335,
+        "cut_f1": 0.387434554973822
+      }
+    },
+    {
+      "name": "test-18",
+      "baseline": {
+        "tp": 125,
+        "fp": 108,
+        "fn": 49,
+        "tn": 854,
+        "cut_precision": 0.5364806866952789,
+        "cut_recall": 0.7183908045977011,
+        "cut_f1": 0.6142506142506142
+      },
+      "candidate": {
+        "tp": 125,
+        "fp": 108,
+        "fn": 49,
+        "tn": 854,
+        "cut_precision": 0.5364806866952789,
+        "cut_recall": 0.7183908045977011,
+        "cut_f1": 0.6142506142506142
+      }
+    },
+    {
+      "name": "test-19",
+      "baseline": {
+        "tp": 47,
+        "fp": 37,
+        "fn": 27,
+        "tn": 1108,
+        "cut_precision": 0.5595238095238095,
+        "cut_recall": 0.6351351351351351,
+        "cut_f1": 0.5949367088607596
+      },
+      "candidate": {
+        "tp": 47,
+        "fp": 37,
+        "fn": 27,
+        "tn": 1108,
+        "cut_precision": 0.5595238095238095,
+        "cut_recall": 0.6351351351351351,
+        "cut_f1": 0.5949367088607596
+      }
+    },
+    {
+      "name": "test-2",
+      "baseline": {
+        "tp": 113,
+        "fp": 5,
+        "fn": 9,
+        "tn": 598,
+        "cut_precision": 0.9576271186440678,
+        "cut_recall": 0.9262295081967213,
+        "cut_f1": 0.9416666666666667
+      },
+      "candidate": {
+        "tp": 113,
+        "fp": 5,
+        "fn": 9,
+        "tn": 598,
+        "cut_precision": 0.9576271186440678,
+        "cut_recall": 0.9262295081967213,
+        "cut_f1": 0.9416666666666667
+      }
+    },
+    {
+      "name": "test-20",
+      "baseline": {
+        "tp": 160,
+        "fp": 25,
+        "fn": 77,
+        "tn": 1116,
+        "cut_precision": 0.8648648648648649,
+        "cut_recall": 0.6751054852320675,
+        "cut_f1": 0.7582938388625592
+      },
+      "candidate": {
+        "tp": 160,
+        "fp": 25,
+        "fn": 77,
+        "tn": 1116,
+        "cut_precision": 0.8648648648648649,
+        "cut_recall": 0.6751054852320675,
+        "cut_f1": 0.7582938388625592
+      }
+    },
+    {
+      "name": "test-21",
+      "baseline": {
+        "tp": 100,
+        "fp": 23,
+        "fn": 74,
+        "tn": 1051,
+        "cut_precision": 0.8130081300813008,
+        "cut_recall": 0.5747126436781609,
+        "cut_f1": 0.6734006734006733
+      },
+      "candidate": {
+        "tp": 100,
+        "fp": 23,
+        "fn": 74,
+        "tn": 1051,
+        "cut_precision": 0.8130081300813008,
+        "cut_recall": 0.5747126436781609,
+        "cut_f1": 0.6734006734006733
+      }
+    },
+    {
+      "name": "test-22",
+      "baseline": {
+        "tp": 190,
+        "fp": 9,
+        "fn": 24,
+        "tn": 966,
+        "cut_precision": 0.9547738693467337,
+        "cut_recall": 0.8878504672897196,
+        "cut_f1": 0.9200968523002422
+      },
+      "candidate": {
+        "tp": 190,
+        "fp": 9,
+        "fn": 24,
+        "tn": 966,
+        "cut_precision": 0.9547738693467337,
+        "cut_recall": 0.8878504672897196,
+        "cut_f1": 0.9200968523002422
+      }
+    },
+    {
+      "name": "test-23",
+      "baseline": {
+        "tp": 77,
+        "fp": 18,
+        "fn": 31,
+        "tn": 724,
+        "cut_precision": 0.8105263157894737,
+        "cut_recall": 0.7129629629629629,
+        "cut_f1": 0.7586206896551724
+      },
+      "candidate": {
+        "tp": 77,
+        "fp": 18,
+        "fn": 31,
+        "tn": 724,
+        "cut_precision": 0.8105263157894737,
+        "cut_recall": 0.7129629629629629,
+        "cut_f1": 0.7586206896551724
+      }
+    },
+    {
+      "name": "test-24",
+      "baseline": {
+        "tp": 100,
+        "fp": 22,
+        "fn": 14,
+        "tn": 539,
+        "cut_precision": 0.819672131147541,
+        "cut_recall": 0.8771929824561403,
+        "cut_f1": 0.8474576271186439
+      },
+      "candidate": {
+        "tp": 100,
+        "fp": 22,
+        "fn": 14,
+        "tn": 539,
+        "cut_precision": 0.819672131147541,
+        "cut_recall": 0.8771929824561403,
+        "cut_f1": 0.8474576271186439
+      }
+    },
+    {
+      "name": "test-25",
+      "baseline": {
+        "tp": 104,
+        "fp": 53,
+        "fn": 123,
+        "tn": 1272,
+        "cut_precision": 0.6624203821656051,
+        "cut_recall": 0.4581497797356828,
+        "cut_f1": 0.5416666666666667
+      },
+      "candidate": {
+        "tp": 104,
+        "fp": 53,
+        "fn": 123,
+        "tn": 1272,
+        "cut_precision": 0.6624203821656051,
+        "cut_recall": 0.4581497797356828,
+        "cut_f1": 0.5416666666666667
+      }
+    },
+    {
+      "name": "test-26",
+      "baseline": {
+        "tp": 85,
+        "fp": 19,
+        "fn": 46,
+        "tn": 952,
+        "cut_precision": 0.8173076923076923,
+        "cut_recall": 0.648854961832061,
+        "cut_f1": 0.723404255319149
+      },
+      "candidate": {
+        "tp": 85,
+        "fp": 19,
+        "fn": 46,
+        "tn": 952,
+        "cut_precision": 0.8173076923076923,
+        "cut_recall": 0.648854961832061,
+        "cut_f1": 0.723404255319149
+      }
+    },
+    {
+      "name": "test-27",
+      "baseline": {
+        "tp": 196,
+        "fp": 51,
+        "fn": 70,
+        "tn": 1255,
+        "cut_precision": 0.7935222672064778,
+        "cut_recall": 0.7368421052631579,
+        "cut_f1": 0.7641325536062379
+      },
+      "candidate": {
+        "tp": 196,
+        "fp": 51,
+        "fn": 70,
+        "tn": 1255,
+        "cut_precision": 0.7935222672064778,
+        "cut_recall": 0.7368421052631579,
+        "cut_f1": 0.7641325536062379
+      }
+    },
+    {
+      "name": "test-28",
+      "baseline": {
+        "tp": 59,
+        "fp": 13,
+        "fn": 40,
+        "tn": 782,
+        "cut_precision": 0.8194444444444444,
+        "cut_recall": 0.5959595959595959,
+        "cut_f1": 0.6900584795321637
+      },
+      "candidate": {
+        "tp": 59,
+        "fp": 13,
+        "fn": 40,
+        "tn": 782,
+        "cut_precision": 0.8194444444444444,
+        "cut_recall": 0.5959595959595959,
+        "cut_f1": 0.6900584795321637
+      }
+    },
+    {
+      "name": "test-29",
+      "baseline": {
+        "tp": 54,
+        "fp": 11,
+        "fn": 3,
+        "tn": 433,
+        "cut_precision": 0.8307692307692308,
+        "cut_recall": 0.9473684210526315,
+        "cut_f1": 0.8852459016393444
+      },
+      "candidate": {
+        "tp": 54,
+        "fp": 11,
+        "fn": 3,
+        "tn": 433,
+        "cut_precision": 0.8307692307692308,
+        "cut_recall": 0.9473684210526315,
+        "cut_f1": 0.8852459016393444
+      }
+    },
+    {
+      "name": "test-30",
+      "baseline": {
+        "tp": 83,
+        "fp": 8,
+        "fn": 14,
+        "tn": 419,
+        "cut_precision": 0.9120879120879121,
+        "cut_recall": 0.8556701030927835,
+        "cut_f1": 0.8829787234042552
+      },
+      "candidate": {
+        "tp": 83,
+        "fp": 8,
+        "fn": 14,
+        "tn": 419,
+        "cut_precision": 0.9120879120879121,
+        "cut_recall": 0.8556701030927835,
+        "cut_f1": 0.8829787234042552
+      }
+    },
+    {
+      "name": "test-31",
+      "baseline": {
+        "tp": 93,
+        "fp": 31,
+        "fn": 73,
+        "tn": 750,
+        "cut_precision": 0.75,
+        "cut_recall": 0.5602409638554217,
+        "cut_f1": 0.6413793103448276
+      },
+      "candidate": {
+        "tp": 93,
+        "fp": 31,
+        "fn": 73,
+        "tn": 750,
+        "cut_precision": 0.75,
+        "cut_recall": 0.5602409638554217,
+        "cut_f1": 0.6413793103448276
+      }
+    },
+    {
+      "name": "test-32",
+      "baseline": {
+        "tp": 109,
+        "fp": 20,
+        "fn": 70,
+        "tn": 1302,
+        "cut_precision": 0.8449612403100775,
+        "cut_recall": 0.6089385474860335,
+        "cut_f1": 0.7077922077922078
+      },
+      "candidate": {
+        "tp": 109,
+        "fp": 20,
+        "fn": 70,
+        "tn": 1302,
+        "cut_precision": 0.8449612403100775,
+        "cut_recall": 0.6089385474860335,
+        "cut_f1": 0.7077922077922078
+      }
+    },
+    {
+      "name": "test-33",
+      "baseline": {
+        "tp": 117,
+        "fp": 16,
+        "fn": 20,
+        "tn": 760,
+        "cut_precision": 0.8796992481203008,
+        "cut_recall": 0.8540145985401459,
+        "cut_f1": 0.8666666666666667
+      },
+      "candidate": {
+        "tp": 117,
+        "fp": 16,
+        "fn": 20,
+        "tn": 760,
+        "cut_precision": 0.8796992481203008,
+        "cut_recall": 0.8540145985401459,
+        "cut_f1": 0.8666666666666667
+      }
+    },
+    {
+      "name": "test-34",
+      "baseline": {
+        "tp": 125,
+        "fp": 54,
+        "fn": 29,
+        "tn": 627,
+        "cut_precision": 0.6983240223463687,
+        "cut_recall": 0.8116883116883117,
+        "cut_f1": 0.7507507507507507
+      },
+      "candidate": {
+        "tp": 125,
+        "fp": 54,
+        "fn": 29,
+        "tn": 627,
+        "cut_precision": 0.6983240223463687,
+        "cut_recall": 0.8116883116883117,
+        "cut_f1": 0.7507507507507507
+      }
+    },
+    {
+      "name": "test-35",
+      "baseline": {
+        "tp": 98,
+        "fp": 22,
+        "fn": 65,
+        "tn": 759,
+        "cut_precision": 0.8166666666666667,
+        "cut_recall": 0.6012269938650306,
+        "cut_f1": 0.6925795053003534
+      },
+      "candidate": {
+        "tp": 98,
+        "fp": 22,
+        "fn": 65,
+        "tn": 759,
+        "cut_precision": 0.8166666666666667,
+        "cut_recall": 0.6012269938650306,
+        "cut_f1": 0.6925795053003534
+      }
+    },
+    {
+      "name": "test-36",
+      "baseline": {
+        "tp": 49,
+        "fp": 12,
+        "fn": 15,
+        "tn": 345,
+        "cut_precision": 0.8032786885245902,
+        "cut_recall": 0.765625,
+        "cut_f1": 0.784
+      },
+      "candidate": {
+        "tp": 49,
+        "fp": 12,
+        "fn": 15,
+        "tn": 345,
+        "cut_precision": 0.8032786885245902,
+        "cut_recall": 0.765625,
+        "cut_f1": 0.784
+      }
+    },
+    {
+      "name": "test-37",
+      "baseline": {
+        "tp": 129,
+        "fp": 8,
+        "fn": 16,
+        "tn": 540,
+        "cut_precision": 0.9416058394160584,
+        "cut_recall": 0.8896551724137931,
+        "cut_f1": 0.9148936170212766
+      },
+      "candidate": {
+        "tp": 129,
+        "fp": 8,
+        "fn": 16,
+        "tn": 540,
+        "cut_precision": 0.9416058394160584,
+        "cut_recall": 0.8896551724137931,
+        "cut_f1": 0.9148936170212766
+      }
+    },
+    {
+      "name": "test-38",
+      "baseline": {
+        "tp": 104,
+        "fp": 9,
+        "fn": 21,
+        "tn": 865,
+        "cut_precision": 0.9203539823008849,
+        "cut_recall": 0.832,
+        "cut_f1": 0.8739495798319328
+      },
+      "candidate": {
+        "tp": 104,
+        "fp": 9,
+        "fn": 21,
+        "tn": 865,
+        "cut_precision": 0.9203539823008849,
+        "cut_recall": 0.832,
+        "cut_f1": 0.8739495798319328
+      }
+    },
+    {
+      "name": "test-39",
+      "baseline": {
+        "tp": 241,
+        "fp": 60,
+        "fn": 80,
+        "tn": 1595,
+        "cut_precision": 0.8006644518272426,
+        "cut_recall": 0.7507788161993769,
+        "cut_f1": 0.77491961414791
+      },
+      "candidate": {
+        "tp": 241,
+        "fp": 60,
+        "fn": 80,
+        "tn": 1595,
+        "cut_precision": 0.8006644518272426,
+        "cut_recall": 0.7507788161993769,
+        "cut_f1": 0.77491961414791
+      }
+    },
+    {
+      "name": "test-40",
+      "baseline": {
+        "tp": 203,
+        "fp": 28,
+        "fn": 90,
+        "tn": 1271,
+        "cut_precision": 0.8787878787878788,
+        "cut_recall": 0.6928327645051194,
+        "cut_f1": 0.7748091603053435
+      },
+      "candidate": {
+        "tp": 203,
+        "fp": 28,
+        "fn": 90,
+        "tn": 1271,
+        "cut_precision": 0.8787878787878788,
+        "cut_recall": 0.6928327645051194,
+        "cut_f1": 0.7748091603053435
+      }
+    },
+    {
+      "name": "test-41",
+      "baseline": {
+        "tp": 292,
+        "fp": 47,
+        "fn": 145,
+        "tn": 1922,
+        "cut_precision": 0.8613569321533924,
+        "cut_recall": 0.6681922196796338,
+        "cut_f1": 0.7525773195876289
+      },
+      "candidate": {
+        "tp": 292,
+        "fp": 47,
+        "fn": 145,
+        "tn": 1922,
+        "cut_precision": 0.8613569321533924,
+        "cut_recall": 0.6681922196796338,
+        "cut_f1": 0.7525773195876289
+      }
+    },
+    {
+      "name": "test-42",
+      "baseline": {
+        "tp": 104,
+        "fp": 29,
+        "fn": 43,
+        "tn": 1064,
+        "cut_precision": 0.7819548872180451,
+        "cut_recall": 0.7074829931972789,
+        "cut_f1": 0.7428571428571429
+      },
+      "candidate": {
+        "tp": 104,
+        "fp": 29,
+        "fn": 43,
+        "tn": 1064,
+        "cut_precision": 0.7819548872180451,
+        "cut_recall": 0.7074829931972789,
+        "cut_f1": 0.7428571428571429
+      }
+    },
+    {
+      "name": "test-43",
+      "baseline": {
+        "tp": 228,
+        "fp": 32,
+        "fn": 123,
+        "tn": 1834,
+        "cut_precision": 0.8769230769230769,
+        "cut_recall": 0.6495726495726496,
+        "cut_f1": 0.7463175122749591
+      },
+      "candidate": {
+        "tp": 228,
+        "fp": 32,
+        "fn": 123,
+        "tn": 1834,
+        "cut_precision": 0.8769230769230769,
+        "cut_recall": 0.6495726495726496,
+        "cut_f1": 0.7463175122749591
+      }
+    },
+    {
+      "name": "test-44",
+      "baseline": {
+        "tp": 216,
+        "fp": 32,
+        "fn": 78,
+        "tn": 1335,
+        "cut_precision": 0.8709677419354839,
+        "cut_recall": 0.7346938775510204,
+        "cut_f1": 0.7970479704797048
+      },
+      "candidate": {
+        "tp": 216,
+        "fp": 32,
+        "fn": 78,
+        "tn": 1335,
+        "cut_precision": 0.8709677419354839,
+        "cut_recall": 0.7346938775510204,
+        "cut_f1": 0.7970479704797048
+      }
+    },
+    {
+      "name": "test-45",
+      "baseline": {
+        "tp": 361,
+        "fp": 53,
+        "fn": 210,
+        "tn": 1857,
+        "cut_precision": 0.8719806763285024,
+        "cut_recall": 0.6322241681260946,
+        "cut_f1": 0.7329949238578681
+      },
+      "candidate": {
+        "tp": 361,
+        "fp": 53,
+        "fn": 210,
+        "tn": 1857,
+        "cut_precision": 0.8719806763285024,
+        "cut_recall": 0.6322241681260946,
+        "cut_f1": 0.7329949238578681
+      }
+    },
+    {
+      "name": "test-46",
+      "baseline": {
+        "tp": 260,
+        "fp": 38,
+        "fn": 150,
+        "tn": 2004,
+        "cut_precision": 0.87248322147651,
+        "cut_recall": 0.6341463414634146,
+        "cut_f1": 0.7344632768361581
+      },
+      "candidate": {
+        "tp": 260,
+        "fp": 38,
+        "fn": 150,
+        "tn": 2004,
+        "cut_precision": 0.87248322147651,
+        "cut_recall": 0.6341463414634146,
+        "cut_f1": 0.7344632768361581
+      }
+    },
+    {
+      "name": "test-47",
+      "baseline": {
+        "tp": 335,
+        "fp": 95,
+        "fn": 200,
+        "tn": 2953,
+        "cut_precision": 0.7790697674418605,
+        "cut_recall": 0.6261682242990654,
+        "cut_f1": 0.694300518134715
+      },
+      "candidate": {
+        "tp": 335,
+        "fp": 95,
+        "fn": 200,
+        "tn": 2953,
+        "cut_precision": 0.7790697674418605,
+        "cut_recall": 0.6261682242990654,
+        "cut_f1": 0.694300518134715
+      }
+    },
+    {
+      "name": "test-5",
+      "baseline": {
+        "tp": 90,
+        "fp": 27,
+        "fn": 28,
+        "tn": 1013,
+        "cut_precision": 0.7692307692307693,
+        "cut_recall": 0.7627118644067796,
+        "cut_f1": 0.7659574468085106
+      },
+      "candidate": {
+        "tp": 90,
+        "fp": 27,
+        "fn": 28,
+        "tn": 1013,
+        "cut_precision": 0.7692307692307693,
+        "cut_recall": 0.7627118644067796,
+        "cut_f1": 0.7659574468085106
+      }
+    },
+    {
+      "name": "test-6",
+      "baseline": {
+        "tp": 76,
+        "fp": 25,
+        "fn": 118,
+        "tn": 1373,
+        "cut_precision": 0.7524752475247525,
+        "cut_recall": 0.3917525773195876,
+        "cut_f1": 0.5152542372881357
+      },
+      "candidate": {
+        "tp": 76,
+        "fp": 25,
+        "fn": 118,
+        "tn": 1373,
+        "cut_precision": 0.7524752475247525,
+        "cut_recall": 0.3917525773195876,
+        "cut_f1": 0.5152542372881357
+      }
+    },
+    {
+      "name": "test-7",
+      "baseline": {
+        "tp": 168,
+        "fp": 18,
+        "fn": 79,
+        "tn": 1358,
+        "cut_precision": 0.9032258064516129,
+        "cut_recall": 0.680161943319838,
+        "cut_f1": 0.7759815242494226
+      },
+      "candidate": {
+        "tp": 168,
+        "fp": 18,
+        "fn": 79,
+        "tn": 1358,
+        "cut_precision": 0.9032258064516129,
+        "cut_recall": 0.680161943319838,
+        "cut_f1": 0.7759815242494226
+      }
+    },
+    {
+      "name": "test-8",
+      "baseline": {
+        "tp": 71,
+        "fp": 26,
+        "fn": 30,
+        "tn": 1153,
+        "cut_precision": 0.7319587628865979,
+        "cut_recall": 0.7029702970297029,
+        "cut_f1": 0.7171717171717172
+      },
+      "candidate": {
+        "tp": 71,
+        "fp": 26,
+        "fn": 30,
+        "tn": 1153,
+        "cut_precision": 0.7319587628865979,
+        "cut_recall": 0.7029702970297029,
+        "cut_f1": 0.7171717171717172
+      }
+    },
+    {
+      "name": "test-9",
+      "baseline": {
+        "tp": 120,
+        "fp": 51,
+        "fn": 55,
+        "tn": 1080,
+        "cut_precision": 0.7017543859649122,
+        "cut_recall": 0.6857142857142857,
+        "cut_f1": 0.6936416184971098
+      },
+      "candidate": {
+        "tp": 120,
+        "fp": 51,
+        "fn": 55,
+        "tn": 1080,
+        "cut_precision": 0.7017543859649122,
+        "cut_recall": 0.6857142857142857,
+        "cut_f1": 0.6936416184971098
+      }
+    }
+  ]
+}

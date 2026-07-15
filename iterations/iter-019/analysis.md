@@ -371,3 +371,43 @@ Projected aggregate cut metrics improve from P/R/F1
 5,163 to 5,130 while overcut words stay at 2,728. `test-6` and `test-44` remain
 unchanged. This is the first iteration-19 candidate whose measured effect is
 both entirely localized and zero-harm on the full corpus.
+
+The fixed-EDL delta alone initially masked one detector error because Sol had
+already made the same overcut in `test-45`. A separate standalone audit scored
+every detector span directly against the human transcript and exposed eight
+wrong words there. Unlike the confirmed listening chain, `test-45`'s truncated
+middle shares no words with its repeated endpoints. Requiring at least three
+shared continuation words for a whole-sentence cut removes that case while
+retaining the confirmed chain.
+
+## Candidate-6 implemented result
+
+The production implementation reproduced the projection exactly against the
+same 98 fixed Sol EDLs:
+
+| Metric | Baseline | Candidate 6 | Change |
+|---|---:|---:|---:|
+| Cut precision | 0.796764 | 0.797263 | +0.000499 |
+| Cut recall | 0.674131 | 0.676213 | +0.002082 |
+| Cut F1 | 0.730336 | 0.731766 | +0.001430 |
+| Correct cut words | 10,687 | 10,720 | +33 |
+| Overcut words | 2,726 | 2,726 | 0 |
+| Missed-cut words | 5,166 | 5,133 | -33 |
+
+Only two videos changed:
+
+- `engleski25ljeto-esej`: +12 correct cut words, no new overcuts, F1
+  0.8248→0.8410;
+- `engleski25ljeto-listening-1`: +21 correct cut words, no new overcuts, F1
+  0.6386→0.6818.
+
+All candidate-6 gates pass. The fixture regressions prove the three exact cuts,
+the required kept remainders, and the `test-6`/`test-44`/`test-45` exclusions.
+The standalone detector audit covers all five videos on which it emits output:
+79 words should be cut and zero should be kept. The complete suite passes 164
+tests. Detailed per-video evidence is stored in
+`candidate-6-scores.json`; the generated candidate EDLs and report remain under
+`output/qa-iteration-19/candidate-6-projection-98`.
+
+Candidate 6 is promoted. Iteration 19 closes with the deterministic lane active
+and all five prompt-based candidates reverted.

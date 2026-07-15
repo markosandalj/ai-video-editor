@@ -1,7 +1,7 @@
 # Iteration 019 — Local repeat hints
 
 **Date:** 2026-07-15  
-**Status:** Candidates 1–5 failed and reverted; candidate 6 approved for implementation
+**Status:** Candidate 6 passed and promoted; iteration 19 complete
 
 ## Problem
 
@@ -356,7 +356,8 @@ chains. A chain is eligible when:
 - both endpoints have at least seven normalized words;
 - near-identical endpoints score at least 98% similarity **and** their normalized
   word counts have a ratio of at least 0.8, in which case the whole earlier
-  endpoint is cut; or
+  endpoint is cut, but only when the truncated middle continues the repeated
+  take with at least three shared endpoint words; or
 - endpoints score at least 65% overall and 85% across the first four words, and
   the later endpoint repeats the same 2–6-word opening within three intervening
   words, in which case only the mechanically derived splice spans are cut.
@@ -370,7 +371,10 @@ automatic semantic judgment beyond these exact structural conditions.
 The first, broader fixed-EDL projection added 50 correct cut words and 19 wrong
 ones. All 19 wrong words came from `test-6` and `test-44`, where one endpoint was
 an expansion rather than a same-sized corrected take. The 0.8 word-count-ratio
-condition removes both cases.
+condition removes both cases. A later standalone audit found one masked control:
+Sol already overcut `test-45`, so the fixed-EDL delta could not reveal that the
+detector agreed with the mistake. Requiring three shared continuation words in
+the truncated middle removes `test-45`; the confirmed listening chain has eight.
 
 Against the saved production EDLs for all 98 fixtures, the refined rule changes
 only `engleski25ljeto-esej` and `engleski25ljeto-listening-1`:
@@ -395,10 +399,26 @@ Candidate 6 passes only if the implemented fixed-EDL evaluation:
 - adds zero overcut words;
 - reduces missed-cut words and improves F1;
 - causes no per-video F1 loss;
-- leaves `test-6` and `test-44` unchanged.
+- leaves `test-6`, `test-44`, and `test-45` unchanged;
+- scores every detector-emitted word directly against the human edit with zero
+  false positives, including spans Sol had already cut.
 
 The older +0.005 recall gate was designed for a noisy 15-video model rerun. It
 is not appropriate for a perfectly isolated full-98 deterministic addition:
 33 recovered words are diluted to +0.0021 recall, but no quality dimension
 regresses. Promotion is based on the explicit absolute-recovery and zero-harm
 gates written here before implementation.
+
+### Candidate-6 outcome
+
+Candidate 6 passed every gate on the implemented fixed-EDL evaluation of all 98
+fixtures. It recovered all 33 projected words, added zero overcuts, preserved
+every required remainder and later take, and left `test-6` and `test-44`
+unchanged. The deeper standalone audit also leaves `test-45` unchanged and
+scores all detector output at 79 correct words and zero wrong words. Aggregate
+P/R/F1 improved from 0.7968/0.6741/0.7303 to
+0.7973/0.6762/0.7318. Only the two intended videos changed, and both improved.
+
+The complete test suite passed with 164 tests. The deterministic lane is
+therefore promoted as the iteration-19 production result. Candidates 1–5 remain
+reverted, including every prompt change.
