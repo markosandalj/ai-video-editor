@@ -18,7 +18,6 @@ from loguru import logger
 from ai_video_editor.config.settings import SectionEditorConfig
 from ai_video_editor.duplicate.edl import EditDecisionList, build_edl
 from ai_video_editor.duplicate.section_editor import (
-    FALSE_START_EVIDENCE_RULE,
     SECTION_PROMPT,
     SectionHealth,
     SectionTrace,
@@ -145,13 +144,10 @@ def _load(fixtures_dir: Path, name: str):
 
 def _section_config(
     llm_config: LangChainModelConfig,
-    *,
-    require_full_false_start_kept_index: bool = False,
 ) -> SectionEditorConfig:
     cfg = SectionEditorConfig()
     cfg.enabled = True
     cfg.llm = llm_config
-    cfg.require_full_false_start_kept_index = require_full_false_start_kept_index
     return cfg
 
 
@@ -221,15 +217,11 @@ def run_section_pilot(
     names: list[str] | None = None,
     llm_config: LangChainModelConfig | None = None,
     resume: bool = True,
-    require_full_false_start_kept_index: bool = False,
     compare_to: Path | None = None,
 ) -> list[FixturePilotResult]:
     llm_config = llm_config or default_section_editor_model_config()
     target = names or DEFAULT_PILOT_FIXTURES
-    cfg = _section_config(
-        llm_config,
-        require_full_false_start_kept_index=require_full_false_start_kept_index,
-    )
+    cfg = _section_config(llm_config)
     reference_results: list[FixturePilotResult] | None = None
     if compare_to is not None:
         reference_path = compare_to / "results.json" if compare_to.is_dir() else compare_to
@@ -248,19 +240,7 @@ def run_section_pilot(
                 "model_id": llm_config.id or llm_config.model,
                 "model": llm_config.public_dict(),
                 "fixtures": list(target),
-                "require_full_false_start_kept_index": (
-                    require_full_false_start_kept_index
-                ),
-                "prompt_sha256": sha256(
-                    (
-                        SECTION_PROMPT
-                        + (
-                            FALSE_START_EVIDENCE_RULE
-                            if require_full_false_start_kept_index
-                            else ""
-                        )
-                    ).encode("utf-8")
-                ).hexdigest(),
+                "prompt_sha256": sha256(SECTION_PROMPT.encode("utf-8")).hexdigest(),
                 "compare_to": str(compare_to) if compare_to is not None else None,
             },
             indent=2,

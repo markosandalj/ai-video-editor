@@ -696,11 +696,6 @@ def eval_section_editor(
         readable=True,
         help="Reference results.json or run directory for candidate gate comparison.",
     ),
-    require_full_false_start_kept_index: bool = typer.Option(
-        False,
-        "--require-full-false-start-kept-index",
-        help="Require whole-sentence false starts to identify a valid later take.",
-    ),
 ) -> None:
     """Pilot the LLM section editor on fixtures, word-level scored vs the human edit."""
     from ai_video_editor.experiments.section_pilot import (
@@ -731,9 +726,6 @@ def eval_section_editor(
         names=selected_names,
         llm_config=llm_config,
         compare_to=compare_to,
-        require_full_false_start_kept_index=(
-            require_full_false_start_kept_index
-        ),
     )
     if not results:
         logger.error("No evaluable fixtures found in {}", fixtures_dir)

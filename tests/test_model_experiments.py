@@ -292,7 +292,6 @@ def test_section_pilot_checkpoints_and_resumes_completed_fixture(
     run_manifest = json.loads((output / "run.json").read_text())
     assert run_manifest["model_id"] == "gpt-5.6-sol"
     assert run_manifest["fixtures"] == ["tiny"]
-    assert run_manifest["require_full_false_start_kept_index"] is False
     candidate_output = tmp_path / "section-candidate"
     run_section_pilot(
         fixtures,
