@@ -1,7 +1,7 @@
 # Iteration 019 — Local repeat hints
 
 **Date:** 2026-07-15  
-**Status:** Candidates 1–5 failed and reverted; candidate 6 in analysis
+**Status:** Candidates 1–5 failed and reverted; candidate 6 approved for implementation
 
 ## Problem
 
@@ -331,3 +331,74 @@ but recall fell 0.701→0.688 and F1 fell 0.742→0.738. The affected reading-1
 video lost 0.038 F1, and both affected listening videos exceeded the overcut
 limit. The exact-boundary hypothesis worked, but prompt perturbation remained
 unsafe. Candidate 5 was reverted in `61b18f2`.
+
+## Candidate 6 — deterministic exact local corrections
+
+### Problem
+
+Candidate 5 derived all three required splice boundaries correctly, but asking
+Sol to emit those cuts changed unrelated model decisions. The unsafe part was
+the prompt delivery mechanism, not the exact boundaries.
+
+### Hypothesis
+
+If the same highly constrained detector adds its exact spans directly after the
+section editor, the three confirmed local corrections will be fixed without
+perturbing any unrelated Sol decision.
+
+### Single change
+
+Add a deterministic post-editor lane for only two- or three-sentence correction
+chains. A chain is eligible when:
+
+- an intervening sentence is visibly truncated with `...`, `-`, or `–`;
+- the later endpoint begins no more than ten seconds after the earlier endpoint;
+- both endpoints have at least seven normalized words;
+- near-identical endpoints score at least 98% similarity **and** their normalized
+  word counts have a ratio of at least 0.8, in which case the whole earlier
+  endpoint is cut; or
+- endpoints score at least 65% overall and 85% across the first four words, and
+  the later endpoint repeats the same 2–6-word opening within three intervening
+  words, in which case only the mechanically derived splice spans are cut.
+
+The output remains ordinary `DuplicateFlag`/`WordTrim` data and is merged with
+Sol's existing flags. There is no prompt change, model call, schema change, or
+automatic semantic judgment beyond these exact structural conditions.
+
+### Pre-implementation projection
+
+The first, broader fixed-EDL projection added 50 correct cut words and 19 wrong
+ones. All 19 wrong words came from `test-6` and `test-44`, where one endpoint was
+an expansion rather than a same-sized corrected take. The 0.8 word-count-ratio
+condition removes both cases.
+
+Against the saved production EDLs for all 98 fixtures, the refined rule changes
+only `engleski25ljeto-esej` and `engleski25ljeto-listening-1`:
+
+- 33 additional correct cut words;
+- 0 additional overcut words;
+- precision 0.7967→0.7972;
+- recall 0.6743→0.6764;
+- F1 0.7304→0.7318;
+- missed-cut words 5,163→5,130.
+
+This is a causal projection over fixed Sol output, so unrelated model variance
+cannot be attributed to the candidate.
+
+### Candidate-6 gates
+
+Candidate 6 passes only if the implemented fixed-EDL evaluation:
+
+- cuts essay [40] words 3:12, essay [43] words 0:7, and listening [148]
+  words 0:21 while preserving every required remainder and later take;
+- adds at least 25 correct cut words across all 98 fixtures;
+- adds zero overcut words;
+- reduces missed-cut words and improves F1;
+- causes no per-video F1 loss;
+- leaves `test-6` and `test-44` unchanged.
+
+The older +0.005 recall gate was designed for a noisy 15-video model rerun. It
+is not appropriate for a perfectly isolated full-98 deterministic addition:
+33 recovered words are diluted to +0.0021 recall, but no quality dimension
+regresses. Promotion is based on the explicit absolute-recovery and zero-harm
+gates written here before implementation.

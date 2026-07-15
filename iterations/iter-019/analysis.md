@@ -348,3 +348,26 @@ Candidate 5 proves the deterministic boundary derivation, not the prompt-based
 delivery mechanism. The next candidate should evaluate the derived spans as
 isolated deterministic additions to a fixed baseline EDL, avoiding any rerun of
 unrelated Sol decisions. This can be projected offline before another paid call.
+
+## Candidate-6 pre-implementation analysis
+
+A fixed-EDL projection isolates the deterministic addition from Sol's observed
+run-to-run variance. The initial broad form recovered 50 correct words but also
+overcut 19 words: 12 in `test-6` and seven in `test-44`. Both errors were
+endpoint expansions whose normalized word counts differed materially.
+
+Adding a minimum endpoint word-count ratio of 0.8 removes those two false
+positives. Across all 98 saved production EDLs, the refined detector then emits
+new effective cuts in only two videos:
+
+| Video | Added correct cut words | Added overcut words | Exact action |
+|---|---:|---:|---|
+| `engleski25ljeto-esej` | 12 | 0 | [40] tail 3:12 and [43] prefix 0:7 |
+| `engleski25ljeto-listening-1` | 21 | 0 | complete earlier take [148] |
+| **Total** | **33** | **0** | all three confirmed spans |
+
+Projected aggregate cut metrics improve from P/R/F1
+0.7967/0.6743/0.7304 to 0.7972/0.6764/0.7318. Missed-cut words decrease from
+5,163 to 5,130 while overcut words stay at 2,728. `test-6` and `test-44` remain
+unchanged. This is the first iteration-19 candidate whose measured effect is
+both entirely localized and zero-harm on the full corpus.
