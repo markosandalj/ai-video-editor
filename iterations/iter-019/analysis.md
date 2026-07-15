@@ -367,8 +367,8 @@ new effective cuts in only two videos:
 | **Total** | **33** | **0** | all three confirmed spans |
 
 Projected aggregate cut metrics improve from P/R/F1
-0.7967/0.6743/0.7304 to 0.7972/0.6764/0.7318. Missed-cut words decrease from
-5,163 to 5,130 while overcut words stay at 2,728. `test-6` and `test-44` remain
+0.7968/0.6741/0.7303 to 0.7973/0.6762/0.7318. Missed-cut words decrease from
+5,166 to 5,133 while overcut words stay at 2,726. `test-6` and `test-44` remain
 unchanged. This is the first iteration-19 candidate whose measured effect is
 both entirely localized and zero-harm on the full corpus.
 

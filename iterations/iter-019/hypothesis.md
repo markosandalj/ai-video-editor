@@ -381,10 +381,10 @@ only `engleski25ljeto-esej` and `engleski25ljeto-listening-1`:
 
 - 33 additional correct cut words;
 - 0 additional overcut words;
-- precision 0.7967→0.7972;
-- recall 0.6743→0.6764;
-- F1 0.7304→0.7318;
-- missed-cut words 5,163→5,130.
+- precision 0.7968→0.7973;
+- recall 0.6741→0.6762;
+- F1 0.7303→0.7318;
+- missed-cut words 5,166→5,133.
 
 This is a causal projection over fixed Sol output, so unrelated model variance
 cannot be attributed to the candidate.
