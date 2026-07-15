@@ -1,7 +1,7 @@
 # Iteration 019 — Local repeat hints
 
 **Date:** 2026-07-15  
-**Status:** Failed and reverted
+**Status:** Candidate 1 failed and reverted; candidate 2 ready to test
 
 ## Problem
 
@@ -59,7 +59,9 @@ instructions are therefore part of the single prompt-context change.
 ## Outcome
 
 The model and pipeline were healthy, but the hypothesis failed its quality
-gates. Positive repeat cases improved only from 2/12 to 5/12, and only two of
+gates. The initial permissive span check reported 2/12→5/12. After requiring
+every non-target word in a partial sentence to remain kept, the truthful result
+is 1/12→4/12. Only two of
 the four user-confirmed spans were cut. Recall fell from 0.687 to 0.678, missed
 cuts increased by 63 words, and F1 fell from 0.736 to 0.733. `test-9` and
 `test-47` each lost more than three F1 points.
@@ -68,3 +70,55 @@ All ten intentional-repeat controls remained kept, so the hints were not
 recklessly aggressive. The problem was that they did not reliably turn into
 the exact partial cuts we needed. The production prompt change was reverted in
 commit `8739e51`; repeat-case scoring and the iteration artifacts remain.
+
+## Candidate 2 — Bilingual teaching-content protection
+
+### Problem
+
+On English lessons, Sol can interpret an English source phrase and its Croatian
+translation or explanation as redundant versions of the same thought. The old
+98-video EDL therefore cuts the Croatian explanation “Dakle, bila je
+razočarana zbog nezahvalnih poslova” after the equivalent English sentence.
+The human edit keeps both because they perform different teaching jobs.
+
+The fresh baseline is model-variable: it keeps that exact user case, but fails
+four other explicit bilingual keep spans. Across the corrected candidate-2
+manifest it passes only 11/15 keep controls.
+
+### Hypothesis
+
+If the existing section-editor prompt states that English source text and its
+Croatian translation or explanation are never duplicates merely because they
+share meaning, Sol will preserve bilingual teaching content more consistently
+without protecting genuine same-language retakes.
+
+### Change plan
+
+Add one rule to `SECTION_PROMPT`:
+
+- keep both an English source/citation and its Croatian
+  translation/explanation;
+- allow deletion only for an independently broken, abandoned, or stuttered
+  attempt—not because another language conveys the same meaning.
+
+There are no detector, schema, model, guardrail, or EDL changes.
+
+### Risk
+
+The rule may be interpreted too broadly and protect genuinely abandoned mixed-
+language attempts. That would reduce recall and increase missed-cut words.
+
+### Candidate-2 gates
+
+Against the same fresh 15-video baseline, candidate 2 must:
+
+- finish with zero failed sections;
+- keep the user-confirmed Croatian translation and at least 14/15 combined
+  keep controls;
+- rescue at least three of the four bilingual controls the baseline overcuts;
+- improve precision by at least 0.005;
+- reduce overcut words by at least 25;
+- lose no more than 0.005 recall and add no more than ten missed-cut words;
+- never reduce F1;
+- avoid an F1 loss greater than 0.03 or more than ten new overcut words on any
+  video.

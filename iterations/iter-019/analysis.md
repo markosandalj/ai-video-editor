@@ -83,8 +83,8 @@ sections completed without retries or fallbacks.
 
 | Run | Cut precision | Cut recall | Cut F1 | True cut words | Overcut words | Missed-cut words | Positive cases | Controls |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| Baseline | 0.791 | 0.687 | 0.736 | 4,382 | 1,158 | 1,992 | 2/12 | 10/10 |
-| Candidate | 0.799 | 0.678 | 0.733 | 4,319 | 1,087 | 2,055 | 5/12 | 10/10 |
+| Baseline | 0.791 | 0.687 | 0.736 | 4,382 | 1,158 | 1,992 | 1/12 | 10/10 |
+| Candidate | 0.799 | 0.678 | 0.733 | 4,319 | 1,087 | 2,055 | 4/12 | 10/10 |
 | Change | +0.008 | -0.009 | -0.003 | -63 | -71 | +63 | +3 | 0 |
 
 ### Promotion gates
@@ -93,7 +93,7 @@ sections completed without retries or fallbacks.
 |---|---:|---:|---|
 | Failed sections | 0 | 0/29 | pass |
 | Four user-confirmed spans | 4/4 | 2/4 | **fail** |
-| Positive repeat cases | at least 9/12 | 5/12 | **fail** |
+| Positive repeat cases | at least 9/12 | 4/12 | **fail** |
 | Intentional-repeat controls | 10/10 kept | 10/10 | pass |
 | Recall change | at least +0.005 | -0.009 | **fail** |
 | Missed-cut words | at least 25 fewer | 63 more | **fail** |
@@ -127,8 +127,41 @@ The generic safety comparison also failed because `engleski25ljeto-esej` and
 The mechanical detector was useful as measurement—it found all 12 explicit
 positive spans and produced only about 305 hints across the 98 transcripts,
 far fewer than the old 1,594-span bigram detector. But advisory prompt hints
-were not a reliable actuator: Sol caught only 5/12 and overall recall worsened.
+were not a reliable actuator: Sol caught only 4/12 with correct partial-span
+validation, and overall recall worsened.
 
-Iteration 19 therefore failed. The 98-video candidate run was skipped, the
+Candidate 1 therefore failed. The 98-video candidate run was skipped, the
 single production change was reverted in `8739e51`, and the repeat-case
-manifest/scorer were retained for future hypotheses.
+manifest/scorer were retained. Iteration 19 remains open for isolated follow-up
+candidates.
+
+## Candidate-2 analysis: bilingual protection
+
+The user's new example exposed a distinct overcut category. The old full-98 EDL
+cuts this Croatian explanation immediately after its English source:
+
+> Dakle, bila je razočarana zbog nezahvalnih poslova
+
+The human edit keeps both languages. The English statement supplies the source
+material; Croatian makes it understandable to the learner. Semantic equivalence
+is therefore not evidence of a retake.
+
+This exact cut is unstable: the fresh baseline keeps it because Sol labels it
+`redundant` and the existing protected-type guardrail rejects the proposal.
+However, four other human-kept bilingual spans are cut in that same baseline:
+
+- `engleski25ljeto-listening-2[14]`: English source before a corrected Croatian
+  explanation (14 overcut words);
+- `engleski25ljeto-reading-1[109]`: Croatian framing plus an English teaching
+  phrase (15 overcut words);
+- `engleski25ljeto-reading-1[157]`: English phrase explained in Croatian (9
+  overcut words);
+- `engleski25ljeto-reading-5[64]`: Croatian translation framing after an
+  English source (5 overcut words).
+
+The new candidate-2 manifest fixes a measurement weakness discovered in
+candidate 1: every partial positive now requires the sentence remainder to stay
+kept. On the unchanged baseline it scores 1/12 positive repeats and 11/15 keep
+controls. Candidate 2 will change only the prompt's bilingual-content rule and
+must rescue at least three of the four failing bilingual controls without
+materially lowering recall.
