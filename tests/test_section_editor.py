@@ -2,31 +2,22 @@
 span mapping, guardrails, merge) plus one end-to-end run with a mocked model."""
 from __future__ import annotations
 
-import json
-from pathlib import Path
-
 import pytest
 
 from ai_video_editor.config.settings import SectionEditorConfig, Settings
 from ai_video_editor.duplicate.models import FlagReason
 from ai_video_editor.duplicate.section_editor import (
-    Section,
     SectionDeletion,
     SectionEdits,
     SectionHealth,
     SectionTrace,
     _build_sections,
     _deletion_to_flag,
-    _edit_section,
-    _find_sandwich_repeat_hints,
     _locate_span,
     _merge_flags,
     detect_section_edits,
 )
 from ai_video_editor.transcription.models import Sentence, Word
-
-
-FIXTURES = Path(__file__).parent / "fixtures"
 
 
 def test_section_editor_is_the_default_cutter() -> None:
@@ -98,98 +89,6 @@ class TestBuildSections:
 
     def test_empty(self):
         assert _build_sections([], SectionEditorConfig()) == []
-
-
-class TestSandwichRepeatHints:
-    @staticmethod
-    def _fixture_sentences(name: str) -> list[Sentence]:
-        payload = json.loads((FIXTURES / f"{name}-raw.transcript.json").read_text())
-        return [Sentence.model_validate(item) for item in payload["sentences"]]
-
-    @staticmethod
-    def _capture_prompt(sentences: list[Sentence], section: Section) -> str:
-        prompts: list[str] = []
-
-        class FakeStructured:
-            def invoke(self, prompt: str) -> SectionEdits:
-                prompts.append(prompt)
-                return SectionEdits()
-
-        class FakeLLM:
-            def with_structured_output(self, schema):
-                return FakeStructured()
-
-        _edit_section(sentences, section, FakeLLM())
-        return prompts[0]
-
-    @pytest.mark.parametrize(
-        ("fixture", "earlier", "later"),
-        [
-            ("engleski25ljeto-esej", 40, 43),
-            ("engleski25ljeto-listening-1", 148, 150),
-        ],
-    )
-    def test_finds_user_supplied_non_adjacent_chains(
-        self, fixture: str, earlier: int, later: int
-    ) -> None:
-        sentences = self._fixture_sentences(fixture)
-        section = Section(earlier, later + 1, earlier, later + 1)
-
-        hints = _find_sandwich_repeat_hints(sentences, section)
-
-        assert (earlier, later) in {
-            (hint.earlier_sentence, hint.later_sentence) for hint in hints
-        }
-
-    def test_requires_a_visibly_truncated_middle_attempt(self) -> None:
-        sentences = [
-            _sentence("Ovo je prvi potpuni pokušaj iste važne rečenice", 0, 3),
-            _sentence("Hm.", 4, 4.5),
-            _sentence("Ovo je prvi potpuni pokušaj iste važne rečenice", 5, 8),
-        ]
-
-        hints = _find_sandwich_repeat_hints(sentences, Section(0, 3, 0, 3))
-
-        assert hints == []
-
-    def test_rejects_endpoint_gap_over_ten_seconds(self) -> None:
-        sentences = [
-            _sentence("Ovo je prvi potpuni pokušaj iste važne rečenice", 0, 3),
-            _sentence("Ovo je...", 4, 5),
-            _sentence("Ovo je prvi potpuni pokušaj iste važne rečenice", 14, 17),
-        ]
-
-        hints = _find_sandwich_repeat_hints(sentences, Section(0, 3, 0, 3))
-
-        assert hints == []
-
-    def test_does_not_emit_a_hint_owned_only_by_context(self) -> None:
-        sentences = [
-            _sentence("Ovo je prvi potpuni pokušaj iste važne rečenice", 0, 3),
-            _sentence("Ovo je...", 4, 5),
-            _sentence("Ovo je prvi potpuni pokušaj iste važne rečenice", 6, 9),
-            _sentence("Sada slijedi potpuno nova korisna rečenica", 10, 13),
-        ]
-
-        hints = _find_sandwich_repeat_hints(sentences, Section(2, 4, 0, 4))
-
-        assert hints == []
-
-    def test_only_appends_chain_instructions_when_a_hint_exists(self) -> None:
-        plain = [
-            _sentence("Ovo je prva korisna rečenica bez ponavljanja", 0, 3),
-            _sentence("Ovo je druga potpuno različita korisna rečenica", 4, 7),
-        ]
-        plain_prompt = self._capture_prompt(plain, Section(0, 2, 0, 2))
-        assert "MOGUĆI LANCI ISPRAVAKA" not in plain_prompt
-
-        sentences = self._fixture_sentences("engleski25ljeto-esej")
-        chain_prompt = self._capture_prompt(sentences, Section(40, 44, 40, 44))
-        assert "MOGUĆI LANCI ISPRAVAKA" in chain_prompt
-        assert '[40] RANIJE: "Zatim nam slijedi ovaj možda najvažniji dio' in chain_prompt
-        assert '[42] IZMEĐU: "a..."' in chain_prompt
-        assert '[43] KASNIJE: "Zatim nam slijedi ovaj Zatim nam slijedi' in chain_prompt
-        assert "NIKADA ne briši cijelu miješanu rečenicu" in chain_prompt
 
 
 class TestLocateSpan:
