@@ -1,7 +1,7 @@
 # Iteration 019 — Local repeat hints
 
 **Date:** 2026-07-15  
-**Status:** Candidates 1–3 failed and reverted; candidate 4 in analysis
+**Status:** Candidates 1–4 failed and reverted; candidate 5 in analysis
 
 ## Problem
 
@@ -253,3 +253,21 @@ Against the same fresh 15-video baseline, candidate 4 must:
   overcut words overall;
 - avoid an F1 loss greater than 0.03 or more than ten new overcut words on any
   video.
+
+### Candidate-4 outcome
+
+The sparse detector found both intended relationships, but plain endpoint hints
+did not provide enough splice precision. It correctly caused listening [148] to
+be cut as a full retake. For the essay chain, Sol cut all of [40], including the
+three-word prefix the human kept, and still removed only 4/7 required words
+from [43]. The core exact-span gate therefore failed: one of three target spans
+passed.
+
+Official aggregate metrics also failed (P 0.791→0.795, R 0.687→0.674, F1
+0.736→0.729), with an affected-video regression on
+`engleski25ljeto-reading-1`. Two other official per-video regressions occurred
+on `engleski25ljeto-reading-5` and `test-9`, even though neither video received
+a hint; conversely, other unchanged videos moved strongly upward. This exposes
+meaningful Sol run-to-run noise in single-run per-video attribution, but it does
+not rescue the failed exact-span hypothesis. Candidate 4 was reverted in
+`a9fe4bb`.

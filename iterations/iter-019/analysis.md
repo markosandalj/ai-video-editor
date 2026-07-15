@@ -266,3 +266,35 @@ does not authorize a cut: the detector only makes the relationship explicit in
 the existing Sol prompt. Sections with no eligible chain must receive the
 unchanged baseline prompt so their model behavior is not intentionally
 perturbed.
+
+## Candidate-4 result
+
+| Run | Cut precision | Cut recall | Cut F1 | True cut words | Overcut words | Missed-cut words | Explicit positives | Keep controls |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Baseline | 0.791 | 0.687 | 0.736 | 4,382 | 1,158 | 1,992 | 1/16 | 13/17 |
+| Candidate 4 | 0.795 | 0.674 | 0.729 | 4,295 | 1,107 | 2,079 | 3/16 | 13/17 |
+| Change | +0.004 | -0.013 | -0.007 | -87 | -51 | +87 | +2 | 0 |
+
+All 29 sections completed without retries or fallbacks. The detector did expose
+both target chains, and the traces show Sol acted on them:
+
+- listening [148] was correctly cut in full, with [150] kept;
+- essay [40] was proposed and cut in full, which wrongly removed its clean
+  three-word prefix;
+- essay [43] still received only the existing four-word stutter trim instead of
+  the required seven-word trim.
+
+Thus only one of the three still-missed non-adjacent spans passed. The next
+candidate should not merely show whole endpoint sentences. It should derive and
+show the exact proposed splice boundaries: a full earlier-take cut for near
+identical endpoints, or exact partial spans when the later endpoint contains an
+internal restarted prefix.
+
+### Attribution warning discovered by candidate 4
+
+`engleski25ljeto-reading-5` and `test-9` received no hint, so their prompts were
+identical to the baseline, yet they lost 0.051 and 0.108 F1. Other unchanged
+videos moved strongly upward. Single reruns therefore contain material Sol
+variance. Official gates remain authoritative for promotion, but future
+analysis must distinguish affected from unaffected videos and avoid claiming
+that an untouched video's movement was caused by the candidate.
