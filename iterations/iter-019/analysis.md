@@ -76,8 +76,59 @@ cutter would therefore be unsafe.
   the human retained. Explicit source-word spans are required to evaluate the
   agreed keep-later policy.
 
-## Recommended hypothesis
+## Candidate result
 
-Mechanically surface conservative local-repeat candidates inside the existing
-section-editor prompt. They are attention hints only: Sol still decides, and all
-existing verification and guardrails remain authoritative.
+The local-repeat hints were tested on the identical 15-video cohort. All 29
+sections completed without retries or fallbacks.
+
+| Run | Cut precision | Cut recall | Cut F1 | True cut words | Overcut words | Missed-cut words | Positive cases | Controls |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Baseline | 0.791 | 0.687 | 0.736 | 4,382 | 1,158 | 1,992 | 2/12 | 10/10 |
+| Candidate | 0.799 | 0.678 | 0.733 | 4,319 | 1,087 | 2,055 | 5/12 | 10/10 |
+| Change | +0.008 | -0.009 | -0.003 | -63 | -71 | +63 | +3 | 0 |
+
+### Promotion gates
+
+| Gate | Required | Result | Verdict |
+|---|---:|---:|---|
+| Failed sections | 0 | 0/29 | pass |
+| Four user-confirmed spans | 4/4 | 2/4 | **fail** |
+| Positive repeat cases | at least 9/12 | 5/12 | **fail** |
+| Intentional-repeat controls | 10/10 kept | 10/10 | pass |
+| Recall change | at least +0.005 | -0.009 | **fail** |
+| Missed-cut words | at least 25 fewer | 63 more | **fail** |
+| Precision change | no worse than -0.005 | +0.008 | pass |
+| F1 change | no decrease | -0.003 | **fail** |
+| Overcut words | no more than 10 extra | 71 fewer | pass |
+| Worst per-video F1 loss | no more than 0.030 | `test-9` -0.058; `test-47` -0.032 | **fail** |
+
+The generic safety comparison also failed because `engleski25ljeto-esej` and
+`engleski25ljeto-listening-1` gained more than ten overcut words.
+
+## Representative findings
+
+- The hints helped the exact grammatical correction in `test-11` and raised
+  the explicit positive-case score by three cases.
+- The two long user-confirmed repeats in `test-10` still remained uncut. Sol
+  saw the matching spans but did not consistently emit the desired partial
+  deletion.
+- For `test-40`, the hint used exact timestamped words (`Od tud`), but Sol
+  rewrote the proposal as the prettified transcript text (`Odtud`). Existing
+  verification correctly rejected the unverifiable span.
+- `test-9` exposed a policy mismatch: Sol proposed the short repeated sentence,
+  but the existing short-interjection guardrail protected it. The guardrail was
+  intentionally out of scope for this iteration.
+- The hints reduced overcuts overall, but changed broader model judgment enough
+  to lose 63 true cut words. Prompting the model to pay attention to repeats did
+  not isolate the change to repeat decisions.
+
+## Conclusion
+
+The mechanical detector was useful as measurement—it found all 12 explicit
+positive spans and produced only about 305 hints across the 98 transcripts,
+far fewer than the old 1,594-span bigram detector. But advisory prompt hints
+were not a reliable actuator: Sol caught only 5/12 and overall recall worsened.
+
+Iteration 19 therefore failed. The 98-video candidate run was skipped, the
+single production change was reverted in `8739e51`, and the repeat-case
+manifest/scorer were retained for future hypotheses.

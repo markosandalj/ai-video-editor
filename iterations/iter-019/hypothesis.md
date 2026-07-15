@@ -1,7 +1,7 @@
 # Iteration 019 — Local repeat hints
 
 **Date:** 2026-07-15  
-**Status:** Ready to test
+**Status:** Failed and reverted
 
 ## Problem
 
@@ -55,3 +55,16 @@ Educational speech repeats words deliberately. A broad detector would place
 too many misleading hints in the prompt and could turn useful explanations or
 comparisons into cuts. Conservative detection and explicit negative
 instructions are therefore part of the single prompt-context change.
+
+## Outcome
+
+The model and pipeline were healthy, but the hypothesis failed its quality
+gates. Positive repeat cases improved only from 2/12 to 5/12, and only two of
+the four user-confirmed spans were cut. Recall fell from 0.687 to 0.678, missed
+cuts increased by 63 words, and F1 fell from 0.736 to 0.733. `test-9` and
+`test-47` each lost more than three F1 points.
+
+All ten intentional-repeat controls remained kept, so the hints were not
+recklessly aggressive. The problem was that they did not reliably turn into
+the exact partial cuts we needed. The production prompt change was reverted in
+commit `8739e51`; repeat-case scoring and the iteration artifacts remain.
