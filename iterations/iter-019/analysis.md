@@ -298,3 +298,22 @@ videos moved strongly upward. Single reruns therefore contain material Sol
 variance. Official gates remain authoritative for promotion, but future
 analysis must distinguish affected from unaffected videos and avoid claiming
 that an untouched video's movement was caused by the candidate.
+
+## Candidate-5 boundary analysis
+
+The exact essay splice is mechanically derivable. Both endpoints begin with
+`Zatim nam slijedi`; the later endpoint repeats that three-word opening after
+one intervening word. Therefore the suggested cuts are exactly:
+
+- essay [40] words 3:12 — keep the first `Zatim nam slijedi`;
+- essay [43] words 0:7 — remove both restarted openings and keep the completion
+  beginning with `možda ovaj najbitniji dio...`.
+
+Listening [148] and [150] have 98.9% endpoint similarity, so the suggested cut
+is the complete earlier [148], exactly as candidate 4 successfully proposed.
+
+Requiring one of these two exact-boundary forms reduces the detector from
+candidate 4's 37 hints in 21 videos to 26 hints in 18 videos. In the 15-video
+cohort it drops from 15 hints in eight videos to nine hints in five videos. A
+two-video micro-pilot will test the three exact source spans before another full
+cohort spend.

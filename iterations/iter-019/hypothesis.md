@@ -271,3 +271,45 @@ a hint; conversely, other unchanged videos moved strongly upward. This exposes
 meaningful Sol run-to-run noise in single-run per-video attribution, but it does
 not rescue the failed exact-span hypothesis. Candidate 4 was reverted in
 `a9fe4bb`.
+
+## Candidate 5 — exact splice-boundary hints
+
+### Hypothesis
+
+Candidate 4 failed because it exposed whole endpoint sentences and left Sol to
+infer the splice. If the deterministic hint supplies the exact candidate spans,
+Sol can keep the clean early prefix in essay [40], remove only its abandoned
+tail, and remove the entire restarted prefix in [43], while retaining candidate
+4's successful full-take handling for listening [148].
+
+### Single change
+
+Retain candidate 4's truncated-middle, ten-second sandwich structure, but emit a
+hint only when it can derive an exact boundary:
+
+- endpoint similarity at least 98% → suggest the complete earlier sentence;
+- otherwise, the later sentence must contain the same 2–6-word opening phrase
+  twice with at most three intervening words, and the earlier sentence must
+  share that opening → suggest the earlier tail after the shared phrase and the
+  later prefix through the second occurrence.
+
+Each suggestion is shown as exact timestamped-word text. It is advisory; Sol
+still returns the deletion and all existing verification/guardrails remain.
+There is no automatic cut, extra call, schema change, or EDL change. The dry
+scan contracts the surface again to 26 hints across 18/98 videos and nine hints
+across five cohort videos.
+
+### Evaluation sequence and gates
+
+First run only `engleski25ljeto-esej` and
+`engleski25ljeto-listening-1`. Continue to the full 15-video cohort only if the
+micro-pilot:
+
+- completes every section;
+- cuts essay [40] 3:12, essay [43] 0:7, and listening [148] 0:21 exactly;
+- preserves all required remainders plus listening [150].
+
+If that passes, apply candidate 4's full cohort gates: at least 4/16 positives,
+no loss among the 13 baseline-passing controls, recall +0.005, at least 25 fewer
+missed-cut words, precision loss no worse than 0.005, no F1 decrease, no more
+than ten new aggregate overcuts, and the existing per-video safety limits.
