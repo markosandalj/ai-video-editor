@@ -217,3 +217,34 @@ new later-take controls ([18] and [150]) are already kept. Candidate 3 therefore
 must add at least four exact chain-span successes without losing any of the 13
 baseline-passing controls; it is not expected to solve candidate 2's four
 pre-existing bilingual failures.
+
+## Candidate-3 result
+
+| Run | Cut precision | Cut recall | Cut F1 | True cut words | Overcut words | Missed-cut words | Explicit positives | Keep controls |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Baseline | 0.791 | 0.687 | 0.736 | 4,382 | 1,158 | 1,992 | 1/16 | 13/17 |
+| Candidate 3 | 0.803 | 0.687 | 0.741 | 4,381 | 1,075 | 1,993 | 5/16 | 14/17 |
+| Change | +0.012 | 0.000 | +0.005 | -1 | -83 | +1 | +4 | +1 |
+
+All 29 sections completed without retries or fallbacks. The candidate nevertheless
+failed its core gate: only two of five newly supplied chain spans passed, not
+four. The traces are decisive:
+
+- listening [16] and [17] were proposed as exact partial retakes and accepted;
+- listening [148] was never proposed; Sol only removed the obvious intervening
+  false start [149];
+- essay [40] was never proposed;
+- essay [43] received only the same four-word stutter trim as the baseline,
+  leaving three more repeated words uncut.
+
+It also failed per-video safety: `test-13` lost 0.047 F1 and gained 14 overcut
+words, `test-46` lost 0.062 F1, and `test-9` lost 0.066 F1 and gained 13 overcut
+words. Candidate 3 was reverted in `2ec1beb`; artifacts remain under
+`output/qa-iteration-19/candidate-3-15`.
+
+The next candidate stays inside iteration 19 but must be localized. A global
+instruction can teach exact trimming once Sol notices a chain, yet it does not
+make Sol discover the non-adjacent [40]→[43] or [148]→[150] relationship. The
+next analysis therefore tests whether a very sparse two-to-three-sentence
+"sandwich" hint can expose only those chains without reintroducing candidate
+1's 305 broad repeat hints.

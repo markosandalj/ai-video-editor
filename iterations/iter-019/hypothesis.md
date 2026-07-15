@@ -1,7 +1,7 @@
 # Iteration 019 — Local repeat hints
 
 **Date:** 2026-07-15  
-**Status:** Candidates 1 and 2 failed and reverted; candidate 3 in analysis
+**Status:** Candidates 1–3 failed and reverted; candidate 4 in analysis
 
 ## Problem
 
@@ -185,3 +185,18 @@ Against the same fresh 15-video baseline, candidate 3 must:
   overcut words overall;
 - avoid an F1 loss greater than 0.03 or more than ten new overcut words on any
   video.
+
+### Candidate-3 outcome
+
+The run was healthy, and aggregate metrics improved: precision 0.791→0.803,
+recall stayed 0.687, F1 rose 0.736→0.741, and overcuts fell by 83 words. But the
+specific hypothesis failed. Only two of the five new chain spans passed: the
+obsolete Croatian tail in listening sentence [16] and the embedded English copy
+in [17]. Both essay spans and the earlier full take [148] remained missed.
+
+The total explicit score rose 1/16→5/16 and controls rose 13/17→14/17, but
+`test-13`, `test-46`, and `test-9` exceeded the per-video F1-loss gate;
+`test-13` and `test-9` also gained more than ten overcut words. Candidate 3 was
+reverted in `2ec1beb`. Its useful result is narrower than its prompt: Sol can
+follow an exact adjacent-chain example, but the global rule did not make it find
+non-adjacent first takes on its own.
