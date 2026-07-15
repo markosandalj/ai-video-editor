@@ -165,3 +165,31 @@ kept. On the unchanged baseline it scores 1/12 positive repeats and 11/15 keep
 controls. Candidate 2 will change only the prompt's bilingual-content rule and
 must rescue at least three of the four failing bilingual controls without
 materially lowering recall.
+
+## Candidate-2 result
+
+| Run | Cut precision | Cut recall | Cut F1 | True cut words | Overcut words | Missed-cut words | Keep controls |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Baseline | 0.791 | 0.687 | 0.736 | 4,382 | 1,158 | 1,992 | 11/15 |
+| Candidate 2 | 0.790 | 0.682 | 0.732 | 4,348 | 1,157 | 2,026 | 11/15 |
+| Change | -0.001 | -0.005 | -0.004 | -34 | -1 | +34 | 0 |
+
+The run was healthy: 0/29 sections failed, one structured-output retry
+succeeded, and no direct fallback was needed.
+
+### Failed gates
+
+- No bilingual control was rescued; the required result was at least three.
+- Precision did not improve by 0.005.
+- Overcuts decreased by only one word, not 25.
+- Missed cuts increased by 34 words, exceeding the +10 limit.
+- F1 decreased by 0.004.
+- `engleski25ljeto-listening-1` lost 0.033 F1 and `test-9` lost 0.039.
+- `engleski25ljeto-esej`, `engleski25ljeto-listening-1`, and `test-9`
+  each gained more than ten overcut words.
+
+The four failing traces remained cuts because Sol interpreted them as broken
+attempts, not as deletion solely due to cross-language equivalence. The prompt
+rule therefore did not constrain the decisions that caused those measured
+overcuts. Candidate 2 was reverted in `71b5ce5`; its artifacts remain under
+`output/qa-iteration-19/candidate-2-15`.

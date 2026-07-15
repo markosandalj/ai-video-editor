@@ -1,7 +1,7 @@
 # Iteration 019 — Local repeat hints
 
 **Date:** 2026-07-15  
-**Status:** Candidate 1 failed and reverted; candidate 2 ready to test
+**Status:** Candidates 1 and 2 failed and reverted; candidate 3 in analysis
 
 ## Problem
 
@@ -122,3 +122,19 @@ Against the same fresh 15-video baseline, candidate 2 must:
 - never reduce F1;
 - avoid an F1 loss greater than 0.03 or more than ten new overcut words on any
   video.
+
+### Candidate-2 outcome
+
+The prompt rule did not rescue any of the four baseline-failing bilingual
+controls: the keep score stayed 11/15. The traces show why. Sol continued to
+classify those sentences as independently broken or abandoned attempts, which
+the rule explicitly still allowed it to cut. The exact user-confirmed
+English→Croatian example remained kept, but it was already kept by the fresh
+baseline because the `redundant` guardrail rejected that proposal.
+
+Aggregate precision was unchanged within noise (0.791→0.790), recall fell
+0.687→0.682, F1 fell 0.736→0.732, and missed cuts increased by 34 words.
+`engleski25ljeto-listening-1` and `test-9` exceeded the per-video F1-loss gate.
+Candidate 2 was reverted in `71b5ce5`. The bilingual rule is still a valid
+domain statement, but a global prompt addition did not produce a measurable,
+safe improvement.
