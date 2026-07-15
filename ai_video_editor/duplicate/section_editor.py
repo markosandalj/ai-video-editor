@@ -26,6 +26,7 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from ai_video_editor.config.settings import SectionEditorConfig
+from ai_video_editor.duplicate.local_corrections import detect_local_corrections
 from ai_video_editor.duplicate.models import DuplicateFlag, FlagReason, WordTrim
 from ai_video_editor.llm import (
     LangChainModelConfig,
@@ -514,6 +515,7 @@ def detect_section_edits(
             if flag is not None:
                 raw_flags.append(flag)
 
+    raw_flags.extend(detect_local_corrections(sentences))
     flags = _merge_flags(raw_flags)
     health.flags_emitted += len(flags)
     full = sum(1 for f in flags if not f.word_trims)
