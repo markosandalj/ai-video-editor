@@ -3,6 +3,7 @@ import { Video, VideoSkin } from '@videojs/react/video'
 import { useEventCallback, useEventListener } from 'usehooks-ts'
 
 import { ResizableSplit } from '@/components/resizable-split'
+import { PaneVisibilityControls } from '@/components/pane-visibility-controls'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -14,7 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
-import { ViewSwitch, type AppView } from '@/components/view-switch'
+import { ViewSwitch } from '@/components/view-switch'
 import { useDiff } from '@/api'
 import type { DiffSentence, DiffWord } from '@/api/diff'
 import type { VideoSummary } from '@/api/videos'
@@ -30,8 +31,11 @@ type DiffViewProps = {
   videos: VideoSummary[]
   message: string
   onSelect: (id: string) => void
-  view: AppView
-  onViewChange: (v: AppView) => void
+  search: string
+  videoHidden: boolean
+  transcriptHidden: boolean
+  onVideoHiddenChange: (hidden: boolean) => void
+  onTranscriptHiddenChange: (hidden: boolean) => void
 }
 
 const MODES: { value: Mode; label: string }[] = [
@@ -45,8 +49,11 @@ export function DiffView({
   videos,
   message,
   onSelect,
-  view,
-  onViewChange,
+  search,
+  videoHidden,
+  transcriptHidden,
+  onVideoHiddenChange,
+  onTranscriptHiddenChange,
 }: DiffViewProps) {
   const player = Player.usePlayer()
   const diff = useDiff(videoId)
@@ -148,7 +155,7 @@ export function DiffView({
     <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
       <header className="flex shrink-0 flex-wrap items-center gap-3 border-b bg-card px-4 py-2.5">
         <span className="text-sm font-extrabold tracking-tight">AI Video Editor</span>
-        <ViewSwitch view={view} onChange={onViewChange} />
+        <ViewSwitch videoId={videoId} view="compare" search={search} />
 
         <Select value={videoId} onValueChange={onSelect}>
           <SelectTrigger size="sm" className="w-[260px]">
@@ -162,6 +169,13 @@ export function DiffView({
             ))}
           </SelectContent>
         </Select>
+
+        <PaneVisibilityControls
+          videoHidden={videoHidden}
+          transcriptHidden={transcriptHidden}
+          onVideoHiddenChange={onVideoHiddenChange}
+          onTranscriptHiddenChange={onTranscriptHiddenChange}
+        />
 
         <div className="flex items-center gap-0.5 rounded-md border p-0.5">
           {MODES.map((m) => (
@@ -180,7 +194,7 @@ export function DiffView({
         {s && (
           <div className="ml-auto flex flex-wrap items-center gap-1.5">
             {!hasGt && (
-              <Badge variant="outline" className="border-status-yellow/50 text-status-yellow">
+              <Badge variant="outline" className="border-changed/50 text-changed">
                 no human edit
               </Badge>
             )}
@@ -201,6 +215,8 @@ export function DiffView({
       {payload ? (
         <ResizableSplit
           storageKey="diff-sidebar-width"
+          sidebarHidden={videoHidden}
+          mainHidden={transcriptHidden}
           sidebar={
             <div className="flex flex-col gap-3 p-4">
               <div className="overflow-hidden rounded-xl bg-black [&_.media-button--pip]:hidden [&_video]:w-full">

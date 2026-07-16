@@ -1,4 +1,4 @@
-"""Offline model-evaluation harness for cutting and annotation LLMs."""
+"""Offline cutting-model evaluation harness."""
 
 from ai_video_editor.experiments.manifest import (
     ExperimentManifest,

@@ -6,7 +6,14 @@ from pydantic import BaseModel, Field, computed_field
 from ai_video_editor.duplicate.edl import EditAction, EditDecision
 
 
-SCHEMA_VERSION = "review.v2"
+SCHEMA_VERSION = "review.v4"
+
+
+class CutRange(BaseModel):
+    """A free-form span of source video (seconds) removed from the edit."""
+
+    start: float = Field(ge=0.0)
+    end: float
 
 
 class ReviewVideoMetadata(BaseModel):
@@ -61,7 +68,7 @@ class ReviewTimelineSegment(BaseModel):
 
 
 class ReviewWord(BaseModel):
-    """A single transcript word with the AI decision and a keep-likelihood score."""
+    """A single transcript word with the AI decision."""
 
     idx: int
     sentence_idx: int
@@ -72,7 +79,9 @@ class ReviewWord(BaseModel):
     kept: bool
     reason: str = ""
     confidence: float = 1.0
-    keep_score: float = Field(default=1.0, ge=0.0, le=1.0)
+    # Shared acoustic split points. Older payloads omit these and remain valid.
+    cut_in: float | None = None
+    cut_out: float | None = None
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -91,11 +100,6 @@ class ReviewSentence(BaseModel):
     confidence: float = 1.0
     keep_coverage: float = Field(default=0.0, ge=0.0, le=1.0)
     note: str = ""
-    # Enrichment metadata (phase 5). Defaults keep older payloads valid.
-    status: str = ""
-    tags: list[str] = Field(default_factory=list)
-    keep_confidence: float = Field(default=100.0, ge=0.0, le=100.0)
-    rationale: str = ""
     words: list[ReviewWord] = Field(default_factory=list)
 
     @computed_field  # type: ignore[prop-decorator]
@@ -109,11 +113,22 @@ class ReviewPayload(BaseModel):
     video: ReviewVideoMetadata
     segments: list[ReviewTimelineSegment]
     sentences: list[ReviewSentence]
+    # Canonical current cut state as free-form source-time ranges. Derived from
+    # the reviewed sidecar when present, otherwise from the AI EDL. The timeline
+    # and transcript both read/write this.
+    cut_ranges: list[CutRange] = Field(default_factory=list)
 
 
 class ReviewSaveRequest(BaseModel):
-    """Reviewer decisions expressed as the set of word indices to cut."""
+    """Reviewer decisions to persist.
 
+    The canonical form is ``cut_ranges`` (free-form source-time spans). Legacy
+    clients may still send ``cut_words`` (word indices); it is used only when
+    ``cut_ranges`` is omitted (``None``). An explicit empty ``cut_ranges`` list
+    means "no cuts" (restore everything), which is distinct from omitting it.
+    """
+
+    cut_ranges: list[CutRange] | None = None
     cut_words: list[int] = Field(default_factory=list)
 
 

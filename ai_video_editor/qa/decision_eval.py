@@ -24,7 +24,7 @@ from rapidfuzz import fuzz
 from ai_video_editor.duplicate.edl import EditAction, EditDecisionList
 from ai_video_editor.qa.ground_truth import _align_monotonic, derive_word_coverage
 from ai_video_editor.qa.models import CutDecisionResult
-from ai_video_editor.transcription.models import Sentence, Transcript
+from ai_video_editor.transcription.models import Sentence, Transcript, Word
 
 MATCH_THRESHOLD = 65.0
 COVERAGE_THRESHOLD = 0.5
@@ -242,6 +242,93 @@ def evaluate_decisions(
     return score
 
 
+@dataclass
+class WordDecisionScore:
+    """Word-level cut/keep confusion vs the human edit (positive class = CUT).
+
+    Sentence-level scoring counts a word-trim that removes a stutter as a full
+    missed/over cut. This scores every word independently, so a partial trim is
+    credited for the words it correctly removed and only penalised for the rest.
+    """
+    name: str = ""
+    tp: int = 0  # word cut by pipeline, cut by human
+    fp: int = 0  # word cut by pipeline, kept by human
+    fn: int = 0  # word kept by pipeline, cut by human
+    tn: int = 0
+    wrong_cut_by_reason: Counter = field(default_factory=Counter)
+    right_cut_by_reason: Counter = field(default_factory=Counter)
+
+    @property
+    def cut_precision(self) -> float:
+        made = self.tp + self.fp
+        return self.tp / made if made else 1.0
+
+    @property
+    def cut_recall(self) -> float:
+        needed = self.tp + self.fn
+        return self.tp / needed if needed else 1.0
+
+    @property
+    def cut_f1(self) -> float:
+        p, r = self.cut_precision, self.cut_recall
+        return 2 * p * r / (p + r) if (p + r) else 0.0
+
+
+def _word_cut_reason(word: Word, edl: EditDecisionList) -> tuple[bool, str]:
+    """Return whether a word is cut and the EDL reason at its midpoint."""
+    mid = (word.start + word.end) / 2.0
+    reason = ""
+    for d in edl.decisions:
+        if not (d.start <= mid <= d.end):
+            continue
+        if d.action == EditAction.KEEP:
+            return False, ""
+        if not reason:
+            reason = d.reason.value
+    return True, reason
+
+
+def evaluate_decisions_word_level(
+    raw_sentences: list[Sentence],
+    edl: EditDecisionList,
+    gt_sentences: list[Sentence],
+    *,
+    name: str = "",
+) -> WordDecisionScore:
+    """Score the EDL's cut/keep at word granularity against the human edit."""
+    from ai_video_editor.qa.ground_truth import derive_word_keep_flags
+
+    human_kept = derive_word_keep_flags(raw_sentences, gt_sentences)
+    score = WordDecisionScore(name=name)
+    for si, sentence in enumerate(raw_sentences):
+        for wi, word in enumerate(sentence.words):
+            pipeline_cut, reason = _word_cut_reason(word, edl)
+            kept_by_human = human_kept[si][wi]
+            if pipeline_cut and not kept_by_human:
+                score.tp += 1
+                score.right_cut_by_reason[reason] += 1
+            elif pipeline_cut and kept_by_human:
+                score.fp += 1
+                score.wrong_cut_by_reason[reason] += 1
+            elif not pipeline_cut and not kept_by_human:
+                score.fn += 1
+            else:
+                score.tn += 1
+    return score
+
+
+def aggregate_word_scores(scores: list[WordDecisionScore]) -> WordDecisionScore:
+    agg = WordDecisionScore(name="AGGREGATE")
+    for s in scores:
+        agg.tp += s.tp
+        agg.fp += s.fp
+        agg.fn += s.fn
+        agg.tn += s.tn
+        agg.wrong_cut_by_reason.update(s.wrong_cut_by_reason)
+        agg.right_cut_by_reason.update(s.right_cut_by_reason)
+    return agg
+
+
 def to_cut_decision_result(score: DecisionScore) -> CutDecisionResult:
     """Convert a DecisionScore into the serialisable QA-report model."""
     return CutDecisionResult(
@@ -250,6 +337,19 @@ def to_cut_decision_result(score: DecisionScore) -> CutDecisionResult:
         missed_cuts=score.fn,
         true_keeps=score.tn,
         take_disagreements=score.take_disagreements,
+        wrong_cut_by_reason=dict(score.wrong_cut_by_reason),
+        right_cut_by_reason=dict(score.right_cut_by_reason),
+    )
+
+
+def to_word_cut_decision_result(score: WordDecisionScore) -> CutDecisionResult:
+    """Convert word-level decision counts into the QA-report model."""
+    return CutDecisionResult(
+        granularity="word",
+        true_cuts=score.tp,
+        overcuts=score.fp,
+        missed_cuts=score.fn,
+        true_keeps=score.tn,
         wrong_cut_by_reason=dict(score.wrong_cut_by_reason),
         right_cut_by_reason=dict(score.right_cut_by_reason),
     )

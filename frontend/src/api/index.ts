@@ -1,7 +1,16 @@
 export { apiClient, apiErrorMessage } from '@/api/client'
 export { queryClient } from '@/api/query-client'
-export { useRenderReview, useReview, useSaveReview, useVideos, videoKeys } from '@/api/videos'
+export {
+  usePeaks,
+  useRenderReview,
+  useReview,
+  useSaveReview,
+  useVideos,
+  videoKeys,
+} from '@/api/videos'
 export type {
+  CutRange,
+  PeaksPayload,
   RenderResponse,
   ReviewPayload,
   ReviewSentence,

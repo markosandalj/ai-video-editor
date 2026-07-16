@@ -42,11 +42,14 @@ def _process_video_file(
     total: int,
 ) -> bool:
     from ai_video_editor.audio import (
+        build_audio_envelope,
         build_disruptions,
         compute_keep_regions,
         detect_silences,
         extract_audio,
         reduce_noise,
+        snap_edl_boundaries,
+        write_audio_envelope,
     )
     from ai_video_editor.decisions import decide_edits
     from ai_video_editor.duplicate.debug import save_debug_files
@@ -72,9 +75,11 @@ def _process_video_file(
             save_transcript(p, cached)
 
         disruptions = build_disruptions(Path(meta.path), cached, settings.disruption)
-        edl, _ = decide_edits(
-            p, cached, keeps, silences, settings, force=force, log=log, disruptions=disruptions
-        )
+        edl = decide_edits(cached, keeps, silences, settings, disruptions=disruptions)
+
+        envelope = build_audio_envelope(Path(denoised.path))
+        write_audio_envelope(p, envelope)
+        edl = snap_edl_boundaries(edl, cached, envelope)
 
         edl_path = p.with_suffix(".edl.json")
         edl_path.write_text(edl.model_dump_json(indent=2), encoding="utf-8")
@@ -97,7 +102,10 @@ def _process_video_file(
 
 def _eval_cut_decisions(raw_path: Path, edl, gt_sentences, *, name: str, issues: list):
     """Score the EDL's cut/keep calls against the human edit; append QA issues."""
-    from ai_video_editor.qa.decision_eval import evaluate_decisions, to_cut_decision_result
+    from ai_video_editor.qa.decision_eval import (
+        evaluate_decisions_word_level,
+        to_word_cut_decision_result,
+    )
     from ai_video_editor.qa.models import QAIssue, Severity
     from ai_video_editor.transcription.models import Transcript
 
@@ -110,23 +118,23 @@ def _eval_cut_decisions(raw_path: Path, edl, gt_sentences, *, name: str, issues:
         return None
 
     raw_transcript = Transcript.model_validate_json(raw_transcript_path.read_text("utf-8"))
-    ds = evaluate_decisions(raw_transcript.sentences, edl, gt_sentences, name=name)
-    cd = to_cut_decision_result(ds)
+    ds = evaluate_decisions_word_level(raw_transcript.sentences, edl, gt_sentences, name=name)
+    cd = to_word_cut_decision_result(ds)
 
     if cd.needed_cuts and cd.true_cuts == 0:
         issues.append(QAIssue(
             check="cut_decisions", severity=Severity.ERROR,
-            message=f"Missed all {cd.needed_cuts} cuts the human made",
+            message=f"Missed all {cd.needed_cuts} words the human cut",
         ))
     elif cd.missed_cuts:
         issues.append(QAIssue(
             check="cut_decisions", severity=Severity.WARNING,
-            message=f"Missed {cd.missed_cuts}/{cd.needed_cuts} cuts the human made",
+            message=f"Missed {cd.missed_cuts}/{cd.needed_cuts} words the human cut",
         ))
     if cd.overcuts:
         issues.append(QAIssue(
             check="cut_decisions", severity=Severity.WARNING,
-            message=f"{cd.overcuts} overcut(s) — removed content the human kept",
+            message=f"{cd.overcuts} overcut word(s) — removed content the human kept",
             details={"by_mechanism": cd.wrong_cut_by_reason},
         ))
     return cd
@@ -244,7 +252,6 @@ def process(
     ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Shortcut for DEBUG log level."),
     force: bool = typer.Option(False, "--force", "-f", help="Ignore cached transcripts, re-process from scratch."),
-    no_enrich: bool = typer.Option(False, "--no-enrich", help="Skip the transcript metadata enrichment pass."),
 ) -> None:
     """Process a single video through the editing pipeline."""
     settings = get_settings(config_path=config)
@@ -257,11 +264,6 @@ def process(
         settings = settings.model_copy(
             update={"general": settings.general.model_copy(update=g_updates)}
         )
-    if no_enrich:
-        settings = settings.model_copy(
-            update={"enrichment": settings.enrichment.model_copy(update={"enabled": False})}
-        )
-
     setup_logging(settings)
     stem = input_path.stem
     attach_video_log(settings, stem)
@@ -269,11 +271,14 @@ def process(
     log.info("Processing: {}", input_path)
 
     from ai_video_editor.audio import (
+        build_audio_envelope,
         build_disruptions,
         compute_keep_regions,
         detect_silences,
         extract_audio,
         reduce_noise,
+        snap_edl_boundaries,
+        write_audio_envelope,
     )
     from ai_video_editor.decisions import decide_edits
     from ai_video_editor.duplicate.debug import save_debug_files
@@ -294,9 +299,11 @@ def process(
         save_transcript(input_path, cached)
 
     disruptions = build_disruptions(Path(meta.path), cached, settings.disruption)
-    edl, _ = decide_edits(
-        input_path, cached, keeps, silences, settings, force=force, log=log, disruptions=disruptions
-    )
+    edl = decide_edits(cached, keeps, silences, settings, disruptions=disruptions)
+
+    envelope = build_audio_envelope(Path(denoised.path))
+    write_audio_envelope(input_path, envelope)
+    edl = snap_edl_boundaries(edl, cached, envelope)
 
     edl_path = input_path.with_suffix(".edl.json")
     edl_path.write_text(edl.model_dump_json(indent=2), encoding="utf-8")
@@ -336,7 +343,6 @@ def batch(
     ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Shortcut for DEBUG log level."),
     force: bool = typer.Option(False, "--force", "-f", help="Ignore cached transcripts, re-process from scratch."),
-    no_enrich: bool = typer.Option(False, "--no-enrich", help="Skip the transcript metadata enrichment pass."),
     workers: int = typer.Option(
         DEFAULT_WORKERS,
         "--workers",
@@ -356,11 +362,6 @@ def batch(
         settings = settings.model_copy(
             update={"general": settings.general.model_copy(update=g_updates)}
         )
-    if no_enrich:
-        settings = settings.model_copy(
-            update={"enrichment": settings.enrichment.model_copy(update={"enabled": False})}
-        )
-
     setup_logging(settings)
     paths = sorted(Path(p) for p in glob.glob(pattern, recursive=True))
     exts = _resolve_video_extensions()
@@ -618,7 +619,7 @@ def eval_models(
         "--fixtures-dir",
         file_okay=False,
         dir_okay=True,
-        help="Directory with cached transcript, EDL, enrichment, and ground-truth sidecars.",
+        help="Directory with cached transcript, EDL, and ground-truth sidecars.",
     ),
     output_dir: Path = typer.Option(
         Path("output/experiments"),
@@ -634,7 +635,7 @@ def eval_models(
         help="Restrict to specific fixture names (repeatable). Default: manifest fixtures or all cached fixtures.",
     ),
 ) -> None:
-    """Evaluate cutting or annotation LLMs independently from cached fixture sidecars."""
+    """Evaluate cutting LLMs independently from cached fixture sidecars."""
     from ai_video_editor.experiments import run_experiments
 
     results = run_experiments(
@@ -646,6 +647,99 @@ def eval_models(
     logger.info("Model evaluation complete: {}", output_dir)
     print(f"results: {results.output_dir / 'results.json'}")
     print(f"report:  {results.output_dir / 'report.md'}")
+
+
+@app.command("eval-section-editor")
+def eval_section_editor(
+    fixtures_dir: Path = typer.Option(
+        Path("tests/fixtures"),
+        "--fixtures-dir",
+        file_okay=False,
+        dir_okay=True,
+        help="Directory with cached transcript, EDL, and ground-truth sidecars.",
+    ),
+    output_dir: Path = typer.Option(
+        Path("output/section-pilot"),
+        "--output-dir",
+        "-o",
+        file_okay=False,
+        dir_okay=True,
+        help="Directory for report.md, results.json, and per-fixture EDLs.",
+    ),
+    names: list[str] = typer.Option(
+        None,
+        "--name",
+        "-n",
+        help="Fixture names to run (repeatable). Default: a curated diverse slice.",
+    ),
+    all_fixtures: bool = typer.Option(
+        False,
+        "--all-fixtures",
+        help="Run every fixture with raw transcript, baseline EDL, and human transcript.",
+    ),
+    manifest: Path = typer.Option(
+        None,
+        "--manifest",
+        exists=True,
+        readable=True,
+        help="Optional experiment manifest to pull the section-editor model from.",
+    ),
+    model: str = typer.Option(
+        None,
+        "--model",
+        help="Model key within the manifest (defaults to gpt-5.6-sol if no manifest).",
+    ),
+    compare_to: Path = typer.Option(
+        None,
+        "--compare-to",
+        exists=True,
+        readable=True,
+        help="Reference results.json or run directory for candidate gate comparison.",
+    ),
+    repeat_cases: Path = typer.Option(
+        None,
+        "--repeat-cases",
+        exists=True,
+        readable=True,
+        help="Optional explicit source-span repeat cases to score against saved EDLs.",
+    ),
+) -> None:
+    """Pilot the LLM section editor on fixtures, word-level scored vs the human edit."""
+    from ai_video_editor.experiments.section_pilot import (
+        discover_fixture_names,
+        run_section_pilot,
+    )
+    from ai_video_editor.llm import direct_gemini_model_config
+
+    llm_config = None
+    if manifest is not None:
+        from ai_video_editor.experiments import load_manifest
+
+        loaded = load_manifest(manifest)
+        if model is None or model not in loaded.models:
+            logger.error("--model must name one of: {}", ", ".join(loaded.models))
+            raise typer.Exit(code=1)
+        llm_config = loaded.models[model].with_id(model)
+    elif model is not None:
+        llm_config = direct_gemini_model_config(model=model)
+
+    if all_fixtures and names:
+        logger.error("Use either --all-fixtures or --name, not both")
+        raise typer.Exit(code=1)
+    selected_names = discover_fixture_names(fixtures_dir) if all_fixtures else names or None
+    results = run_section_pilot(
+        fixtures_dir,
+        output_dir,
+        names=selected_names,
+        llm_config=llm_config,
+        compare_to=compare_to,
+        repeat_cases_path=repeat_cases,
+    )
+    if not results:
+        logger.error("No evaluable fixtures found in {}", fixtures_dir)
+        raise typer.Exit(code=1)
+    print((output_dir / "report.md").read_text("utf-8"))
+    print(f"\nreport:  {output_dir / 'report.md'}")
 
 
 @app.command("review-export")

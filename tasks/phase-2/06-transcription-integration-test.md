@@ -10,7 +10,7 @@ End-to-end validation: raw video in, sentence-level transcript with precise time
 
 ## Requirements
 
-- Full pipeline: video → audio extraction → denoise → WhisperX → words → sentences
+- Full pipeline: video → audio extraction → denoise → ElevenLabs Scribe → words → sentences → grammar correction
 - Test on real sample files (Croatian lecture recordings)
 - Verify timestamps are reasonable (not drifted, not negative)
 - Verify sentence boundaries make linguistic sense
@@ -24,6 +24,6 @@ End-to-end validation: raw video in, sentence-level transcript with precise time
 
 ## Acceptance Criteria
 
-- [x] Full pipeline runs: video → audio → denoise → WhisperX → words → sentences
+- [x] Full pipeline runs: video → audio → denoise → ElevenLabs Scribe → words → sentences
 - [x] Timestamps present and reasonable (first word at 1.168s, last word near end)
 - [x] Output JSON well-formed: 24 sentences, 697 words, cached to disk

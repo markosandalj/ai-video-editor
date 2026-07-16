@@ -2,7 +2,7 @@
 
 Status: `done`
 Phase: 6
-Depends on: phase-3 (edit decision list), phase-5 (transcript metadata enrichment)
+Depends on: phase-3 (edit decision list)
 
 ## Objective
 

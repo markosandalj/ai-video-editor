@@ -1,7 +1,6 @@
-"""Dev-only diff view: raw transcript as a canvas, with each editor's cuts marked.
+"""QA diff view: raw transcript as a canvas, with each editor's cuts marked.
 
-This powers a throwaway comparison UI (not part of the production app). For one
-video it overlays two independent edits on the *same* raw transcript:
+For one video it overlays two independent edits on the *same* raw transcript:
 
 * **Pipeline** — derived exactly from our EDL: a raw word is kept iff its
   midpoint lands inside a KEEP decision. No re-transcription, no alignment.
@@ -23,7 +22,6 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 
 from ai_video_editor.duplicate.edl import EditAction, EditDecisionList
-from ai_video_editor.enrich.cache import load_cached_enrichment
 from ai_video_editor.qa.ground_truth import _backtrack_lcs, _lcs_length_table
 from ai_video_editor.transcription.cache import cache_path_for
 from ai_video_editor.transcription.models import Sentence, Transcript
@@ -61,10 +59,6 @@ class DiffSentence(BaseModel):
     end: float
     pipeline_kept: bool
     human_kept: bool
-    keep_confidence: float | None = None
-    status: str = ""
-    tags: list[str] = Field(default_factory=list)
-    rationale: str = ""
     words: list[DiffWord] = Field(default_factory=list)
 
 
@@ -191,9 +185,6 @@ def build_diff_payload(video_path: Path) -> DiffPayload:
 
     transcript = Transcript.model_validate_json(transcript_path.read_text("utf-8"))
     edl = EditDecisionList.model_validate_json(edl_path.read_text("utf-8"))
-    enrich = load_cached_enrichment(video_path)
-    enrich_map = enrich.by_index() if enrich is not None else {}
-
     gt_path = ground_truth_path_for(video_path)
     gt: Transcript | None = None
     if gt_path.exists():
@@ -212,7 +203,6 @@ def build_diff_payload(video_path: Path) -> DiffPayload:
     agree_keep = agree_cut = pipeline_only_cut = human_only_cut = 0
 
     for sidx, sent in enumerate(raw_sentences):
-        e = enrich_map.get(sidx)
         word_human = human_word_kept.get(sidx)
 
         words: list[DiffWord] = []
@@ -264,10 +254,6 @@ def build_diff_payload(video_path: Path) -> DiffPayload:
                 end=sent.end,
                 pipeline_kept=sent_pipeline_kept,
                 human_kept=sent_human_kept if gt is not None else True,
-                keep_confidence=e.keep_confidence if e is not None else None,
-                status=e.status.value if e is not None else "",
-                tags=[t.value for t in e.tags] if e is not None else [],
-                rationale=e.rationale if e is not None else "",
                 words=words,
             )
         )

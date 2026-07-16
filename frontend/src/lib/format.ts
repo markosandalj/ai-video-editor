@@ -5,7 +5,8 @@ export function formatTimestamp(seconds: number) {
 }
 
 export function formatDuration(seconds: number) {
-  const mins = Math.floor(seconds / 60)
-  const secs = Math.round(seconds % 60)
+  const roundedSeconds = Math.round(seconds)
+  const mins = Math.floor(roundedSeconds / 60)
+  const secs = roundedSeconds % 60
   return `${mins}m ${secs}s`
 }

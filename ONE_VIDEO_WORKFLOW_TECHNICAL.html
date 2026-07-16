@@ -696,6 +696,16 @@
   </head>
   <body>
     <main class="page">
+      <section class="callout" aria-label="Historical document warning">
+        <h2>Historical architecture snapshot</h2>
+        <p>
+          This document predates the section editor becoming the default and still
+          describes the retired enrichment arbiter and annotation queue. It is kept as
+          historical context, not as runtime documentation. The current pipeline uses
+          the section editor directly, rejects risky proposals, and reviews the EDL in
+          the Transcript and Compare screens without a separate annotation pass.
+        </p>
+      </section>
       <section class="hero" aria-labelledby="title">
         <div class="hero-title">
           <p class="kicker">Technical workflow</p>
@@ -715,11 +725,11 @@
             </div>
             <div class="map-node decision">
               <strong>Decision layer</strong>
-              <span>RapidFuzz, multilingual sentence embeddings, Gemini duplicate checks, false-start and aside detection, enrichment arbiter.</span>
+              <span>RapidFuzz, multilingual sentence embeddings, guardrailed LLM verification, deterministic keep-later take selection, false-start and aside detection, enrichment arbiter.</span>
             </div>
             <div class="map-node human">
               <strong>Review layer</strong>
-              <span>Word-level keep/cut payload, reviewed edit plan, reviewed render with the raw source preserved.</span>
+              <span>Web review app (FastAPI + React), word-level keep/cut payload, pipeline-vs-human diff view, reviewed edit plan, reviewed render with the raw source preserved.</span>
             </div>
           </div>
         </aside>
@@ -812,14 +822,18 @@
                 The edit decision layer generates cut candidates from multiple signals:
                 silence, duplicate retakes, false starts, stutters, incomplete fragments,
                 off-topic asides, and acoustic disruptions. The system favors precision:
-                cheaper deterministic checks narrow the candidate set, and Gemini is used
-                for judgment where context is needed.
+                cheaper deterministic checks narrow the candidate set, an LLM verifies
+                candidates where context is needed, and the final choices — which take
+                survives, what is safe to auto-cut — are made by deterministic rules,
+                not by the model.
               </p>
               <div class="facts">
                 <div class="fact"><b>Duplicate window</b><span>Each sentence compares against the next 5 sentences by default.</span></div>
                 <div class="fact"><b>Lexical tier</b><span>RapidFuzz ratio and token-sort ratio.</span></div>
                 <div class="fact"><b>Semantic tier</b><span>SentenceTransformer paraphrase-multilingual-MiniLM-L12-v2 cosine similarity.</span></div>
-                <div class="fact"><b>LLM tier</b><span>Gemini 2.5 Flash for borderline pairs and context-heavy decisions.</span></div>
+                <div class="fact"><b>LLM tier</b><span>Configurable cutting model (default Gemini 2.5 Flash) verifies borderline pairs only.</span></div>
+                <div class="fact"><b>Take selection</b><span>Deterministic keep-later rule; the LLM no longer picks the surviving take.</span></div>
+                <div class="fact"><b>Short-pair guard</b><span>Definite matches under 4 words are demoted to LLM review, never auto-cut.</span></div>
               </div>
             </div>
           </article>
@@ -876,16 +890,20 @@
             </div>
             <div class="stage-body">
               <p>
-                The review payload exposes the raw video, timeline segments, transcript
-                sentences, per-word keep state, reasons, confidence, enrichment tags, and
-                salience scores. Reviewer changes are saved as word indices to cut. A
-                reviewed EDL is built from the remaining word spans, then rendered as a
-                separate reviewed MP4. The automatic EDL and raw recording remain intact.
+                Review happens in a local web app (FastAPI backend, React frontend): a
+                waveform timeline synced to the video, the transcript with per-word keep
+                state, and a review queue where every suggested cut carries its reason,
+                confidence, and a plain-language rationale. The payload exposes reasons,
+                enrichment tags, and salience scores; reviewer changes are saved as word
+                indices to cut. A reviewed EDL is built from the remaining word spans and
+                rendered from the same screen as a separate reviewed MP4. The automatic
+                EDL and raw recording remain intact.
               </p>
               <div class="facts">
                 <div class="fact"><b>Review granularity</b><span>Word-level keep/cut state with sentence-level grouping.</span></div>
+                <div class="fact"><b>Explanations</b><span>Each suggestion shows reason, confidence, and rationale; one-click restore.</span></div>
                 <div class="fact"><b>Reviewed artifact</b><span>Separate reviewed EDL, not an overwrite of the automatic EDL.</span></div>
-                <div class="fact"><b>Reviewed output</b><span>Rendered with output suffix reviewed.</span></div>
+                <div class="fact"><b>Reviewed output</b><span>Rendered from the review UI with output suffix reviewed.</span></div>
               </div>
             </div>
           </article>
@@ -899,9 +917,10 @@
             <h2 id="decision-title">How keep and cut decisions are made</h2>
           </div>
           <p>
-            The pipeline is not a single AI call. It is a staged classifier that narrows
-            candidates cheaply, uses embeddings for meaning, and uses Gemini where local
-            context or editorial judgment is needed.
+            The pipeline is not a single AI call, and the AI's role has been deliberately
+            narrowed: it verifies and proposes, while deterministic rules — validated
+            against 98 human-edited videos — make the final keep/cut choices such as
+            which take survives a retake.
           </p>
         </div>
 
@@ -967,9 +986,10 @@
           <ul>
             <li>RapidFuzz ratio and token-sort ratio identify exact or near-exact repetition.</li>
             <li>Multilingual MiniLM embeddings catch paraphrased repetition.</li>
-            <li>Gemini 2.5 Flash judges borderline pairs with neighboring context and time gap.</li>
+            <li>The cutting LLM judges only borderline pairs, with neighboring context and time gap.</li>
+            <li>Definite pairs whose shorter sentence has fewer than 4 words are never auto-cut — short interjections ("Dobro.", "Ok.") are recurring discourse markers, not retakes.</li>
             <li>Confirmed duplicate pairs are clustered so one sentence cannot be both kept and cut in different pair relationships.</li>
-            <li>Gemini chooses which confirmed version to keep, preferring completeness before clean delivery.</li>
+            <li>Take selection is deterministic: the later take always survives (keep-later). The former Gemini "which to keep" pass is removed from the default path — on ground truth, human editors kept the later take in 71% of near-identical and 82% of paraphrase pairs, while sentence length carried no signal.</li>
           </ul>
           <div class="tag-row">
             <span class="tag decision">window size 5</span>
@@ -977,6 +997,8 @@
             <span class="tag decision">lexical definite 90</span>
             <span class="tag decision">semantic maybe 0.75</span>
             <span class="tag decision">semantic definite 0.95</span>
+            <span class="tag decision">take selection: last</span>
+            <span class="tag decision">definite min words 4</span>
           </div>
         </article>
 
@@ -993,7 +1015,7 @@
             <li>Word-level trims are represented as timed ranges, so the rest of the sentence can stay.</li>
           </ul>
           <div class="tag-row">
-            <span class="tag decision">Gemini 2.5 Flash</span>
+            <span class="tag decision">cutting LLM verification</span>
             <span class="tag decision">word-level trim</span>
             <span class="tag decision">fragment threshold 0.8</span>
           </div>
@@ -1020,6 +1042,136 @@
         </article>
       </section>
 
+      <section class="section" aria-labelledby="policy-title">
+        <div class="section-head">
+          <div>
+            <p class="kicker">Decision policy</p>
+            <h2 id="policy-title">AI proposes, deterministic rules decide</h2>
+          </div>
+          <p>
+            The pipeline has moved away from letting the model make final editorial
+            choices. Wherever a rule measured against human editors beats LLM judgment,
+            the rule wins — and every AI proposal passes deterministic validation before
+            it becomes a cut.
+          </p>
+        </div>
+
+        <div class="grid-3">
+          <article class="card">
+            <h3>Keep-later take selection</h3>
+            <p>
+              When a duplicate is confirmed, the later take always survives. The Gemini
+              "which to keep" re-litigation pass was removed from the default path.
+            </p>
+            <ul>
+              <li>Measured on the fixture corpus: humans kept the later take in 71% of near-identical pairs and 82% of paraphrase pairs.</li>
+              <li>Keep-longer (completeness) carried no signal, so <code>prefer_completeness</code> is off by default.</li>
+              <li>A predictable rule professors can record for: flub, pause, redo clean — the earlier take is cut.</li>
+              <li>Removes an LLM call and a nondeterminism source per video.</li>
+            </ul>
+            <div class="tag-row">
+              <span class="tag decision">take_selection last</span>
+              <span class="tag decision">llm_keep_review off</span>
+            </div>
+          </article>
+
+          <article class="card">
+            <h3>Guardrails that outrank the model</h3>
+            <p>
+              Deterministic checks run after every LLM verdict, and can veto or demote it.
+            </p>
+            <ul>
+              <li>Definite similarity pairs under 4 words are demoted to review instead of auto-cut (protects recurring interjections).</li>
+              <li>Model confidence values are clamped to their valid range instead of trusted blindly.</li>
+              <li>Borderline verdicts below the confidence threshold (0.8) never become cuts.</li>
+              <li>Risky unique-content removals surface as review suggestions, not automatic cuts.</li>
+            </ul>
+            <div class="tag-row">
+              <span class="tag decision">definite_min_words 4</span>
+              <span class="tag decision">confidence gate 0.8</span>
+            </div>
+          </article>
+
+          <article class="card">
+            <h3>Measured against human editors</h3>
+            <p>
+              Every decision-policy change is justified by data, not intuition: the QA
+              harness scores the pipeline against 98 videos edited by human editors.
+            </p>
+            <ul>
+              <li>Human verdicts are derived from word-level coverage of the human editor's final video, not sentence matching.</li>
+              <li>Word-level precision/recall/F1 credits partial trims honestly.</li>
+              <li>A model-experiment runner benchmarks alternative LLMs (Gemini, GPT, Claude) via provider-agnostic manifests before any swap; <code>eval-section-editor</code> pilots the new architecture the same way.</li>
+              <li>A dev diff view overlays the pipeline's cuts and the human editor's cuts on the same raw transcript, so disagreements are visible at a glance.</li>
+              <li>LangSmith tracing can be enabled per environment to log every LLM call for debugging.</li>
+              <li>Failure patterns are catalogued in <code>MISTAKE_PATTERNS.md</code> and drive the roadmap.</li>
+            </ul>
+            <div class="tag-row">
+              <span class="tag decision">98-video ground truth</span>
+              <span class="tag decision">word-level scoring</span>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="section-editor-title">
+        <div class="section-head">
+          <div>
+            <p class="kicker">Piloted architecture</p>
+            <h2 id="section-editor-title">Section editor: the LLM only names text, code makes the cut</h2>
+          </div>
+          <p>
+            An alternative cutting architecture, off by default behind
+            <code>section_editor.enabled</code>, that pushes the same philosophy further:
+            the model works purely on text and every proposal is deterministically verified.
+          </p>
+        </div>
+
+        <div class="grid-2">
+          <article class="card">
+            <h3>Design</h3>
+            <p>
+              The tiered detector compares sentence pairs through a small model, one
+              mechanism at a time, so it overcuts paraphrases and can only remove whole
+              sentences. The section editor inverts this: one strong model reads
+              paragraph-sized sections and proposes verbatim spans to delete.
+            </p>
+            <ul>
+              <li>Transcript is tiled into ~1200-word sections snapped to pause boundaries, with overlap context but disjoint ownership.</li>
+              <li>The model returns exact text spans tagged retake, false start, stutter, filler, or redundant — whole sentences or partial spans.</li>
+              <li>Verify-the-claim: a span that cannot be located verbatim in the sentence (match ratio ≥ 0.8) is rejected outright.</li>
+              <li>Text-to-timeline mapping is a separate deterministic step over existing word timestamps — the model never touches time.</li>
+              <li>Keep-later, recap time-gap (60 s), and short-interjection guardrails demote or reject risky retake deletions; "redundant" deletions always land as review suggestions.</li>
+            </ul>
+            <div class="tag-row">
+              <span class="tag decision">off by default</span>
+              <span class="tag decision">span match ≥ 0.8</span>
+              <span class="tag decision">protect &lt; 4 words</span>
+              <span class="tag decision">retake gap ≤ 60 s</span>
+            </div>
+          </article>
+
+          <article class="card">
+            <h3>Pilot results (10 fixtures, word-level scoring)</h3>
+            <p>
+              Compared against the tiered detector on the same fixtures, scored word by
+              word against the human edit.
+            </p>
+            <ul>
+              <li>Cut F1 0.491 → 0.670 (+0.180 aggregate); 8 of 10 fixtures improved.</li>
+              <li>Cut precision 0.397 → 0.670: overcut words dropped 3,145 → 1,067 (−66%) at held recall.</li>
+              <li>Word-level trims the tiered detector could not express: one fixture produced 62 full-sentence cuts plus 39 partial trims.</li>
+              <li>Health telemetry (failed sections, rejected spans) prevents a broken model run from masquerading as a conservative editor.</li>
+              <li>Next: strong-model comparison (Gemini 2.5 Pro vs GPT-5.5 vs Claude) via <code>eval-section-editor</code>, then scale to all 98 fixtures before promotion.</li>
+            </ul>
+            <div class="tag-row">
+              <span class="tag decision">F1 +0.180</span>
+              <span class="tag decision">overcuts −66%</span>
+            </div>
+          </article>
+        </div>
+      </section>
+
       <section class="section" aria-labelledby="models-title">
         <div class="section-head">
           <div>
@@ -1027,8 +1179,9 @@
             <h2 id="models-title">Current model stack</h2>
           </div>
           <p>
-            WhisperX fields still exist for experiments, but the active single-video CLI
-            path uses ElevenLabs Scribe plus Gemini and sentence-transformer models.
+            LLM calls go through a provider-agnostic LangChain layer, so every model
+            below is a configurable default, not a hardwired dependency — experiment
+            manifests swap in OpenAI, OpenRouter, or Anthropic models for benchmarking.
           </p>
         </div>
 
@@ -1069,10 +1222,16 @@
                 <td>maybe threshold 0.75, definite threshold 0.95.</td>
               </tr>
               <tr>
-                <td><strong>Editorial judgment</strong></td>
-                <td>Gemini 2.5 Flash</td>
-                <td>Duplicate verification, best-version selection, false-start blocks, stutters, fragments, and asides.</td>
-                <td>temperature 0.0, structured outputs, retries, contextual prompts in Croatian.</td>
+                <td><strong>Cut verification</strong></td>
+                <td>Configurable cutting LLM (default Gemini 2.5 Flash)</td>
+                <td>Verifies borderline duplicates, false-start blocks, stutters, fragments, and asides. No longer selects which duplicate take to keep — that is the deterministic keep-later rule.</td>
+                <td>temperature 0.0, structured outputs, confidence clamped, verdicts gated at 0.8; take_selection last.</td>
+              </tr>
+              <tr>
+                <td><strong>Section editor (pilot)</strong></td>
+                <td>Configurable strong model (default Gemini 2.5 Pro; GPT-5.5 and Claude under comparison)</td>
+                <td>Reads paragraph-sized sections and proposes verbatim deletion spans; deterministic code verifies each span, maps it to word timestamps, and applies the guardrails.</td>
+                <td>off by default, ~1200-word sections, span match ratio 0.8, redundant cuts demoted to review.</td>
               </tr>
               <tr>
                 <td><strong>Enrichment and arbiter</strong></td>
@@ -1325,11 +1484,13 @@
             <li>Reviewer changes are represented as the set of word indices to cut.</li>
             <li>The reviewed EDL is rebuilt from contiguous kept word spans.</li>
             <li>The reviewed render uses the same raw video and denoised audio path, but with reviewed decisions.</li>
+            <li>A separate diff endpoint renders the raw transcript with each editor's cuts struck through — pipeline decisions from the EDL, human decisions from word-level alignment to the edited video's re-transcription.</li>
           </ul>
           <div class="tag-row">
             <span class="tag human">word-level review</span>
             <span class="tag human">review.v2 payload</span>
             <span class="tag human">separate reviewed EDL</span>
+            <span class="tag human">diff view</span>
           </div>
         </article>
       </section>
@@ -1384,8 +1545,10 @@ VAŽNO - Ovo je već nekoliko puta provjereni tekst:
           </details>
 
           <details class="prompt-card">
-            <summary>DUPLICATE_PROMPT <span>borderline duplicate verification</span></summary>
+            <summary>DUPLICATE_PROMPT <span>borderline duplicate verification — preferred_index is ignored under the default take_selection="last"</span></summary>
             <pre class="prompt-body">Jesi li ekspert za analizu govornog jezika na hrvatskom. Tvoj zadatak je odlučiti jesu li parovi rečenica iz video lekcije **ponavljanja** (govornik je rekao istu stvar dva puta, jednom pogrešno pa zatim ispravno).
+
+ODGOVOR: Vrati isključivo validan json koji odgovara zadanoj structured-output shemi. Ne koristi Markdown, code blockove ni dodatni tekst.
 
 PRAVILA:
 - "Duplikat" znači da je govornik ponovio istu misao — NE da su rečenice slične po temi
@@ -1402,18 +1565,19 @@ Za svaki par navedi:
 - is_duplicate: true/false
 - confidence: 0.0-1.0 (koliko si siguran)
 - reasoning: kratko objašnjenje na hrvatskom
-- preferred_index: AKO je duplikat, navedi indeks rečenice koja je BOLJA verzija i koju treba ZADRŽATI. Kriteriji za odabir (ovim redoslijedom):
-  1. Potpunija misao (više informativnog sadržaja, cjelovitije objašnjenje) — u edukacijskim lekcijama dulja verzija je obično vrjednija
-  2. Čišća izvedba (manje poštapalica, manje oklijevanja, manje nedovršenih riječi)
-  3. Ako su jednake kvalitete, preferiraj KASNIJU verziju (govornik obično ispravlja/poboljšava)
+- preferred_index: AKO je duplikat, navedi indeks rečenice koju treba ZADRŽATI. Pravilo odabira:
+  1. Zadano zadrži KASNIJU verziju (veći indeks) — govornik ponavlja upravo zato da ispravi ili poboljša raniju izvedbu
+  2. Odaberi RANIJU verziju SAMO ako je kasnija OČITO lošija: prekinuta, nedovršena, s više poštapalica ili s manje sadržaja
 
 Parovi rečenica za analizu:
 {pairs_text}</pre>
           </details>
 
           <details class="prompt-card">
-            <summary>WHICH_TO_KEEP_PROMPT <span>default confirmed-duplicate keep selection</span></summary>
+            <summary>WHICH_TO_KEEP_PROMPT <span>legacy — off by default; only under take_selection="gemini" with llm_keep_review=true</span></summary>
             <pre class="prompt-body">Ti si ekspert za analizu govornog jezika na hrvatskom. Ove rečenice su potvrđeni duplikati — govornik je rekao istu stvar dva puta. Odaberi BOLJU verziju za zadržati.
+
+ODGOVOR: Vrati isključivo validan json koji odgovara zadanoj structured-output shemi. Ne koristi Markdown, code blockove ni dodatni tekst.
 
 Kriteriji (ovim redoslijedom):
 1. Potpunija misao (više informativnog sadržaja, cjelovitije objašnjenje) — u edukacijskim lekcijama dulja, potpunija verzija je obično vrjednija
@@ -1425,8 +1589,10 @@ Parovi:
           </details>
 
           <details class="prompt-card">
-            <summary>WHICH_TO_KEEP_PROMPT_CLEAN <span>alternate keep selection when completeness preference is disabled</span></summary>
+            <summary>WHICH_TO_KEEP_PROMPT_CLEAN <span>legacy — cleanliness-first variant of the same off-by-default pass</span></summary>
             <pre class="prompt-body">Ti si ekspert za analizu govornog jezika na hrvatskom. Ove rečenice su potvrđeni duplikati — govornik je rekao istu stvar dva puta. Odaberi BOLJU verziju za zadržati.
+
+ODGOVOR: Vrati isključivo validan json koji odgovara zadanoj structured-output shemi. Ne koristi Markdown, code blockove ni dodatni tekst.
 
 Kriteriji (ovim redoslijedom):
 1. Čišća izvedba (manje poštapalica, oklijevanja, nedovršenih riječi)
@@ -1440,6 +1606,8 @@ Parovi:
           <details class="prompt-card">
             <summary>FALSE_START_PROMPT <span>sentences between confirmed duplicate takes</span></summary>
             <pre class="prompt-body">Analiziraj sljedeći blok rečenica iz video lekcije na hrvatskom. Ove rečenice se nalaze IZMEĐU dva ponavljanja — govornik je rekao istu stvar prije i poslije ovog bloka.
+
+ODGOVOR: Vrati isključivo validan json koji odgovara zadanoj structured-output shemi. Ne koristi Markdown, code blockove ni dodatni tekst.
 
 Tvoj zadatak: odluči koje od ovih rečenica su **lažni počeci, nedovršene misli ili filler** koji se mogu izbaciti, a koje su **stvarni sadržaj** koji treba zadržati.
 
@@ -1463,6 +1631,8 @@ Kontekst — rečenica NAKON bloka:
             <summary>STUTTER_PROMPT <span>word-level stutter verification</span></summary>
             <pre class="prompt-body">Analiziraj sljedeću rečenicu iz video lekcije na hrvatskom. Rečenica sadrži ponovljene riječi/fraze koje ukazuju na mucanje ili lažni početak.
 
+ODGOVOR: Vrati isključivo validan json koji odgovara zadanoj structured-output shemi. Ne koristi Markdown, code blockove ni dodatni tekst.
+
 Tvoj zadatak: prepoznaj koje RIJEČI su dio mucanja (ponovljeni/nedovršeni dio) i koje treba IZBACITI, a koje su dio čistog izlaganja i treba ih ZADRŽATI.
 
 PRAVILA:
@@ -1485,6 +1655,8 @@ Kontekst — rečenica NAKON:
             <summary>FRAGMENT_PROMPT <span>incomplete fragment verification</span></summary>
             <pre class="prompt-body">Ti si profesionalni video editor. Pregledaj sljedeće kandidate za nepotpune fragmente u kontekstu okolnih rečenica.
 
+ODGOVOR: Vrati isključivo validan json koji odgovara zadanoj structured-output shemi. Ne koristi Markdown, code blockove ni dodatni tekst.
+
 Za SVAKI kandidat odgovori:
 - should_cut: true AKO je fragment nepotpun/nedovršen i potpunija verzija postoji u okolnim rečenicama
 - should_cut: false AKO fragment zapravo služi svrsi (naglasak, prijelaz, uvod)
@@ -1500,6 +1672,8 @@ Kandidati:
           <details class="prompt-card">
             <summary>ASIDE_PROMPT <span>off-lesson aside and production noise verification</span></summary>
             <pre class="prompt-body">Ti si profesionalni video editor za edukacijske lekcije na hrvatskom. Pregledaj sljedeće kandidate u kontekstu okolnih rečenica.
+
+ODGOVOR: Vrati isključivo validan json koji odgovara zadanoj structured-output shemi. Ne koristi Markdown, code blockove ni dodatni tekst.
 
 Tvoj zadatak: za SVAKI kandidat odluči je li dio LEKCIJE ili je usputni komentar / smetnja koju treba izbaciti.
 
@@ -1519,8 +1693,34 @@ Kandidati (svaki s kontekstom; kandidat označen s &lt;&lt;&lt;):
           </details>
 
           <details class="prompt-card">
+            <summary>SECTION_PROMPT <span>piloted section editor — verbatim deletion spans, deterministically validated</span></summary>
+            <pre class="prompt-body">Ti si iskusan video editor za edukacijske lekcije na hrvatskom. Dobivaš ODLOMAK transkripta snimke. Govornik snima u jednom dahu i često pogriješi pa ponovi — tvoj zadatak je označiti dijelove koje treba IZBACITI da montaža bude čista, a da se ne izgubi sadržaj.
+
+ODGOVOR: Vrati isključivo validan JSON prema shemi. Bez Markdowna, bez dodatnog teksta.
+
+ŠTO IZBACITI (delete_type):
+- "retake": govornik je istu misao rekao dva puta (lažni pa ispravan pokušaj). Izbaci RANIJU verziju, zadrži KASNIJU. U kept_index navedi indeks verzije koju zadržavaš.
+- "false_start": započeta pa prekinuta misao ("Dakle, ovaj-", "Kako bismo, kako bismo..."), nakon koje slijedi potpuna verzija.
+- "stutter": ponovljene/zamuckane riječi UNUTAR rečenice ("Firstly, youngsters s- Firstly, youngsters spend..."). Izbaci SAMO zamuckani dio, ne cijelu rečenicu.
+- "filler": prazne poštapalice bez sadržaja ("znači", "evo", "ovaj" same za sebe).
+- "redundant": rečenica koja ne dodaje NIŠTA novo jer je sadržaj već rečen (npr. suvišno prepričavanje). Budi OPREZAN — ovo je najrizičnije.
+
+KLJUČNA PRAVILA:
+- verbatim_text MORA biti točno prepisan iz rečenice (može biti dio rečenice za djelomično izbacivanje).
+- Za zamuckivanje/lažni početak izbaci samo pogrešni dio, ne cijelu rečenicu.
+- Ako govornik ponovi kratku frazu radi naglaska ili se vraća temi kao PODSJETNIKU (velik vremenski razmak), NE briši — to nije retake.
+- Kad nisi siguran, radije NE briši (montažer lakše doda cut nego što vrati izgubljen sadržaj).
+- Označavaj SAMO rečenice s indeksima koji su u rasponu za uređivanje: {editable_range}. Rečenice označene (kontekst) su samo za razumijevanje — NE vraćaj brisanja za njih.
+
+Odlomak (indeksi su globalni):
+{section_text}</pre>
+          </details>
+
+          <details class="prompt-card">
             <summary>ENRICH_PROMPT <span>independent per-sentence enrichment and arbiter input</span></summary>
             <pre class="prompt-body">Ti si iskusni video editor koji montira edukacijske lekcije na hrvatskom jeziku, snimljene neformalnim govornim stilom. Za SVAKU rečenicu NEOVISNO procijeni pripada li u finalnu montažu. Rečenice su dane redoslijedom kako su izgovorene, pa koristi susjedne rečenice da prepoznaš ponavljanja.
+
+ODGOVOR: Vrati isključivo validan json koji odgovara zadanoj structured-output shemi. Ne koristi Markdown, code blockove ni dodatni tekst.
 
 KAKO LJUDSKI EDITOR ODLUČUJE:
 - ZADRŽAVA: svaki jedinstven sadržaj (korak, definiciju, formulu, međurezultat, odgovor) I prirodan govorni tok — kratke potvrde i prijelaze ("Okej", "Dobro", "Evo", "Pa evo", "Znači", "Dakle", "Jel tako?"). Prirodne poštapalice koje zvuče normalno OSTAJU u videu.
@@ -1548,6 +1748,8 @@ Rečenice (redoslijedom; svaka s riječima):
           <details class="prompt-card">
             <summary>HOLISTIC_PROMPT <span>defined in code; not on the default single-video path</span></summary>
             <pre class="prompt-body">Ti si profesionalni video editor za edukacijske video lekcije na hrvatskom jeziku. Pregledaj sljedeći transkript i označi rečenice koje su **nepotrebne** i mogu se izbaciti bez gubitka sadržaja.
+
+ODGOVOR: Vrati isključivo validan json koji odgovara zadanoj structured-output shemi. Ne koristi Markdown, code blockove ni dodatni tekst.
 
 PRAVILA:
 - "Nepotrebna" znači da rečenica NE dodaje nikakvu novu informaciju koju kontekst već ne pokriva
@@ -1578,6 +1780,7 @@ Transkript (s indeksima originalnih rečenica):
         <div class="callout risk">
           <h3>Known technical gaps before production service use</h3>
           <ul>
+            <li>The section-editor architecture is piloted on 10 fixtures; the strong-model comparison and the full 98-fixture run are pending before it is promoted to the default path.</li>
             <li>Production render settings are not finalized; current defaults are development-oriented.</li>
             <li>Intro and outro insertion is not implemented.</li>
             <li>Professional NLE export is planned but not part of the current active single-video flow.</li>

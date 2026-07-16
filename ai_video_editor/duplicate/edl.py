@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field, computed_field
 
 from ai_video_editor.audio.models import KeepRegion
 from ai_video_editor.duplicate.models import DuplicateFlag, FlagReason
-from ai_video_editor.transcription.models import Sentence, Transcript
+from ai_video_editor.transcription.models import Transcript
 
 
 class EditAction(str, Enum):
@@ -92,9 +92,16 @@ def build_edl(
 
     total_dur = transcript.sentences[-1].end
     full_cut_flags = {f.idx for f in duplicate_flags if not f.word_trims}
-    word_trim_flags = {f.idx: f for f in duplicate_flags if f.word_trims}
+    word_trim_flags = [f for f in duplicate_flags if f.word_trims]
     flagged: set[int] = full_cut_flags
-    flag_by_idx = {f.idx: f for f in duplicate_flags}
+
+    cut_sources: list[tuple[float, float, DuplicateFlag]] = []
+    for flag in duplicate_flags:
+        if flag.word_trims:
+            cut_sources.extend((trim.start, trim.end, flag) for trim in flag.word_trims)
+        elif 0 <= flag.idx < len(transcript.sentences):
+            sentence = transcript.sentences[flag.idx]
+            cut_sources.append((sentence.start, sentence.end, flag))
 
     keep_spans: list[tuple[float, float]] = []
 
@@ -146,7 +153,7 @@ def build_edl(
             merged.append((start, end))
 
     word_trim_cuts: list[tuple[float, float]] = []
-    for flag in word_trim_flags.values():
+    for flag in word_trim_flags:
         for wt in flag.word_trims:
             word_trim_cuts.append((wt.start, wt.end))
     word_trim_cuts.sort()
@@ -174,13 +181,7 @@ def build_edl(
 
     for start, end in merged:
         if start > prev_end + 0.01:
-            cut_reason = _classify_gap(prev_end, start, transcript.sentences, flag_by_idx)
-            decisions.append(EditDecision(
-                start=prev_end,
-                end=start,
-                action=EditAction.CUT,
-                reason=cut_reason,
-            ))
+            decisions.extend(_cut_decisions_for_gap(prev_end, start, cut_sources))
 
         decisions.append(EditDecision(
             start=start,
@@ -191,12 +192,7 @@ def build_edl(
         prev_end = end
 
     if prev_end < total_dur - 0.01:
-        decisions.append(EditDecision(
-            start=prev_end,
-            end=total_dur,
-            action=EditAction.CUT,
-            reason=EditReason.SILENCE,
-        ))
+        decisions.extend(_cut_decisions_for_gap(prev_end, total_dur, cut_sources))
 
     edl = EditDecisionList(
         decisions=decisions,
@@ -214,15 +210,43 @@ def build_edl(
     return edl
 
 
-def _classify_gap(
+def _cut_decisions_for_gap(
     gap_start: float,
     gap_end: float,
-    sentences: list[Sentence],
-    flag_by_idx: dict[int, DuplicateFlag],
-) -> EditReason:
-    """Determine why a gap exists — silence, duplicate, or false start."""
-    for idx, sent in enumerate(sentences):
-        if sent.start >= gap_start and sent.end <= gap_end and idx in flag_by_idx:
-            flag = flag_by_idx[idx]
-            return _flag_reason_to_edit_reason(flag.reason)
-    return EditReason.SILENCE
+    cut_sources: list[tuple[float, float, DuplicateFlag]],
+) -> list[EditDecision]:
+    """Split one cut gap into genuine silence and provenance-bearing text cuts."""
+    overlapping = [
+        (max(gap_start, start), min(gap_end, end), flag)
+        for start, end, flag in cut_sources
+        if start < gap_end and end > gap_start
+    ]
+    boundaries = {gap_start, gap_end}
+    for start, end, _flag in overlapping:
+        boundaries.update((start, end))
+
+    points = sorted(boundaries)
+    decisions: list[EditDecision] = []
+    for start, end in zip(points, points[1:]):
+        if end <= start + 0.001:
+            continue
+        midpoint = (start + end) / 2.0
+        sources = [
+            flag
+            for source_start, source_end, flag in overlapping
+            if source_start <= midpoint <= source_end
+        ]
+        source = max(sources, key=lambda flag: flag.confidence) if sources else None
+        decisions.append(EditDecision(
+            start=start,
+            end=end,
+            action=EditAction.CUT,
+            reason=(
+                _flag_reason_to_edit_reason(source.reason)
+                if source is not None
+                else EditReason.SILENCE
+            ),
+            confidence=source.confidence if source is not None else 1.0,
+            note=source.note if source is not None else "",
+        ))
+    return decisions

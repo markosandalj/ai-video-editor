@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from ai_video_editor.llm import LangChainModelConfig
 
 
-ExperimentPart = Literal["cutting", "annotations"]
+ExperimentPart = Literal["cutting"]
 
 
 class ExperimentRunConfig(BaseModel):
@@ -22,6 +22,11 @@ class ExperimentRunConfig(BaseModel):
 
 
 class ExperimentManifest(BaseModel):
+    """Cutting-model experiment manifest.
+
+    Annotation experiments were removed with the enrichment subsystem.
+    """
+
     model_config = ConfigDict(extra="forbid")
 
     models: dict[str, LangChainModelConfig] = Field(default_factory=dict)
@@ -41,7 +46,6 @@ class ExperimentManifest(BaseModel):
         missing_models = sorted({run.model for run in self.runs if run.model not in self.models})
         if missing_models:
             raise ValueError(f"Runs reference unknown models: {', '.join(missing_models)}")
-
         if not self.runs:
             raise ValueError("Manifest must contain at least one run.")
         if not self.models:
@@ -54,8 +58,5 @@ class ExperimentManifest(BaseModel):
 
 def load_manifest(path: Path) -> ExperimentManifest:
     raw = path.read_text(encoding="utf-8")
-    if path.suffix.lower() == ".toml":
-        data = tomllib.loads(raw)
-    else:
-        data = json.loads(raw)
+    data = tomllib.loads(raw) if path.suffix.lower() == ".toml" else json.loads(raw)
     return ExperimentManifest.model_validate(data)

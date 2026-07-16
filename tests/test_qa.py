@@ -34,7 +34,7 @@ from ai_video_editor.qa.regression import (
     record_scores,
 )
 from ai_video_editor.qa.report import generate_report
-from ai_video_editor.transcription.models import Sentence, Word
+from ai_video_editor.transcription.models import Sentence, Transcript, Word
 
 
 def _make_sentence(text: str, start: float = 0.0, end: float = 1.0) -> Sentence:
@@ -268,6 +268,62 @@ class TestWordCoverageDecisionEval:
         assert score.fn == 0
 
 
+class TestCliCutDecisionEvaluation:
+    def test_qa_report_scores_partial_trim_at_word_level(self, tmp_path: Path):
+        from ai_video_editor.cli.app import _eval_cut_decisions
+
+        words = [
+            Word(text=text, start=float(i), end=float(i + 1))
+            for i, text in enumerate("aa bb cc dd ee ff".split())
+        ]
+        raw = [Sentence(words=words, text="aa bb cc dd ee ff", start=0.0, end=6.0)]
+        gt = [_make_sentence("dd ee ff", 0.0, 3.0)]
+        edl = EditDecisionList(
+            decisions=[
+                EditDecision(
+                    start=0.0,
+                    end=3.0,
+                    action=EditAction.CUT,
+                    reason=EditReason.FALSE_START,
+                ),
+                EditDecision(
+                    start=3.0,
+                    end=6.0,
+                    action=EditAction.KEEP,
+                    reason=EditReason.SPEECH,
+                ),
+            ],
+            total_duration=6.0,
+        )
+        raw_path = tmp_path / "partial-trim-raw.mp4"
+        raw_path.with_suffix(".transcript.json").write_text(
+            Transcript(
+                sentences=raw,
+                source_video=str(raw_path),
+                language="hr",
+                model_size="test",
+            ).model_dump_json(),
+            encoding="utf-8",
+        )
+
+        result = _eval_cut_decisions(
+            raw_path,
+            edl,
+            gt,
+            name="partial-trim",
+            issues=[],
+        )
+
+        assert result is not None
+        assert result.granularity == "word"
+        assert result.true_cuts == 3
+        assert result.true_keeps == 3
+        assert result.missed_cuts == 0
+        assert result.overcuts == 0
+        assert result.right_cut_by_reason == {"false_start": 3}
+        assert result.cut_f1 == pytest.approx(1.0)
+
+
 class TestCutDecisionResult:
     def test_no_cuts_needed_none_made_is_perfect(self):
         """A video that needs no cuts and gets none is a perfect edit."""
@@ -438,6 +494,22 @@ class TestHTMLReport:
         assert "test-video" in html
         assert "Test warning" in html
         assert "Precision" in html
+
+    def test_labels_word_level_cut_counts_as_words(self):
+        report = QAReport(
+            video_name="partial-trim",
+            cut_decisions=CutDecisionResult(
+                granularity="word",
+                true_cuts=3,
+                true_keeps=3,
+            ),
+        )
+
+        html = generate_report(report)
+
+        assert "Word-Level Cut Decisions vs Human" in html
+        assert "Correctly cut words" in html
+        assert "Needed cuts (human)" not in html
 
 
 class TestDiscoverPairs:

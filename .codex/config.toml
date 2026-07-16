@@ -1,0 +1,18 @@
+[mcp_servers.langsmith]
+command = "uv"
+args = ["run", "dotenv", "run", "--", "uvx", "langsmith-mcp-server"]
+startup_timeout_sec = 30
+tool_timeout_sec = 60
+enabled = true
+required = false
+enabled_tools = [
+  "get_thread_history",
+  "fetch_runs",
+  "list_projects",
+  "list_datasets",
+  "list_examples",
+  "read_dataset",
+  "read_example",
+  "list_experiments",
+]
+default_tools_approval_mode = "writes"

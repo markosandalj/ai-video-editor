@@ -12,7 +12,7 @@ Extract audio track from input video files to WAV format for downstream processi
 
 - Use `ffmpeg-python` wrapper to call FFmpeg
 - Keep the source's original sample rate (no forced resampling at extraction)
-- Downstream steps handle their own resampling as needed (e.g., Whisper needs 16kHz)
+- Downstream transcription handles its own media decoding and resampling.
 - Support common formats: MP4, MOV, MKV, AVI, WEBM, M4V
 - Keep intermediate WAV in `temp_dir` for debugging
 - Add `AudioConfig` section to Settings (sample_rate override if ever needed)

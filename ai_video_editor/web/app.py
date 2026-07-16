@@ -8,6 +8,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from ai_video_editor.audio.snap import ensure_audio_envelope, envelope_to_peaks
 from ai_video_editor.config.settings import RenderConfig
 from ai_video_editor.duplicate.edl import EditDecisionList
 from ai_video_editor.render import render_video
@@ -26,6 +27,15 @@ from ai_video_editor.web.diff import DiffPayload, build_diff_payload
 class RenderResponse(BaseModel):
     output_path: str
     output_name: str
+
+
+class PeaksPayload(BaseModel):
+    """Downsampled audio waveform for the timeline strip."""
+
+    version: str = "peaks.v1"
+    duration: float
+    length: int
+    peaks: list[float]
 
 
 def create_app(
@@ -51,13 +61,13 @@ def create_app(
     def get_review(video_id: str) -> ReviewPayload:
         video_path = _video_by_id(root, video_id)
         try:
-            return load_review_payload(video_path)
+            return load_review_payload(video_path, _denoised_audio_path(video_path))
         except FileNotFoundError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     @app.get("/api/videos/{video_id}/diff", response_model=DiffPayload)
     def get_diff(video_id: str) -> DiffPayload:
-        """Dev-only: raw transcript with pipeline vs human-edit cuts overlaid."""
+        """Raw transcript with pipeline vs human-edit cuts overlaid for QA."""
         video_path = _video_by_id(root, video_id)
         try:
             return build_diff_payload(video_path)
@@ -68,7 +78,7 @@ def create_app(
     def save_review(video_id: str, request: ReviewSaveRequest) -> ReviewSaveResponse:
         video_path = _video_by_id(root, video_id)
         try:
-            return save_reviewed_edl(video_path, request)
+            return save_reviewed_edl(video_path, request, _denoised_audio_path(video_path))
         except FileNotFoundError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 
@@ -94,6 +104,17 @@ def create_app(
         output = render_video(video_path, edl, denoised, cfg)
         return RenderResponse(output_path=str(output), output_name=output.name)
 
+    @app.get("/api/videos/{video_id}/peaks", response_model=PeaksPayload)
+    def get_peaks(video_id: str, buckets: int = 8000) -> PeaksPayload:
+        """Downsampled waveform peaks for the timeline (built from the cached
+        RMS envelope; degrades to an empty waveform if no audio is available)."""
+        video_path = _video_by_id(root, video_id)
+        envelope = ensure_audio_envelope(video_path, _denoised_audio_path(video_path))
+        if envelope is None:
+            return PeaksPayload(duration=_source_duration(video_path), length=0, peaks=[])
+        peaks = envelope_to_peaks(envelope, buckets=max(1, min(buckets, 40000)))
+        return PeaksPayload(duration=envelope.duration_s, length=len(peaks), peaks=peaks)
+
     @app.get("/media/{video_id}")
     def media(video_id: str) -> FileResponse:
         video_path = _video_by_id(root, video_id)
@@ -101,6 +122,16 @@ def create_app(
 
     dist = Path(frontend_dist).expanduser().resolve() if frontend_dist else _default_frontend_dist()
     if dist.exists():
+        @app.get("/videos/{video_id}", include_in_schema=False)
+        def video_route(video_id: str) -> FileResponse:
+            """Serve the SPA shell when a video URL is opened or refreshed directly."""
+            return FileResponse(dist / "index.html")
+
+        @app.get("/videos/{video_id}/{view}", include_in_schema=False)
+        def video_view_route(video_id: str, view: str) -> FileResponse:
+            """Serve the SPA shell for a directly opened editor view."""
+            return FileResponse(dist / "index.html")
+
         app.mount("/", StaticFiles(directory=dist, html=True), name="frontend")
 
     return app
@@ -144,6 +175,14 @@ def _summary_for(video_path: Path) -> ReviewVideoSummary:
         has_review=review_edl_path_for(video_path).exists(),
         duration=duration,
     )
+
+
+def _source_duration(video_path: Path) -> float:
+    edl_path = video_path.with_suffix(".edl.json")
+    if not edl_path.exists():
+        return 0.0
+    edl = EditDecisionList.model_validate_json(edl_path.read_text(encoding="utf-8"))
+    return edl.total_duration
 
 
 def _denoised_audio_path(video_path: Path) -> Path | None:

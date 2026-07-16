@@ -1,18 +1,13 @@
 """Orchestration of the edit-decision layer.
 
 Single source of truth for how raw transcript + silence/keep regions become an
-EDL, shared by ``process`` and ``batch`` so the two never drift. The ordering is:
+EDL, shared by ``process`` and ``batch`` so the two never drift:
 
-    duplicates → asides → base EDL → enrichment → arbiter → final EDL
+    section editor → audio false starts → asides → final EDL
 
-Enrichment and the arbiter are best-effort: any failure falls back to the base
-EDL so a video is always rendered.
+The review UI consumes the EDL directly; there is no separate annotation pass.
 """
 from __future__ import annotations
-
-from pathlib import Path
-
-from loguru import logger
 
 from ai_video_editor.audio.models import DisruptionRegion, KeepRegion, SilenceRegion
 from ai_video_editor.config.settings import Settings
@@ -21,14 +16,7 @@ from ai_video_editor.duplicate.edl import EditDecisionList, build_edl
 from ai_video_editor.duplicate.false_start_audio import detect_audio_false_starts
 from ai_video_editor.duplicate.models import DuplicateFlag, FlagReason
 from ai_video_editor.duplicate.pipeline import detect_duplicates
-from ai_video_editor.enrich import (
-    EnrichmentResult,
-    apply_enrichment_arbiter,
-    enrich_transcript,
-    load_cached_enrichment,
-    restatus_against_edl,
-    save_enrichment,
-)
+from ai_video_editor.duplicate.section_editor import detect_section_edits
 from ai_video_editor.llm import LangChainModelConfig
 from ai_video_editor.transcription.models import Transcript
 
@@ -44,18 +32,26 @@ def detect_all_flags(
     """Duplicate/false-start/stutter/fragment flags, aside flags, and audio-driven
     (cough/noise) false starts."""
     llm_config = cutting_llm_config or settings.cutting_llm
-    flags = detect_duplicates(
-        transcript.sentences,
-        settings.duplicate_detection,
-        llm_config=llm_config,
-    )
+    if settings.section_editor.enabled:
+        # Section editor replaces the tiered duplicate detector for text-judgment
+        # cuts; the audio lane (disruptions, asides) below still runs.
+        flags = detect_section_edits(
+            transcript.sentences,
+            settings.section_editor,
+            llm_config=settings.section_editor.llm,
+        )
+    else:
+        flags = detect_duplicates(
+            transcript.sentences,
+            settings.duplicate_detection,
+            llm_config=llm_config,
+        )
     flagged = {f.idx for f in flags if not f.word_trims}
 
     # Audio evidence can overlap a text-derived flag. In that case it should
     # *upgrade* the existing full-sentence flag rather than being skipped: the
-    # text-only enrichment arbiter may restore a short phrase that reads like a
-    # natural transition, but the cough/noise in the pause is independent evidence
-    # that it was a flubbed restart.
+    # cough/noise in the pause is independent evidence that it was a flubbed
+    # restart.
     audio_fs_flags = detect_audio_false_starts(
         transcript.sentences, disruptions, set(), settings.false_start_audio
     )
@@ -89,47 +85,13 @@ def detect_all_flags(
 
 
 def decide_edits(
-    video_path: Path,
     transcript: Transcript,
     keeps: list[KeepRegion],
     silences: list[SilenceRegion],
     settings: Settings,
     *,
-    force: bool,
-    log,
     disruptions: list[DisruptionRegion] | None = None,
-) -> tuple[EditDecisionList, EnrichmentResult | None]:
-    """Produce the final EDL and (when enabled) the enrichment sidecar."""
+) -> EditDecisionList:
+    """Produce the final EDL from the active cutting lanes."""
     flags = detect_all_flags(transcript, silences, disruptions or [], settings)
-    edl = build_edl(transcript, keeps, flags)
-
-    enrichment: EnrichmentResult | None = None
-    if not settings.enrichment.enabled:
-        log.info("Enrichment disabled — skipping arbiter")
-        return edl, None
-
-    try:
-        enrichment = None if force else load_cached_enrichment(video_path)
-        if enrichment is None:
-            enrichment = enrich_transcript(transcript, edl, settings.enrichment)
-
-        if settings.enrichment.arbiter_enabled:
-            revised = apply_enrichment_arbiter(
-                flags, transcript, enrichment, settings.enrichment
-            )
-            if revised != flags:
-                edl = build_edl(transcript, keeps, revised)
-                enrichment = restatus_against_edl(
-                    enrichment, transcript, edl, settings.enrichment
-                )
-        save_enrichment(video_path, enrichment)
-        statuses: dict[str, int] = {}
-        for s in enrichment.sentences:
-            statuses[s.status.value] = statuses.get(s.status.value, 0) + 1
-        log.info("Enrichment: {} sentences scored ({})", len(enrichment.sentences), statuses)
-    except Exception:
-        log.exception("Enrichment/arbiter failed for {} — using base EDL", video_path)
-        # Re-derive the base EDL untouched so a failure can't leave a half-applied state.
-        edl = build_edl(transcript, keeps, flags)
-
-    return edl, enrichment
+    return build_edl(transcript, keeps, flags)

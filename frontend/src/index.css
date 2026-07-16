@@ -42,12 +42,6 @@
   --cut: oklch(0.577 0.245 27.325);
   --changed: oklch(0.75 0.16 75);
   --playing: oklch(0.62 0.19 256);
-
-  /* Enrichment status tokens */
-  --status-green: oklch(0.627 0.17 149);
-  --status-yellow: oklch(0.78 0.16 85);
-  --status-red: oklch(0.6 0.22 27);
-  --status-restore: oklch(0.62 0.2 295);
 }
 
 .dark {
@@ -87,11 +81,6 @@
   --cut: oklch(0.704 0.191 22.216);
   --changed: oklch(0.8 0.15 80);
   --playing: oklch(0.7 0.16 256);
-
-  --status-green: oklch(0.7 0.16 149);
-  --status-yellow: oklch(0.82 0.15 85);
-  --status-red: oklch(0.704 0.191 22.216);
-  --status-restore: oklch(0.7 0.18 295);
 }
 
 @theme inline {
@@ -134,10 +123,6 @@
   --color-cut: var(--cut);
   --color-changed: var(--changed);
   --color-playing: var(--playing);
-  --color-status-green: var(--status-green);
-  --color-status-yellow: var(--status-yellow);
-  --color-status-red: var(--status-red);
-  --color-status-restore: var(--status-restore);
 }
 
 @layer base {
@@ -145,6 +130,6 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply relative bg-background text-foreground;
   }
 }
