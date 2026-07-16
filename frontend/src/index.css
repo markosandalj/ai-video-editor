@@ -42,7 +42,6 @@
   --cut: oklch(0.577 0.245 27.325);
   --changed: oklch(0.75 0.16 75);
   --playing: oklch(0.62 0.19 256);
-
 }
 
 .dark {
@@ -82,7 +81,6 @@
   --cut: oklch(0.704 0.191 22.216);
   --changed: oklch(0.8 0.15 80);
   --playing: oklch(0.7 0.16 256);
-
 }
 
 @theme inline {

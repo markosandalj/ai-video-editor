@@ -11,11 +11,7 @@ import {
   sameRanges,
   wordStatus as computeWordStatus,
 } from '@/lib/cut-ranges'
-import {
-  CUT_HISTORY_LIMIT,
-  REVIEW_DRAFT_VERSION,
-  buildInitialCutRanges,
-} from '@/lib/review-model'
+import { CUT_HISTORY_LIMIT, REVIEW_DRAFT_VERSION, buildInitialCutRanges } from '@/lib/review-model'
 import { type TimeRange, deriveCutRanges } from '@/lib/timeline-model'
 
 function draftStorageKey(videoId: string) {

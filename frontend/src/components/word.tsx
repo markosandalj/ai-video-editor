@@ -52,7 +52,8 @@ export const Word = memo(function Word({
         isCut && 'text-muted-foreground line-through decoration-cut opacity-40',
         // Partially cut: a free-form edge landed mid-word. Dashed strike, less
         // faded than a full cut, so it reads as "some of this audio is gone".
-        isPartialCut && 'text-muted-foreground line-through decoration-dashed decoration-cut/80 opacity-70',
+        isPartialCut &&
+          'text-muted-foreground line-through decoration-dashed decoration-cut/80 opacity-70',
         !isCut && !isPartialCut && 'text-foreground',
         isSearchMatch && 'bg-changed/25 text-foreground opacity-100',
         isSelected && !isPlaying && 'bg-primary/25 opacity-100',

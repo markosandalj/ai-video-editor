@@ -37,6 +37,10 @@ const WORD_SNAP_MIN_PXPS = 80
 const NICE_STEPS = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800]
 const NO_PEAKS: number[] = []
 
+function initialTimelineView(duration: number): TimeRange {
+  return { start: 0, end: Math.min(duration, Math.max(MIN_SPAN_SECONDS, duration / 4)) }
+}
+
 type Palette = {
   cut: string
   wave: string
@@ -257,6 +261,7 @@ export type TimelineStripProps = {
   onEditingChange: (editing: boolean) => void
   follow: boolean
   onToggleFollow: () => void
+  onDisableFollow: () => void
   collapsed: boolean
   onToggleCollapsed: () => void
 }
@@ -283,6 +288,7 @@ export function TimelineStrip({
   onEditingChange,
   follow,
   onToggleFollow,
+  onDisableFollow,
   collapsed,
   onToggleCollapsed,
 }: TimelineStripProps) {
@@ -298,9 +304,9 @@ export function TimelineStrip({
   const palette = usePalette(containerRef)
   const cols = Math.max(1, Math.floor(width))
 
-  const [view, setView] = useState<TimeRange>({ start: 0, end: duration })
+  const [view, setView] = useState<TimeRange>(() => initialTimelineView(duration))
   useEffect(() => {
-    setView({ start: 0, end: duration })
+    setView(initialTimelineView(duration))
   }, [duration, videoId])
 
   // Live gesture preview (drawn instead of the committed state during a drag).
@@ -354,7 +360,8 @@ export function TimelineStrip({
     cutRanges.forEach((range, index) => {
       if (index !== excludeCutIndex) targets.push(range.start, range.end)
     })
-    for (const start of sentenceStarts) if (start >= view.start && start <= view.end) targets.push(start)
+    for (const start of sentenceStarts)
+      if (start >= view.start && start <= view.end) targets.push(start)
     if (pxPerSecond >= WORD_SNAP_MIN_PXPS) {
       for (const boundary of wordBoundaries) {
         if (boundary >= view.start && boundary <= view.end) targets.push(boundary)
@@ -386,7 +393,17 @@ export function TimelineStrip({
         ctx.restore()
       }
     },
-    [minimapSamples, displayRanges, activeSelection, palette, duration, collapsed, view.start, view.end, width],
+    [
+      minimapSamples,
+      displayRanges,
+      activeSelection,
+      palette,
+      duration,
+      collapsed,
+      view.start,
+      view.end,
+      width,
+    ],
   )
   useCanvasLayer(
     minimapHead,
@@ -424,15 +441,21 @@ export function TimelineStrip({
     if (!el || collapsed) return
     const onWheel = (event: WheelEvent) => {
       event.preventDefault()
+      if (!paused && follow) onDisableFollow()
       const rect = el.getBoundingClientRect()
-      const ratio = rect.width > 0 ? clamp(event.clientX - rect.left, 0, rect.width) / rect.width : 0
+      const ratio =
+        rect.width > 0 ? clamp(event.clientX - rect.left, 0, rect.width) / rect.width : 0
       setView((current) => {
         const span = current.end - current.start
         if (event.ctrlKey || event.metaKey) {
           const anchor = current.start + ratio * span
           const factor = event.deltaY > 0 ? 1.2 : 1 / 1.2
           const nextSpan = clamp(span * factor, MIN_SPAN_SECONDS, duration)
-          return clampWindow(anchor - ratio * nextSpan, anchor - ratio * nextSpan + nextSpan, duration)
+          return clampWindow(
+            anchor - ratio * nextSpan,
+            anchor - ratio * nextSpan + nextSpan,
+            duration,
+          )
         }
         const delta = (event.deltaX !== 0 ? event.deltaX : event.deltaY) * (span / rect.width)
         return clampWindow(current.start + delta, current.end + delta, duration)
@@ -440,7 +463,7 @@ export function TimelineStrip({
     }
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => el.removeEventListener('wheel', onWheel)
-  }, [duration, collapsed])
+  }, [duration, collapsed, paused, follow, onDisableFollow])
 
   // Follow playback: page the detail window forward so the playhead stays in
   // view. Only while playing — a paused reviewer can pan/zoom freely without the
@@ -453,7 +476,8 @@ export function TimelineStrip({
     if (currentTime >= aheadEdge || currentTime < view.start) {
       const maxStart = Math.max(0, duration - span)
       const nextStart = clamp(currentTime - span * 0.08, 0, maxStart)
-      if (Math.abs(nextStart - view.start) > 1e-3) setView({ start: nextStart, end: nextStart + span })
+      if (Math.abs(nextStart - view.start) > 1e-3)
+        setView({ start: nextStart, end: nextStart + span })
     }
   }, [currentTime, follow, collapsed, paused, duration, view.start, view.end])
 
@@ -484,7 +508,10 @@ export function TimelineStrip({
       movedRef.current = true
     } else {
       const snapped = snapTime(t, snapTargets(null, event.altKey), pxPerSecond)
-      setDragSelection({ start: Math.min(drag.anchor, snapped), end: Math.max(drag.anchor, snapped) })
+      setDragSelection({
+        start: Math.min(drag.anchor, snapped),
+        end: Math.max(drag.anchor, snapped),
+      })
       if (Math.abs(t - drag.anchor) * pxPerSecond > DRAG_THRESHOLD_PX) movedRef.current = true
     }
   }
@@ -504,7 +531,10 @@ export function TimelineStrip({
     }
     if (movedRef.current) {
       const snapped = snapTime(t, snapTargets(null, event.altKey), pxPerSecond)
-      onTimeSelectionChange({ start: Math.min(drag.anchor, snapped), end: Math.max(drag.anchor, snapped) })
+      onTimeSelectionChange({
+        start: Math.min(drag.anchor, snapped),
+        end: Math.max(drag.anchor, snapped),
+      })
     } else {
       const cutIdx = findCutAt(cutRanges, drag.anchor)
       if (cutIdx >= 0) onTimeSelectionChange(cutRanges[cutIdx])
@@ -540,10 +570,10 @@ export function TimelineStrip({
     }
   }
 
-  const zoomBy = (factor: number) => {
+  const zoomBy = (factor: number, anchorTime?: number) => {
     setView((current) => {
       const span = current.end - current.start
-      const center = (current.start + current.end) / 2
+      const center = anchorTime ?? (current.start + current.end) / 2
       const nextSpan = clamp(span * factor, MIN_SPAN_SECONDS, duration)
       return clampWindow(center - nextSpan / 2, center + nextSpan / 2, duration)
     })
@@ -577,7 +607,11 @@ export function TimelineStrip({
     { hotkey: 'Delete', callback: cutSelection, options: { enabled: hasSelection } },
     { hotkey: 'Enter', callback: restoreSelection, options: { enabled: hasSelection } },
     { hotkey: 'L', callback: auditionSelection, options: { enabled: hasSelection } },
-    { hotkey: 'Escape', callback: () => onTimeSelectionChange(null), options: { enabled: hasSelection, ignoreInputs: true } },
+    {
+      hotkey: 'Escape',
+      callback: () => onTimeSelectionChange(null),
+      options: { enabled: hasSelection, ignoreInputs: true },
+    },
     { hotkey: 'I', callback: markIn, options: { enabled: duration > 0 } },
     { hotkey: 'O', callback: markOut, options: { enabled: duration > 0 } },
   ]
@@ -608,10 +642,20 @@ export function TimelineStrip({
             <span className="text-xs font-medium text-primary">
               {formatTimestamp(timeSelection.start)}–{formatTimestamp(timeSelection.end)}
             </span>
-            <Button size="icon-xs" variant="ghost" aria-label="Cut selection (X)" onClick={cutSelection}>
+            <Button
+              size="icon-xs"
+              variant="ghost"
+              aria-label="Cut selection (X)"
+              onClick={cutSelection}
+            >
               <Scissors />
             </Button>
-            <Button size="icon-xs" variant="ghost" aria-label="Restore selection (Enter)" onClick={restoreSelection}>
+            <Button
+              size="icon-xs"
+              variant="ghost"
+              aria-label="Restore selection (Enter)"
+              onClick={restoreSelection}
+            >
               <Check />
             </Button>
           </div>
@@ -632,10 +676,20 @@ export function TimelineStrip({
             >
               <Crosshair />
             </Button>
-            <Button size="icon-sm" variant="ghost" onClick={() => zoomBy(1 / 1.6)} aria-label="Zoom in">
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              onClick={() => zoomBy(1 / 1.6, follow && paused ? currentTime : undefined)}
+              aria-label="Zoom in"
+            >
               <ZoomIn />
             </Button>
-            <Button size="icon-sm" variant="ghost" onClick={() => zoomBy(1.6)} aria-label="Zoom out">
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              onClick={() => zoomBy(1.6)}
+              aria-label="Zoom out"
+            >
               <ZoomOut />
             </Button>
             <Button

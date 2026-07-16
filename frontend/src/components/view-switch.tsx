@@ -1,25 +1,39 @@
-import { Button } from '@/components/ui/button'
+import { Link } from 'react-router-dom'
 
-export type AppView = 'editor' | 'diff'
+import { buttonVariants } from '@/components/ui/button'
+import { videoPath, type VideoView } from '@/lib/routes'
+import { cn } from '@/lib/utils'
 
-const VIEWS: Array<{ value: AppView; label: string }> = [
-  { value: 'editor', label: 'Transcript' },
-  { value: 'diff', label: 'Compare' },
+const VIEWS: Array<{ value: VideoView; label: string }> = [
+  { value: 'transcript', label: 'Transcript' },
+  { value: 'compare', label: 'Compare' },
 ]
 
 /** Top-level switch between transcript editing and QA comparison. */
-export function ViewSwitch({ view, onChange }: { view: AppView; onChange: (v: AppView) => void }) {
+export function ViewSwitch({
+  videoId,
+  view,
+  search,
+}: {
+  videoId: string
+  view: VideoView
+  search?: string
+}) {
   return (
     <div className="flex items-center gap-0.5 rounded-md border p-0.5">
       {VIEWS.map((entry) => (
-        <Button
+        <Link
           key={entry.value}
-          size="xs"
-          variant={view === entry.value ? 'secondary' : 'ghost'}
-          onClick={() => onChange(entry.value)}
+          to={videoPath(videoId, entry.value, search)}
+          className={cn(
+            buttonVariants({
+              size: 'xs',
+              variant: view === entry.value ? 'secondary' : 'ghost',
+            }),
+          )}
         >
           {entry.label}
-        </Button>
+        </Link>
       ))}
     </div>
   )

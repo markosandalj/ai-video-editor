@@ -122,6 +122,16 @@ def create_app(
 
     dist = Path(frontend_dist).expanduser().resolve() if frontend_dist else _default_frontend_dist()
     if dist.exists():
+        @app.get("/videos/{video_id}", include_in_schema=False)
+        def video_route(video_id: str) -> FileResponse:
+            """Serve the SPA shell when a video URL is opened or refreshed directly."""
+            return FileResponse(dist / "index.html")
+
+        @app.get("/videos/{video_id}/{view}", include_in_schema=False)
+        def video_view_route(video_id: str, view: str) -> FileResponse:
+            """Serve the SPA shell for a directly opened editor view."""
+            return FileResponse(dist / "index.html")
+
         app.mount("/", StaticFiles(directory=dist, html=True), name="frontend")
 
     return app

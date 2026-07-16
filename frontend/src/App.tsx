@@ -1,14 +1,24 @@
 import '@videojs/react/video/skin.css'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useHotkeys, type UseHotkeyDefinition } from '@tanstack/react-hotkeys'
 import { Agentation } from 'agentation'
 import { Check, CircleHelp, Redo2, Scissors, Sparkles, Undo2 } from 'lucide-react'
+import {
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from 'react-router-dom'
 import { useBoolean, useEventCallback } from 'usehooks-ts'
 
 import { DiffView } from '@/DiffView'
 import { HelpDrawer } from '@/components/help-drawer'
 import { MediaColumn } from '@/components/media-column'
+import { PaneVisibilityControls } from '@/components/pane-visibility-controls'
 import type { AuditionRange } from '@/components/playback-sync'
 import { ResizableSplit } from '@/components/resizable-split'
 import { TimelineStrip } from '@/components/timeline/timeline-strip'
@@ -22,23 +32,69 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { ViewSwitch, type AppView } from '@/components/view-switch'
+import { ViewSwitch } from '@/components/view-switch'
+import { VideoList } from '@/components/video-list'
 import { useReview, useVideos } from '@/api'
 import type { ReviewPayload, VideoSummary } from '@/api'
 import { useEditorSelection } from '@/hooks/use-editor-selection'
 import { useReviewSession } from '@/hooks/use-review-session'
 import { Player } from '@/lib/player'
+import { videoPath, type VideoView } from '@/lib/routes'
 import type { TimeRange } from '@/lib/timeline-model'
 
 export default function App() {
+  return (
+    <>
+      <Routes>
+        <Route path="/" element={<VideoList />} />
+        <Route path="/videos/:videoId" element={<VideoViewRedirect />} />
+        <Route path="/videos/:videoId/transcript" element={<VideoEditor view="transcript" />} />
+        <Route path="/videos/:videoId/compare" element={<VideoEditor view="compare" />} />
+        <Route path="/videos/:videoId/*" element={<VideoViewRedirect />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      {import.meta.env.DEV && <Agentation />}
+    </>
+  )
+}
+
+function VideoViewRedirect() {
+  const { videoId = '' } = useParams()
+  const { search } = useLocation()
+  return <Navigate to={videoPath(videoId, 'transcript', search)} replace />
+}
+
+function VideoEditor({ view }: { view: VideoView }) {
   const videosQuery = useVideos()
-  const [selectedId, setSelectedId] = useState('')
-  const [view, setView] = useState<AppView>('editor')
+  const { videoId = '' } = useParams()
+  const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const search = searchParams.toString()
+  const videoHidden = searchParams.get('video') === 'hidden'
+  const transcriptHidden = searchParams.get('transcript') === 'hidden'
+
+  const setPaneHidden = useCallback(
+    (pane: 'video' | 'transcript', hidden: boolean) => {
+      const next = new URLSearchParams(searchParams)
+      if (hidden) next.set(pane, 'hidden')
+      else next.delete(pane)
+      setSearchParams(next, { replace: true })
+    },
+    [searchParams, setSearchParams],
+  )
+
+  const selectVideo = useCallback(
+    (nextVideoId: string) => navigate(videoPath(nextVideoId, view, search)),
+    [navigate, search, view],
+  )
 
   useEffect(() => {
-    const list = videosQuery.data
-    if (!selectedId && list && list.length > 0) setSelectedId(list[0].id)
-  }, [videosQuery.data, selectedId])
+    const video = videosQuery.data?.find((candidate) => candidate.id === videoId)
+    const viewName = view === 'compare' ? 'Compare' : 'Transcript'
+    document.title = video
+      ? `${video.source_name} · ${viewName} · AI Video Editor`
+      : `${viewName} · AI Video Editor`
+  }, [videoId, videosQuery.data, view])
 
   const message = videosQuery.isPending
     ? 'Loading videos…'
@@ -51,27 +107,33 @@ export default function App() {
   return (
     <>
       {/* Keyed only on the video so switching Transcript↔Compare keeps playback stable. */}
-      <Player.Provider key={selectedId || 'empty'}>
-        {view === 'diff' ? (
+      <Player.Provider key={videoId || 'empty'}>
+        {view === 'compare' ? (
           <DiffView
-            videoId={selectedId}
+            videoId={videoId}
             videos={videosQuery.data ?? []}
             message={message}
-            onSelect={setSelectedId}
-            view={view}
-            onViewChange={setView}
+            onSelect={selectVideo}
+            search={search}
+            videoHidden={videoHidden}
+            transcriptHidden={transcriptHidden}
+            onVideoHiddenChange={(hidden) => setPaneHidden('video', hidden)}
+            onTranscriptHiddenChange={(hidden) => setPaneHidden('transcript', hidden)}
           />
         ) : (
           <Workspace
-            videoId={selectedId}
+            videoId={videoId}
             videos={videosQuery.data ?? []}
             message={message}
-            onSelect={setSelectedId}
-            onViewChange={setView}
+            onSelect={selectVideo}
+            search={search}
+            videoHidden={videoHidden}
+            transcriptHidden={transcriptHidden}
+            onVideoHiddenChange={(hidden) => setPaneHidden('video', hidden)}
+            onTranscriptHiddenChange={(hidden) => setPaneHidden('transcript', hidden)}
           />
         )}
       </Player.Provider>
-      {import.meta.env.DEV && <Agentation />}
     </>
   )
 }
@@ -81,18 +143,34 @@ type WorkspaceProps = {
   videos: VideoSummary[]
   message: string
   onSelect: (id: string) => void
-  onViewChange: (view: AppView) => void
+  search: string
+  videoHidden: boolean
+  transcriptHidden: boolean
+  onVideoHiddenChange: (hidden: boolean) => void
+  onTranscriptHiddenChange: (hidden: boolean) => void
 }
 
-function Workspace({ videoId, videos, message, onSelect, onViewChange }: WorkspaceProps) {
+function Workspace({
+  videoId,
+  videos,
+  message,
+  onSelect,
+  search,
+  videoHidden,
+  transcriptHidden,
+  onVideoHiddenChange,
+  onTranscriptHiddenChange,
+}: WorkspaceProps) {
   const player = Player.usePlayer()
+  const paused = Player.usePlayer((state) => state.paused)
   const review = useReview(videoId)
   const payload = (review.data as ReviewPayload | undefined) ?? null
   const session = useReviewSession(payload, videoId)
 
   const previewEdit = useBoolean(true)
   const loopAudition = useBoolean(false)
-  const followPlayback = useBoolean(true)
+  const followTimelinePlayback = useBoolean(false)
+  const followTranscriptPlayback = useBoolean(true)
   const helpOpen = useBoolean(false)
   const timelineCollapsed = useBoolean(false)
   const timelineEditing = useBoolean(false)
@@ -170,21 +248,33 @@ function Workspace({ videoId, videos, message, onSelect, onViewChange }: Workspa
   const baseEnabled = payload !== null && !helpOpen.value
   const globalHotkeys: UseHotkeyDefinition[] = [
     { hotkey: 'Space', callback: () => player.togglePaused(), options: { enabled: baseEnabled } },
-    { hotkey: 'Mod+S', callback: () => void finish(), options: { enabled: baseEnabled, ignoreInputs: false } },
+    {
+      hotkey: 'Mod+S',
+      callback: () => void finish(),
+      options: { enabled: baseEnabled, ignoreInputs: false },
+    },
     { hotkey: 'Mod+Z', callback: () => session.undo(), options: { enabled: baseEnabled } },
     { hotkey: 'Mod+Shift+Z', callback: () => session.redo(), options: { enabled: baseEnabled } },
     { hotkey: 'Mod+Y', callback: () => session.redo(), options: { enabled: baseEnabled } },
     { hotkey: 'Shift+L', callback: () => loopAudition.toggle(), options: { enabled: baseEnabled } },
-    { hotkey: 'F', callback: () => followPlayback.toggle(), options: { enabled: baseEnabled } },
+    {
+      hotkey: 'F',
+      callback: () => followTimelinePlayback.toggle(),
+      options: { enabled: baseEnabled },
+    },
   ]
 
-  useHotkeys(globalHotkeys, { conflictBehavior: 'allow', preventDefault: true, stopPropagation: true })
+  useHotkeys(globalHotkeys, {
+    conflictBehavior: 'allow',
+    preventDefault: true,
+    stopPropagation: true,
+  })
 
   // Follow playback in the transcript: keep the active word in view without jitter.
   useEffect(() => {
-    if (!followPlayback.value || activeIdx === null) return
+    if (!followTranscriptPlayback.value || activeIdx === null) return
     scrollToWord(activeIdx, true)
-  }, [activeIdx, followPlayback.value, scrollToWord])
+  }, [activeIdx, followTranscriptPlayback.value, scrollToWord])
 
   const finishLabel =
     session.finishState === 'saving'
@@ -206,7 +296,7 @@ function Workspace({ videoId, videos, message, onSelect, onViewChange }: Workspa
     <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
       <header className="flex shrink-0 flex-wrap items-center gap-3 border-b bg-card px-4 py-2.5">
         <span className="text-sm font-extrabold tracking-tight">AI Video Editor</span>
-        <ViewSwitch view="editor" onChange={onViewChange} />
+        <ViewSwitch videoId={videoId} view="transcript" search={search} />
 
         <Select value={videoId} onValueChange={onSelect}>
           <SelectTrigger size="sm" className="w-[260px]">
@@ -221,6 +311,13 @@ function Workspace({ videoId, videos, message, onSelect, onViewChange }: Workspa
             ))}
           </SelectContent>
         </Select>
+
+        <PaneVisibilityControls
+          videoHidden={videoHidden}
+          transcriptHidden={transcriptHidden}
+          onVideoHiddenChange={onVideoHiddenChange}
+          onTranscriptHiddenChange={onTranscriptHiddenChange}
+        />
 
         <div className="ml-auto flex items-center gap-2">
           {payload && session.isDirty && (
@@ -250,6 +347,8 @@ function Workspace({ videoId, videos, message, onSelect, onViewChange }: Workspa
 
       {payload ? (
         <ResizableSplit
+          sidebarHidden={videoHidden}
+          mainHidden={transcriptHidden}
           sidebar={
             <MediaColumn
               videoId={payload.video.id}
@@ -276,6 +375,11 @@ function Workspace({ videoId, videos, message, onSelect, onViewChange }: Workspa
               activeIdx={activeIdx}
               wordRefs={wordRefs}
               scrollRef={scrollRef}
+              follow={followTranscriptPlayback.value}
+              onToggleFollow={followTranscriptPlayback.toggle}
+              onManualScroll={() => {
+                if (!paused) followTranscriptPlayback.setFalse()
+              }}
             />
           }
         />
@@ -299,8 +403,9 @@ function Workspace({ videoId, videos, message, onSelect, onViewChange }: Workspa
           onCommitRanges={session.commitRanges}
           onAudition={audition}
           onEditingChange={timelineEditing.setValue}
-          follow={followPlayback.value}
-          onToggleFollow={followPlayback.toggle}
+          follow={followTimelinePlayback.value}
+          onToggleFollow={followTimelinePlayback.toggle}
+          onDisableFollow={followTimelinePlayback.setFalse}
           collapsed={timelineCollapsed.value}
           onToggleCollapsed={timelineCollapsed.toggle}
         />

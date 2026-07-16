@@ -191,6 +191,23 @@ def test_review_api_lists_loads_and_saves(tmp_path: Path) -> None:
     assert reloaded.status_code == 200
 
 
+def test_frontend_video_route_serves_spa_index(tmp_path: Path) -> None:
+    frontend_dist = tmp_path / "frontend"
+    frontend_dist.mkdir()
+    (frontend_dist / "index.html").write_text("<main>review app</main>", encoding="utf-8")
+    client = TestClient(create_app(media_root=tmp_path, frontend_dist=frontend_dist))
+
+    for path in (
+        "/videos/lesson-raw",
+        "/videos/lesson-raw/transcript",
+        "/videos/lesson-raw/compare",
+    ):
+        response = client.get(path)
+
+        assert response.status_code == 200
+        assert response.text == "<main>review app</main>"
+
+
 def test_review_api_ignores_stale_enrichment_sidecar(tmp_path: Path) -> None:
     video = _write_fixture(tmp_path)
     video.with_suffix(".enrichment.json").write_text('{"stale": true}', encoding="utf-8")

@@ -1,5 +1,5 @@
 import { type RefObject, useRef, useState } from 'react'
-import { Search, X } from 'lucide-react'
+import { Crosshair, Search, X } from 'lucide-react'
 import { useEventCallback } from 'usehooks-ts'
 
 import type { ReviewSentence } from '@/api'
@@ -15,6 +15,9 @@ type TranscriptViewProps = {
   activeIdx: number | null
   wordRefs: RefObject<Map<number, HTMLSpanElement>>
   scrollRef: RefObject<HTMLDivElement | null>
+  follow: boolean
+  onToggleFollow: () => void
+  onManualScroll: () => void
 }
 
 // Presentational transcript. All editing lives in `selection`; this renders words,
@@ -26,6 +29,9 @@ export function TranscriptView({
   activeIdx,
   wordRefs,
   scrollRef,
+  follow,
+  onToggleFollow,
+  onManualScroll,
 }: TranscriptViewProps) {
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [searchOpen, setSearchOpen] = useState(false)
@@ -51,33 +57,64 @@ export function TranscriptView({
             ? `${selectionRange![1] - selectionRange![0] + 1} word${selectionRange![1] === selectionRange![0] ? '' : 's'} selected · ⌫ cut · ⏎ keep · ⌘C copy`
             : 'Click a word to select it · drag or ⇧-click to extend · X cuts'}
         </p>
-        {searchOpen ? (
-          <div className="flex items-center gap-1">
-            <Search className="size-3.5 shrink-0 text-muted-foreground" />
-            <input
-              ref={searchInputRef}
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.currentTarget.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') selection.findMatchesJump(searchQuery, event.shiftKey ? -1 : 1)
-                if (event.key === 'Escape') closeSearch()
-              }}
-              placeholder="Find in transcript"
-              className="h-7 w-44 rounded-md border bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-            <Button variant="ghost" size="icon-xs" aria-label="Close search" onClick={closeSearch}>
-              <X />
-            </Button>
-          </div>
-        ) : (
-          <Button variant="ghost" size="icon-sm" aria-label="Find in transcript" onClick={openSearch}>
-            <Search />
+        <div className="flex items-center gap-1">
+          <Button
+            size="icon-sm"
+            variant={follow ? 'secondary' : 'ghost'}
+            aria-pressed={follow}
+            onClick={onToggleFollow}
+            aria-label="Follow playback in transcript"
+            title="Follow playback in transcript"
+          >
+            <Crosshair />
           </Button>
-        )}
+          {searchOpen ? (
+            <>
+              <Search className="size-3.5 shrink-0 text-muted-foreground" />
+              <input
+                ref={searchInputRef}
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.currentTarget.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter')
+                    selection.findMatchesJump(searchQuery, event.shiftKey ? -1 : 1)
+                  if (event.key === 'Escape') closeSearch()
+                }}
+                placeholder="Find in transcript"
+                className="h-7 w-44 rounded-md border bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                aria-label="Close search"
+                onClick={closeSearch}
+              >
+                <X />
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Find in transcript"
+              onClick={openSearch}
+            >
+              <Search />
+            </Button>
+          )}
+        </div>
       </div>
 
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
-        <article aria-label="Transcript editor" className="mx-auto my-6 max-w-3xl px-6 text-lg leading-8">
+      <div
+        ref={scrollRef}
+        className="min-h-0 flex-1 overflow-y-auto"
+        onWheel={onManualScroll}
+        onTouchMove={onManualScroll}
+      >
+        <article
+          aria-label="Transcript editor"
+          className="mx-auto my-6 max-w-3xl px-6 text-lg leading-8"
+        >
           {sentences.map((sentence) => (
             <p key={sentence.idx} className="relative mb-5 rounded-md last:mb-0">
               {(sentence.words ?? []).map((word) => (
