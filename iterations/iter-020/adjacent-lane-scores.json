@@ -1,0 +1,1774 @@
+{
+  "aggregate": {
+    "precision": 0.7948376599363952,
+    "recall": 0.6779158518892323,
+    "f1": 0.7317355484442023,
+    "tp": 10747,
+    "fp": 2774,
+    "fn": 5106
+  },
+  "aggregate_reconciled": {
+    "precision": 0.8100732194364322,
+    "recall": 0.6887812853729091,
+    "f1": 0.7445195935152772,
+    "tp": 10953,
+    "fp": 2568,
+    "fn": 4949
+  },
+  "per_video": {
+    "engleski25ljeto-esej": {
+      "precision": 0.8333333333333334,
+      "recall": 0.8488372093023255,
+      "f1": 0.8410138248847927,
+      "tp": 365,
+      "fp": 73,
+      "fn": 65
+    },
+    "engleski25ljeto-listening-1": {
+      "precision": 0.6706231454005934,
+      "recall": 0.6746268656716418,
+      "f1": 0.6726190476190476,
+      "tp": 226,
+      "fp": 111,
+      "fn": 109
+    },
+    "engleski25ljeto-listening-2": {
+      "precision": 0.7586776859504132,
+      "recall": 0.6128170894526035,
+      "f1": 0.6779911373707533,
+      "tp": 459,
+      "fp": 146,
+      "fn": 290
+    },
+    "engleski25ljeto-reading-1": {
+      "precision": 0.8394698085419735,
+      "recall": 0.6896551724137931,
+      "f1": 0.7572235137827964,
+      "tp": 1140,
+      "fp": 218,
+      "fn": 513
+    },
+    "engleski25ljeto-reading-2": {
+      "precision": 0.7852852852852853,
+      "recall": 0.6521197007481296,
+      "f1": 0.7125340599455041,
+      "tp": 523,
+      "fp": 143,
+      "fn": 279
+    },
+    "engleski25ljeto-reading-3": {
+      "precision": 0.8151260504201681,
+      "recall": 0.751937984496124,
+      "f1": 0.782258064516129,
+      "tp": 388,
+      "fp": 88,
+      "fn": 128
+    },
+    "engleski25ljeto-reading-4": {
+      "precision": 0.8647959183673469,
+      "recall": 0.6932515337423313,
+      "f1": 0.7695800227014755,
+      "tp": 339,
+      "fp": 53,
+      "fn": 150
+    },
+    "engleski25ljeto-reading-5": {
+      "precision": 0.8132183908045977,
+      "recall": 0.5775510204081633,
+      "f1": 0.6754176610978521,
+      "tp": 283,
+      "fp": 65,
+      "fn": 207
+    },
+    "fizika25ljeto-001": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "tp": 0,
+      "fp": 2,
+      "fn": 4
+    },
+    "fizika25ljeto-002": {
+      "precision": 0.06666666666666667,
+      "recall": 0.041666666666666664,
+      "f1": 0.05128205128205127,
+      "tp": 1,
+      "fp": 14,
+      "fn": 23
+    },
+    "fizika25ljeto-003": {
+      "precision": 0.6,
+      "recall": 0.2727272727272727,
+      "f1": 0.37499999999999994,
+      "tp": 3,
+      "fp": 2,
+      "fn": 8
+    },
+    "fizika25ljeto-004": {
+      "precision": 1.0,
+      "recall": 0.6666666666666666,
+      "f1": 0.8,
+      "tp": 4,
+      "fp": 0,
+      "fn": 2
+    },
+    "fizika25ljeto-005": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "tp": 0,
+      "fp": 1,
+      "fn": 3
+    },
+    "fizika25ljeto-006": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0
+    },
+    "fizika25ljeto-007": {
+      "precision": 1.0,
+      "recall": 0.08695652173913043,
+      "f1": 0.16,
+      "tp": 2,
+      "fp": 0,
+      "fn": 21
+    },
+    "fizika25ljeto-008": {
+      "precision": 0.25,
+      "recall": 0.6666666666666666,
+      "f1": 0.36363636363636365,
+      "tp": 2,
+      "fp": 6,
+      "fn": 1
+    },
+    "fizika25ljeto-009": {
+      "precision": 0.08333333333333333,
+      "recall": 0.08333333333333333,
+      "f1": 0.08333333333333333,
+      "tp": 1,
+      "fp": 11,
+      "fn": 11
+    },
+    "fizika25ljeto-010": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "tp": 0,
+      "fp": 4,
+      "fn": 3
+    },
+    "fizika25ljeto-025": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "tp": 0,
+      "fp": 3,
+      "fn": 30
+    },
+    "fizika25ljeto-026": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "tp": 0,
+      "fp": 6,
+      "fn": 3
+    },
+    "fizika25ljeto-027": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "tp": 0,
+      "fp": 2,
+      "fn": 2
+    },
+    "fizika25ljeto-028": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "tp": 0,
+      "fp": 2,
+      "fn": 1
+    },
+    "fizika25ljeto-029": {
+      "precision": 0.9411764705882353,
+      "recall": 0.6956521739130435,
+      "f1": 0.7999999999999999,
+      "tp": 16,
+      "fp": 1,
+      "fn": 7
+    },
+    "fizika25ljeto-030": {
+      "precision": 0.8,
+      "recall": 0.14814814814814814,
+      "f1": 0.25,
+      "tp": 4,
+      "fp": 1,
+      "fn": 23
+    },
+    "fizika25ljeto-033": {
+      "precision": 0.1111111111111111,
+      "recall": 0.05555555555555555,
+      "f1": 0.07407407407407407,
+      "tp": 1,
+      "fp": 8,
+      "fn": 17
+    },
+    "fizika25ljeto-034": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "tp": 0,
+      "fp": 15,
+      "fn": 1
+    },
+    "fizika25ljeto-035": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "tp": 0,
+      "fp": 2,
+      "fn": 4
+    },
+    "hrvatski25ljeto-sazetak-ljeto-24-25": {
+      "precision": 0.46875,
+      "recall": 0.3488372093023256,
+      "f1": 0.4000000000000001,
+      "tp": 15,
+      "fp": 17,
+      "fn": 28
+    },
+    "hrvatski25ljeto-tekst-1": {
+      "precision": 0.29411764705882354,
+      "recall": 0.35714285714285715,
+      "f1": 0.3225806451612903,
+      "tp": 10,
+      "fp": 24,
+      "fn": 18
+    },
+    "hrvatski25ljeto-tekst-2": {
+      "precision": 0.3157894736842105,
+      "recall": 0.16216216216216217,
+      "f1": 0.21428571428571427,
+      "tp": 6,
+      "fp": 13,
+      "fn": 31
+    },
+    "hrvatski25ljeto-tekst-3": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "tp": 0,
+      "fp": 5,
+      "fn": 33
+    },
+    "hrvatski25ljeto-zad-53": {
+      "precision": 0.05555555555555555,
+      "recall": 1.0,
+      "f1": 0.10526315789473684,
+      "tp": 1,
+      "fp": 17,
+      "fn": 0
+    },
+    "hrvatski25ljeto-zad-54": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0
+    },
+    "hrvatski25ljeto-zad-56": {
+      "precision": 0.125,
+      "recall": 0.5,
+      "f1": 0.2,
+      "tp": 1,
+      "fp": 7,
+      "fn": 1
+    },
+    "hrvatski25ljeto-zad-58": {
+      "precision": 0.1111111111111111,
+      "recall": 0.16666666666666666,
+      "f1": 0.13333333333333333,
+      "tp": 2,
+      "fp": 16,
+      "fn": 10
+    },
+    "kemija25ljeto-k1-1": {
+      "precision": 0.30434782608695654,
+      "recall": 0.3684210526315789,
+      "f1": 0.3333333333333333,
+      "tp": 7,
+      "fp": 16,
+      "fn": 12
+    },
+    "kemija25ljeto-k1-10": {
+      "precision": 0.7424242424242424,
+      "recall": 0.7313432835820896,
+      "f1": 0.736842105263158,
+      "tp": 49,
+      "fp": 17,
+      "fn": 18
+    },
+    "kemija25ljeto-k1-2": {
+      "precision": 0.9523809523809523,
+      "recall": 1.0,
+      "f1": 0.975609756097561,
+      "tp": 20,
+      "fp": 1,
+      "fn": 0
+    },
+    "kemija25ljeto-k1-3": {
+      "precision": 0.828125,
+      "recall": 0.828125,
+      "f1": 0.828125,
+      "tp": 106,
+      "fp": 22,
+      "fn": 22
+    },
+    "kemija25ljeto-k1-4": {
+      "precision": 0.9358974358974359,
+      "recall": 0.8588235294117647,
+      "f1": 0.8957055214723926,
+      "tp": 73,
+      "fp": 5,
+      "fn": 12
+    },
+    "kemija25ljeto-k1-5": {
+      "precision": 0.9473684210526315,
+      "recall": 0.8780487804878049,
+      "f1": 0.9113924050632912,
+      "tp": 36,
+      "fp": 2,
+      "fn": 5
+    },
+    "kemija25ljeto-k1-6": {
+      "precision": 0.9857142857142858,
+      "recall": 0.9583333333333334,
+      "f1": 0.971830985915493,
+      "tp": 69,
+      "fp": 1,
+      "fn": 3
+    },
+    "kemija25ljeto-k1-7": {
+      "precision": 0.7,
+      "recall": 0.8235294117647058,
+      "f1": 0.7567567567567567,
+      "tp": 42,
+      "fp": 18,
+      "fn": 9
+    },
+    "kemija25ljeto-k1-8": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "tp": 0,
+      "fp": 3,
+      "fn": 5
+    },
+    "kemija25ljeto-k1-9": {
+      "precision": 0.14634146341463414,
+      "recall": 0.2857142857142857,
+      "f1": 0.1935483870967742,
+      "tp": 6,
+      "fp": 35,
+      "fn": 15
+    },
+    "kemija25ljeto-k2-40": {
+      "precision": 1.0,
+      "recall": 0.5,
+      "f1": 0.6666666666666666,
+      "tp": 29,
+      "fp": 0,
+      "fn": 29
+    },
+    "kemija25ljeto-k2-41": {
+      "precision": 0.8137254901960784,
+      "recall": 0.7980769230769231,
+      "f1": 0.8058252427184466,
+      "tp": 83,
+      "fp": 19,
+      "fn": 21
+    },
+    "kemija25ljeto-k2-42": {
+      "precision": 0.7325581395348837,
+      "recall": 0.42,
+      "f1": 0.5338983050847457,
+      "tp": 63,
+      "fp": 23,
+      "fn": 87
+    },
+    "kemija25ljeto-k2-43": {
+      "precision": 0.7228915662650602,
+      "recall": 0.625,
+      "f1": 0.6703910614525139,
+      "tp": 60,
+      "fp": 23,
+      "fn": 36
+    },
+    "kemija25ljeto-k2-44": {
+      "precision": 0.8631578947368421,
+      "recall": 0.7321428571428571,
+      "f1": 0.792270531400966,
+      "tp": 82,
+      "fp": 13,
+      "fn": 30
+    },
+    "kemija25ljeto-k2-45": {
+      "precision": 0.6962025316455697,
+      "recall": 0.7638888888888888,
+      "f1": 0.7284768211920529,
+      "tp": 55,
+      "fp": 24,
+      "fn": 17
+    },
+    "kemija25ljeto-k2-46": {
+      "precision": 0.6068376068376068,
+      "recall": 0.568,
+      "f1": 0.5867768595041322,
+      "tp": 71,
+      "fp": 46,
+      "fn": 54
+    },
+    "kemija25ljeto-k2-47": {
+      "precision": 1.0,
+      "recall": 0.1111111111111111,
+      "f1": 0.19999999999999998,
+      "tp": 1,
+      "fp": 0,
+      "fn": 8
+    },
+    "test-1": {
+      "precision": 0.65,
+      "recall": 0.7703703703703704,
+      "f1": 0.7050847457627117,
+      "tp": 104,
+      "fp": 56,
+      "fn": 31
+    },
+    "test-10": {
+      "precision": 0.8827586206896552,
+      "recall": 0.8421052631578947,
+      "f1": 0.8619528619528619,
+      "tp": 256,
+      "fp": 34,
+      "fn": 48
+    },
+    "test-11": {
+      "precision": 0.7177914110429447,
+      "recall": 0.7548387096774194,
+      "f1": 0.7358490566037735,
+      "tp": 117,
+      "fp": 46,
+      "fn": 38
+    },
+    "test-12": {
+      "precision": 0.841726618705036,
+      "recall": 0.785234899328859,
+      "f1": 0.8124999999999999,
+      "tp": 117,
+      "fp": 22,
+      "fn": 32
+    },
+    "test-13": {
+      "precision": 0.7540983606557377,
+      "recall": 0.773109243697479,
+      "f1": 0.7634854771784233,
+      "tp": 92,
+      "fp": 30,
+      "fn": 27
+    },
+    "test-14": {
+      "precision": 0.8495575221238938,
+      "recall": 0.7218045112781954,
+      "f1": 0.7804878048780488,
+      "tp": 96,
+      "fp": 17,
+      "fn": 37
+    },
+    "test-15": {
+      "precision": 0.6470588235294118,
+      "recall": 0.584070796460177,
+      "f1": 0.6139534883720931,
+      "tp": 66,
+      "fp": 36,
+      "fn": 47
+    },
+    "test-16": {
+      "precision": 0.8802816901408451,
+      "recall": 0.8333333333333334,
+      "f1": 0.8561643835616439,
+      "tp": 125,
+      "fp": 17,
+      "fn": 25
+    },
+    "test-17": {
+      "precision": 0.5211267605633803,
+      "recall": 0.30833333333333335,
+      "f1": 0.387434554973822,
+      "tp": 37,
+      "fp": 34,
+      "fn": 83
+    },
+    "test-18": {
+      "precision": 0.5364806866952789,
+      "recall": 0.7183908045977011,
+      "f1": 0.6142506142506142,
+      "tp": 125,
+      "fp": 108,
+      "fn": 49
+    },
+    "test-19": {
+      "precision": 0.5595238095238095,
+      "recall": 0.6351351351351351,
+      "f1": 0.5949367088607596,
+      "tp": 47,
+      "fp": 37,
+      "fn": 27
+    },
+    "test-2": {
+      "precision": 0.9576271186440678,
+      "recall": 0.9262295081967213,
+      "f1": 0.9416666666666667,
+      "tp": 113,
+      "fp": 5,
+      "fn": 9
+    },
+    "test-20": {
+      "precision": 0.8648648648648649,
+      "recall": 0.6751054852320675,
+      "f1": 0.7582938388625592,
+      "tp": 160,
+      "fp": 25,
+      "fn": 77
+    },
+    "test-21": {
+      "precision": 0.8130081300813008,
+      "recall": 0.5747126436781609,
+      "f1": 0.6734006734006733,
+      "tp": 100,
+      "fp": 23,
+      "fn": 74
+    },
+    "test-22": {
+      "precision": 0.9547738693467337,
+      "recall": 0.8878504672897196,
+      "f1": 0.9200968523002422,
+      "tp": 190,
+      "fp": 9,
+      "fn": 24
+    },
+    "test-23": {
+      "precision": 0.8105263157894737,
+      "recall": 0.7129629629629629,
+      "f1": 0.7586206896551724,
+      "tp": 77,
+      "fp": 18,
+      "fn": 31
+    },
+    "test-24": {
+      "precision": 0.819672131147541,
+      "recall": 0.8771929824561403,
+      "f1": 0.8474576271186439,
+      "tp": 100,
+      "fp": 22,
+      "fn": 14
+    },
+    "test-25": {
+      "precision": 0.6624203821656051,
+      "recall": 0.4581497797356828,
+      "f1": 0.5416666666666667,
+      "tp": 104,
+      "fp": 53,
+      "fn": 123
+    },
+    "test-26": {
+      "precision": 0.8173076923076923,
+      "recall": 0.648854961832061,
+      "f1": 0.723404255319149,
+      "tp": 85,
+      "fp": 19,
+      "fn": 46
+    },
+    "test-27": {
+      "precision": 0.7935222672064778,
+      "recall": 0.7368421052631579,
+      "f1": 0.7641325536062379,
+      "tp": 196,
+      "fp": 51,
+      "fn": 70
+    },
+    "test-28": {
+      "precision": 0.8194444444444444,
+      "recall": 0.5959595959595959,
+      "f1": 0.6900584795321637,
+      "tp": 59,
+      "fp": 13,
+      "fn": 40
+    },
+    "test-29": {
+      "precision": 0.8307692307692308,
+      "recall": 0.9473684210526315,
+      "f1": 0.8852459016393444,
+      "tp": 54,
+      "fp": 11,
+      "fn": 3
+    },
+    "test-30": {
+      "precision": 0.9120879120879121,
+      "recall": 0.8556701030927835,
+      "f1": 0.8829787234042552,
+      "tp": 83,
+      "fp": 8,
+      "fn": 14
+    },
+    "test-31": {
+      "precision": 0.75,
+      "recall": 0.5602409638554217,
+      "f1": 0.6413793103448276,
+      "tp": 93,
+      "fp": 31,
+      "fn": 73
+    },
+    "test-32": {
+      "precision": 0.8449612403100775,
+      "recall": 0.6089385474860335,
+      "f1": 0.7077922077922078,
+      "tp": 109,
+      "fp": 20,
+      "fn": 70
+    },
+    "test-33": {
+      "precision": 0.8796992481203008,
+      "recall": 0.8540145985401459,
+      "f1": 0.8666666666666667,
+      "tp": 117,
+      "fp": 16,
+      "fn": 20
+    },
+    "test-34": {
+      "precision": 0.6983240223463687,
+      "recall": 0.8116883116883117,
+      "f1": 0.7507507507507507,
+      "tp": 125,
+      "fp": 54,
+      "fn": 29
+    },
+    "test-35": {
+      "precision": 0.8166666666666667,
+      "recall": 0.6012269938650306,
+      "f1": 0.6925795053003534,
+      "tp": 98,
+      "fp": 22,
+      "fn": 65
+    },
+    "test-36": {
+      "precision": 0.8032786885245902,
+      "recall": 0.765625,
+      "f1": 0.784,
+      "tp": 49,
+      "fp": 12,
+      "fn": 15
+    },
+    "test-37": {
+      "precision": 0.9416058394160584,
+      "recall": 0.8896551724137931,
+      "f1": 0.9148936170212766,
+      "tp": 129,
+      "fp": 8,
+      "fn": 16
+    },
+    "test-38": {
+      "precision": 0.9203539823008849,
+      "recall": 0.832,
+      "f1": 0.8739495798319328,
+      "tp": 104,
+      "fp": 9,
+      "fn": 21
+    },
+    "test-39": {
+      "precision": 0.8006644518272426,
+      "recall": 0.7507788161993769,
+      "f1": 0.77491961414791,
+      "tp": 241,
+      "fp": 60,
+      "fn": 80
+    },
+    "test-40": {
+      "precision": 0.8765957446808511,
+      "recall": 0.7030716723549488,
+      "f1": 0.7803030303030304,
+      "tp": 206,
+      "fp": 29,
+      "fn": 87
+    },
+    "test-41": {
+      "precision": 0.863768115942029,
+      "recall": 0.6819221967963387,
+      "f1": 0.7621483375959079,
+      "tp": 298,
+      "fp": 47,
+      "fn": 139
+    },
+    "test-42": {
+      "precision": 0.7819548872180451,
+      "recall": 0.7074829931972789,
+      "f1": 0.7428571428571429,
+      "tp": 104,
+      "fp": 29,
+      "fn": 43
+    },
+    "test-43": {
+      "precision": 0.8769230769230769,
+      "recall": 0.6495726495726496,
+      "f1": 0.7463175122749591,
+      "tp": 228,
+      "fp": 32,
+      "fn": 123
+    },
+    "test-44": {
+      "precision": 0.8709677419354839,
+      "recall": 0.7346938775510204,
+      "f1": 0.7970479704797048,
+      "tp": 216,
+      "fp": 32,
+      "fn": 78
+    },
+    "test-45": {
+      "precision": 0.8719806763285024,
+      "recall": 0.6322241681260946,
+      "f1": 0.7329949238578681,
+      "tp": 361,
+      "fp": 53,
+      "fn": 210
+    },
+    "test-46": {
+      "precision": 0.87248322147651,
+      "recall": 0.6341463414634146,
+      "f1": 0.7344632768361581,
+      "tp": 260,
+      "fp": 38,
+      "fn": 150
+    },
+    "test-47": {
+      "precision": 0.7790697674418605,
+      "recall": 0.6261682242990654,
+      "f1": 0.694300518134715,
+      "tp": 335,
+      "fp": 95,
+      "fn": 200
+    },
+    "test-5": {
+      "precision": 0.7692307692307693,
+      "recall": 0.7627118644067796,
+      "f1": 0.7659574468085106,
+      "tp": 90,
+      "fp": 27,
+      "fn": 28
+    },
+    "test-6": {
+      "precision": 0.7524752475247525,
+      "recall": 0.3917525773195876,
+      "f1": 0.5152542372881357,
+      "tp": 76,
+      "fp": 25,
+      "fn": 118
+    },
+    "test-7": {
+      "precision": 0.9032258064516129,
+      "recall": 0.680161943319838,
+      "f1": 0.7759815242494226,
+      "tp": 168,
+      "fp": 18,
+      "fn": 79
+    },
+    "test-8": {
+      "precision": 0.7319587628865979,
+      "recall": 0.7029702970297029,
+      "f1": 0.7171717171717172,
+      "tp": 71,
+      "fp": 26,
+      "fn": 30
+    },
+    "test-9": {
+      "precision": 0.6954022988505747,
+      "recall": 0.6914285714285714,
+      "f1": 0.6934097421203438,
+      "tp": 121,
+      "fp": 53,
+      "fn": 54
+    }
+  },
+  "per_video_delta": {
+    "engleski25ljeto-listening-1": {
+      "f1_before": 0.6817,
+      "f1_after": 0.6726,
+      "delta": -0.0091,
+      "tp": 0,
+      "fp": 9,
+      "fn": 0
+    },
+    "engleski25ljeto-listening-2": {
+      "f1_before": 0.6806,
+      "f1_after": 0.678,
+      "delta": -0.0026,
+      "tp": 2,
+      "fp": 9,
+      "fn": -2
+    },
+    "test-1": {
+      "f1_before": 0.7197,
+      "f1_after": 0.7051,
+      "delta": -0.0146,
+      "tp": 0,
+      "fp": 6,
+      "fn": 0
+    },
+    "test-10": {
+      "f1_before": 0.8761,
+      "f1_after": 0.862,
+      "delta": -0.0141,
+      "tp": 5,
+      "fp": 16,
+      "fn": -5
+    },
+    "test-13": {
+      "f1_before": 0.7257,
+      "f1_after": 0.7635,
+      "delta": 0.0378,
+      "tp": 10,
+      "fp": 5,
+      "fn": -10
+    },
+    "test-40": {
+      "f1_before": 0.7748,
+      "f1_after": 0.7803,
+      "delta": 0.0055,
+      "tp": 3,
+      "fp": 1,
+      "fn": -3
+    },
+    "test-41": {
+      "f1_before": 0.7526,
+      "f1_after": 0.7621,
+      "delta": 0.0096,
+      "tp": 6,
+      "fp": 0,
+      "fn": -6
+    },
+    "test-9": {
+      "f1_before": 0.6936,
+      "f1_after": 0.6934,
+      "delta": -0.0002,
+      "tp": 1,
+      "fp": 2,
+      "fn": -1
+    }
+  },
+  "changed_videos": {
+    "engleski25ljeto-esej": 1,
+    "engleski25ljeto-listening-1": 2,
+    "engleski25ljeto-listening-2": 6,
+    "engleski25ljeto-reading-1": 7,
+    "engleski25ljeto-reading-2": 4,
+    "engleski25ljeto-reading-3": 3,
+    "engleski25ljeto-reading-4": 3,
+    "kemija25ljeto-k1-1": 1,
+    "kemija25ljeto-k1-5": 2,
+    "kemija25ljeto-k2-40": 1,
+    "kemija25ljeto-k2-43": 1,
+    "kemija25ljeto-k2-45": 1,
+    "kemija25ljeto-k2-46": 3,
+    "test-1": 1,
+    "test-10": 3,
+    "test-11": 3,
+    "test-12": 1,
+    "test-13": 2,
+    "test-15": 1,
+    "test-16": 2,
+    "test-18": 1,
+    "test-21": 1,
+    "test-23": 1,
+    "test-26": 1,
+    "test-30": 1,
+    "test-31": 1,
+    "test-34": 1,
+    "test-35": 1,
+    "test-38": 2,
+    "test-39": 3,
+    "test-40": 3,
+    "test-41": 1,
+    "test-44": 2,
+    "test-45": 5,
+    "test-46": 4,
+    "test-47": 3,
+    "test-6": 1,
+    "test-7": 1,
+    "test-8": 2,
+    "test-9": 3
+  },
+  "audit": [
+    {
+      "video": "engleski25ljeto-esej",
+      "idx": 49,
+      "words": 6,
+      "span": "u drugoj varijanti sam malo na",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 85.1,
+      "verdict": "correct"
+    },
+    {
+      "video": "engleski25ljeto-listening-1",
+      "idx": 17,
+      "words": 9,
+      "span": "it was a good instinct to broaden my network",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 76.6,
+      "verdict": "correct"
+    },
+    {
+      "video": "engleski25ljeto-listening-1",
+      "idx": 24,
+      "words": 3,
+      "span": "za početak ima",
+      "raw_copies": 3,
+      "gt_copies": 1,
+      "locate_sim": 90.7,
+      "verdict": "correct"
+    },
+    {
+      "video": "engleski25ljeto-listening-2",
+      "idx": 15,
+      "words": 17,
+      "span": "dakle ona ulaže u vježbanje zato što će joj to pomoći odnosno poboljšati njen izgled za zaposlenje",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 71.2,
+      "verdict": "correct"
+    },
+    {
+      "video": "engleski25ljeto-listening-2",
+      "idx": 18,
+      "words": 8,
+      "span": "na engleskom još možemo reći improve ili strengthen",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 79.1,
+      "verdict": "correct"
+    },
+    {
+      "video": "engleski25ljeto-listening-2",
+      "idx": 19,
+      "words": 3,
+      "span": "imamo employment prospects",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 88.1,
+      "verdict": "correct"
+    },
+    {
+      "video": "engleski25ljeto-listening-2",
+      "idx": 52,
+      "words": 11,
+      "span": "dakle čujemo dvoje prijatelja kako razgovaraju o svojim planovima za poslijepodne",
+      "raw_copies": 2,
+      "gt_copies": 0,
+      "locate_sim": 66.6,
+      "verdict": "correct"
+    },
+    {
+      "video": "engleski25ljeto-listening-2",
+      "idx": 106,
+      "words": 30,
+      "span": "you know it was marys birthday on saturday and i was hardly enthusiastic when she announced we would all be spending the day sweating in saunas and soaking in a",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 88.3,
+      "verdict": "correct"
+    },
+    {
+      "video": "engleski25ljeto-listening-2",
+      "idx": 148,
+      "words": 11,
+      "span": "you hear a man talking about his success as a musici",
+      "raw_copies": 5,
+      "gt_copies": 1,
+      "locate_sim": 80.6,
+      "verdict": "correct"
+    },
+    {
+      "video": "engleski25ljeto-reading-1",
+      "idx": 41,
+      "words": 9,
+      "span": "možemo nastaviti na naše sljedeće pitanje pod broj dva",
+      "raw_copies": 3,
+      "gt_copies": 1,
+      "locate_sim": 66.2,
+      "verdict": "correct"
+    },
+    {
+      "video": "engleski25ljeto-reading-1",
+      "idx": 42,
+      "words": 16,
+      "span": "možemo nastaviti na naše sljedeće pitanje pod broj dva koje nam glasi which person says they",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 66.6,
+      "verdict": "correct"
+    },
+    {
+      "video": "engleski25ljeto-reading-1",
+      "idx": 63,
+      "words": 12,
+      "span": "točan odgovor ovdje nam je connie pa ćemo odmah zaokružiti pod c",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 67.5,
+      "verdict": "correct"
+    },
+    {
+      "video": "engleski25ljeto-reading-1",
+      "idx": 172,
+      "words": 18,
+      "span": "sljedeće pitanje glasi which person says that the success of a film depends on when you bring toget",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 70.6,
+      "verdict": "correct"
+    },
+    {
+      "video": "engleski25ljeto-reading-1",
+      "idx": 290,
+      "words": 10,
+      "span": "sljedeće pitanje glasi which person states they enjoyed the su",
+      "raw_copies": 3,
+      "gt_copies": 1,
+      "locate_sim": 79.9,
+      "verdict": "correct"
+    },
+    {
+      "video": "engleski25ljeto-reading-1",
+      "idx": 403,
+      "words": 11,
+      "span": "konačno pitanje nam glasi which person suggests that you need to",
+      "raw_copies": 3,
+      "gt_copies": 1,
+      "locate_sim": 82.6,
+      "verdict": "correct"
+    },
+    {
+      "video": "engleski25ljeto-reading-1",
+      "idx": 449,
+      "words": 5,
+      "span": "još možemo usporediti odgovor connie",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 95.4,
+      "verdict": "correct"
+    },
+    {
+      "video": "engleski25ljeto-reading-2",
+      "idx": 80,
+      "words": 13,
+      "span": "ono što vidimo da autor kaže u tekstu je farmers and landowners",
+      "raw_copies": 3,
+      "gt_copies": 1,
+      "locate_sim": 51.4,
+      "verdict": "correct"
+    },
+    {
+      "video": "engleski25ljeto-reading-2",
+      "idx": 85,
+      "words": 13,
+      "span": "ono što vidimo da autor kaže u tekstu je farmers and landowners",
+      "raw_copies": 5,
+      "gt_copies": 1,
+      "locate_sim": 51.3,
+      "verdict": "correct"
+    },
+    {
+      "video": "engleski25ljeto-reading-2",
+      "idx": 88,
+      "words": 9,
+      "span": "farmers and landowners were loudly criticizing the perpetrator perpetrators",
+      "raw_copies": 3,
+      "gt_copies": 1,
+      "locate_sim": 72.8,
+      "verdict": "correct"
+    },
+    {
+      "video": "engleski25ljeto-reading-2",
+      "idx": 150,
+      "words": 5,
+      "span": "ovdje nam je točan odgovor",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 79.5,
+      "verdict": "correct"
+    },
+    {
+      "video": "engleski25ljeto-reading-3",
+      "idx": 48,
+      "words": 5,
+      "span": "sada ćemo i vidjeti zašto",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 97.4,
+      "verdict": "correct"
+    },
+    {
+      "video": "engleski25ljeto-reading-3",
+      "idx": 79,
+      "words": 11,
+      "span": "znamo da ovo nije točan odgovor jer opet imamo taj this",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 94.2,
+      "verdict": "correct"
+    },
+    {
+      "video": "engleski25ljeto-reading-3",
+      "idx": 84,
+      "words": 14,
+      "span": "instead of asking why something happened ask if there are answers to the problem",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 89.1,
+      "verdict": "correct"
+    },
+    {
+      "video": "engleski25ljeto-reading-4",
+      "idx": 39,
+      "words": 18,
+      "span": "furthermore dogs are nešto at understanding nonverbal cues such as body language and facial expressions and are particularly",
+      "raw_copies": 3,
+      "gt_copies": 1,
+      "locate_sim": 72.4,
+      "verdict": "correct"
+    },
+    {
+      "video": "engleski25ljeto-reading-4",
+      "idx": 164,
+      "words": 16,
+      "span": "ongoing research sheds light on the intricate dynamics of communication between humans and their canine companions",
+      "raw_copies": 3,
+      "gt_copies": 1,
+      "locate_sim": 75.2,
+      "verdict": "correct"
+    },
+    {
+      "video": "engleski25ljeto-reading-4",
+      "idx": 195,
+      "words": 5,
+      "span": "također imamo ovaj izraz development",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 91.3,
+      "verdict": "correct"
+    },
+    {
+      "video": "kemija25ljeto-k1-1",
+      "idx": 8,
+      "words": 12,
+      "span": "i tako ustvari možemo doći do točnog odgovora da je d granit",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 76.3,
+      "verdict": "correct"
+    },
+    {
+      "video": "kemija25ljeto-k1-5",
+      "idx": 2,
+      "words": 14,
+      "span": "za početak ispisat ću sve ono što znam a to je da je elektronegativnost",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 81.8,
+      "verdict": "correct"
+    },
+    {
+      "video": "kemija25ljeto-k1-5",
+      "idx": 4,
+      "words": 9,
+      "span": "također ono što želim znati koliki je to koeficijent",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 86.0,
+      "verdict": "correct"
+    },
+    {
+      "video": "kemija25ljeto-k2-40",
+      "idx": 7,
+      "words": 16,
+      "span": "za početak ćemo ispisati sve ono što znamo te ono što nas se traži a zna",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 92.5,
+      "verdict": "correct"
+    },
+    {
+      "video": "kemija25ljeto-k2-43",
+      "idx": 2,
+      "words": 19,
+      "span": "kao malu pomoć pri rješavanju ovog zadatka koristit ćemo se tablicom standardnih elektronskih potencijala i pronaći gdje se to",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 77.7,
+      "verdict": "correct"
+    },
+    {
+      "video": "kemija25ljeto-k2-45",
+      "idx": 4,
+      "words": 3,
+      "span": "koji će biti",
+      "raw_copies": 4,
+      "gt_copies": 2,
+      "locate_sim": 79.0,
+      "verdict": "correct"
+    },
+    {
+      "video": "kemija25ljeto-k2-46",
+      "idx": 30,
+      "words": 5,
+      "span": "i to će biti točan",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 84.6,
+      "verdict": "correct"
+    },
+    {
+      "video": "kemija25ljeto-k2-46",
+      "idx": 61,
+      "words": 5,
+      "span": "kada to uvrstimo u kalkulator",
+      "raw_copies": 3,
+      "gt_copies": 2,
+      "locate_sim": 86.7,
+      "verdict": "correct"
+    },
+    {
+      "video": "kemija25ljeto-k2-46",
+      "idx": 71,
+      "words": 3,
+      "span": "i takav odgovor",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 82.8,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-1",
+      "idx": 20,
+      "words": 6,
+      "span": "a y os gleda imaginarni dio",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 88.4,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-10",
+      "idx": 19,
+      "words": 10,
+      "span": "jer u ovom slučaju postoji samo jedna ta najveća vrijednost",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 78.3,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-10",
+      "idx": 37,
+      "words": 9,
+      "span": "ok mi u svakom trenutku možemo gledati ili y",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 92.2,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-10",
+      "idx": 87,
+      "words": 11,
+      "span": "morali bi doći točno na aritmetičku sredinu naše dvije nul točke",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 89.1,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-11",
+      "idx": 10,
+      "words": 18,
+      "span": "evo vjerujem da je to nekako možda najneobičnija stvar koja nam prvo upadne u oči kada jednostavno pogledamo",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 88.6,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-11",
+      "idx": 39,
+      "words": 10,
+      "span": "dakle drugim riječima naša domena će bit svi realni brojevi",
+      "raw_copies": 4,
+      "gt_copies": 1,
+      "locate_sim": 69.2,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-11",
+      "idx": 63,
+      "words": 7,
+      "span": "dakle mi znamo da na tom grafu",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 76.3,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-12",
+      "idx": 14,
+      "words": 9,
+      "span": "dobro znači te neke stvari nam mogu mogu pokvariti",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 93.2,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-13",
+      "idx": 21,
+      "words": 12,
+      "span": "pa evo recimo tako nekakav t odavde će kada ga preslikamo na",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 89.6,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-13",
+      "idx": 45,
+      "words": 15,
+      "span": "pa znači kosinus od t bi mi u ovom slučaju bio minus tri kroz pet",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 79.0,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-15",
+      "idx": 86,
+      "words": 9,
+      "span": "pa to znači da su kutevi nasuprot tim stranicama",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 92.1,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-16",
+      "idx": 32,
+      "words": 20,
+      "span": "evo znači taj kut kada se otvorio na sedamdeset i dva stupnja kao da je nekako u ovoj žutoj boji",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 65.7,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-16",
+      "idx": 43,
+      "words": 5,
+      "span": "evo znači samo gledamo preko",
+      "raw_copies": 2,
+      "gt_copies": 0,
+      "locate_sim": 85.1,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-18",
+      "idx": 40,
+      "words": 4,
+      "span": "pa to možemo gledati",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 90.5,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-21",
+      "idx": 39,
+      "words": 7,
+      "span": "i sad ova zadnja dva pitanja na",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 90.7,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-23",
+      "idx": 13,
+      "words": 6,
+      "span": "odnosno koji će oni zajednički nazivnik",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 76.3,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-26",
+      "idx": 25,
+      "words": 12,
+      "span": "pa u tom prvom slučaju imamo sve skupa litru i pol tak",
+      "raw_copies": 3,
+      "gt_copies": 1,
+      "locate_sim": 81.6,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-30",
+      "idx": 13,
+      "words": 7,
+      "span": "pita nas koliko iznosi duljina druge katete",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 81.3,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-31",
+      "idx": 54,
+      "words": 17,
+      "span": "pa znači da ćemo umjesto a pisati četiri b i to mi mora biti jednako b plus",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 83.1,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-34",
+      "idx": 12,
+      "words": 13,
+      "span": "pa prije toga idemo samo vidjeti onda za taj naš limes znači kada",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 89.0,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-35",
+      "idx": 24,
+      "words": 11,
+      "span": "sve ono što ćemo ovdje napraviti je samo uzeti ovu dvojku",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 81.8,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-38",
+      "idx": 48,
+      "words": 5,
+      "span": "pa to je udaljenost središta",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 83.4,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-38",
+      "idx": 53,
+      "words": 11,
+      "span": "evo pa onda se samo pitamo kako ćemo odrediti znači udaljenost",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 85.1,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-39",
+      "idx": 36,
+      "words": 9,
+      "span": "i ono što ovdje želimo napraviti je nekako iskoristiti",
+      "raw_copies": 3,
+      "gt_copies": 0,
+      "locate_sim": 65.9,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-39",
+      "idx": 48,
+      "words": 21,
+      "span": "okej a ako mi je to dugačko osam onda znam da mi je ovaj tu žuti dio jednak trinaest manje za",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 77.0,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-39",
+      "idx": 83,
+      "words": 10,
+      "span": "evo u oba slučaja dobijemo da je ta naša stranica",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 88.5,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-40",
+      "idx": 39,
+      "words": 4,
+      "span": "od tud onda nastavljamo",
+      "raw_copies": 4,
+      "gt_copies": 1,
+      "locate_sim": 75.5,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-40",
+      "idx": 42,
+      "words": 7,
+      "span": "od od tud onda nastavljamo dalje do",
+      "raw_copies": 5,
+      "gt_copies": 1,
+      "locate_sim": 68.7,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-40",
+      "idx": 77,
+      "words": 16,
+      "span": "i vidimo to znači kada bi spljoštili taj graf na y os ono što bi ostalo",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 88.0,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-41",
+      "idx": 51,
+      "words": 6,
+      "span": "i onda ovdje imamo minus 2x",
+      "raw_copies": 2,
+      "gt_copies": 0,
+      "locate_sim": 80.3,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-44",
+      "idx": 37,
+      "words": 13,
+      "span": "kažemo ovo tu je samo skica pa nije točno bitno da su na",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 77.7,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-44",
+      "idx": 72,
+      "words": 9,
+      "span": "nema smisla da mi sada brojimo točno svaku točkicu",
+      "raw_copies": 3,
+      "gt_copies": 1,
+      "locate_sim": 69.4,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-45",
+      "idx": 41,
+      "words": 13,
+      "span": "ali ako napišemo kosinus od pet x puta skok koji je isto to",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 91.8,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-45",
+      "idx": 121,
+      "words": 8,
+      "span": "ovaj drugi dio koji mi je za pola",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 81.6,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-45",
+      "idx": 124,
+      "words": 11,
+      "span": "pa kako znamo da mi je pi polovina ta četvrtina kruga",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 79.3,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-45",
+      "idx": 142,
+      "words": 15,
+      "span": "okej znači to mi je bio sve ovaj tu dio koji mi se odnosio na",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 82.2,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-45",
+      "idx": 153,
+      "words": 7,
+      "span": "ovdje znamo da se riješimo tog kosinusa",
+      "raw_copies": 3,
+      "gt_copies": 1,
+      "locate_sim": 71.6,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-46",
+      "idx": 31,
+      "words": 8,
+      "span": "ili ovaj tu gornji lik s kojim je",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 95.7,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-46",
+      "idx": 105,
+      "words": 7,
+      "span": "a formulu za visinu u jednakostraničnom trokutu",
+      "raw_copies": 3,
+      "gt_copies": 1,
+      "locate_sim": 83.4,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-46",
+      "idx": 126,
+      "words": 14,
+      "span": "pa evo onda malo razmislimo i sjetimo se da mi u stošcu zapravo jako",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 78.3,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-46",
+      "idx": 161,
+      "words": 10,
+      "span": "i onda imamo još plus dvanaest korijena iz devedeset jedan",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 82.8,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-47",
+      "idx": 17,
+      "words": 6,
+      "span": "i evo ga mi znamo da",
+      "raw_copies": 3,
+      "gt_copies": 1,
+      "locate_sim": 90.3,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-47",
+      "idx": 239,
+      "words": 5,
+      "span": "okej znači sada s ovim",
+      "raw_copies": 2,
+      "gt_copies": 0,
+      "locate_sim": 76.0,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-47",
+      "idx": 248,
+      "words": 9,
+      "span": "i sada možemo reći koja je to maksimalna površina",
+      "raw_copies": 3,
+      "gt_copies": 1,
+      "locate_sim": 74.2,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-6",
+      "idx": 103,
+      "words": 11,
+      "span": "i dalje je to okej omjer samo što u ovom našem",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 82.3,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-7",
+      "idx": 30,
+      "words": 9,
+      "span": "evo recimo jedna dobra formula koju ja volim koristiti",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 84.0,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-8",
+      "idx": 30,
+      "words": 8,
+      "span": "evo znači on jednostavno označava poziciju u nizu",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 90.0,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-8",
+      "idx": 69,
+      "words": 12,
+      "span": "što znači da smo mi dvije tisuće sto dvadeset eura platili cij",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 88.3,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-9",
+      "idx": 26,
+      "words": 3,
+      "span": "ok pa onda",
+      "raw_copies": 2,
+      "gt_copies": 0,
+      "locate_sim": 77.7,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-9",
+      "idx": 49,
+      "words": 10,
+      "span": "kažem nije sad točno bitno da su nam svi razmaci",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 89.1,
+      "verdict": "correct"
+    },
+    {
+      "video": "test-9",
+      "idx": 78,
+      "words": 10,
+      "span": "evo pa znači možemo zaključiti da će naš taj odsječak",
+      "raw_copies": 2,
+      "gt_copies": 1,
+      "locate_sim": 88.6,
+      "verdict": "correct"
+    }
+  ]
+}

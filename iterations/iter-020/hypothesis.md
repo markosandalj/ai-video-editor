@@ -1,6 +1,7 @@
 # Iteration 020 — Deterministic adjacent partial-repeat cuts
 
 **Date:** 2026-07-18
+**Status:** Passed all gates and promoted (user decision 2026-07-18)
 **Grilling decision:** target adjacent partial repeats; deliver via a
 deterministic post-pass (same lane family as iter-019 candidate 6).
 
@@ -152,3 +153,33 @@ the sentence-level reconciliation already used by the official scorer.
   ~flat-to-up (0.7973 → ≈0.799), F1 0.7318 → ≈0.734–0.736.
 - Only videos containing detector hits change; every changed video improves
   or is neutral under audit-corrected attribution.
+
+## Outcome
+
+Every gate passed on the implemented fixed-EDL evaluation of all 98 fixtures
+(`output/qa-iteration-20/adjacent-projection-98`, artifacts copied to
+`adjacent-lane-scores.json` and `repeat-cases.md`):
+
+- Explicit source-span cases **3/16 → 13/16**; all 10 targeted adjacent
+  cases cut exactly with remainders preserved; the 3 sandwich chains still
+  pass; controls **14/17 with the identical pre-existing fail set** (three
+  Sol bilingual overcuts) — zero regressions, including listening-1 [108],
+  which the first sweep had broken and the coverage rule restored.
+- Standalone span audit: **86/86 emitted spans correct (879 words), zero
+  both-kept, zero unlocated** across 40 videos.
+- EDL delta: +75 newly cut words. Raw LCS aggregate P/R/F1
+  0.7973/0.6762/0.7318 → 0.7948/0.6779/0.7317; all +48 raw FP words lie
+  inside audited-correct spans (twin attribution artifact, per the
+  evaluation-method caveat above). Take-swap-reconciled aggregate (same
+  procedure applied to baseline and candidate): **0.7413 → 0.7445 F1**,
+  with all eight score-changed videos improving (+0.009 to +0.079) and none
+  regressing.
+- Test suite: 172 passed (8 new adjacent-lane unit tests).
+
+The expected-outcome word estimate held (75 vs 60–80 predicted); the raw
+F1 point estimate did not materialize precisely because the recovered words
+are echo copies that raw LCS credits to the cut position — the reconciled
+aggregate confirms the predicted direction. Promoted as the iteration-20
+production result; the projected EDLs under
+`output/qa-iteration-20/adjacent-projection-98/edls` are the new fixed-EDL
+baseline for iteration 21.
