@@ -1,9 +1,11 @@
 """Deterministic cuts for exceptionally clear local correction chains.
 
-This lane is intentionally narrow. It handles only a completed take separated
-from a highly similar earlier take by one or two visibly truncated attempts.
-Unlike the section editor, it makes no semantic judgment and performs no model
-call: every emitted trim follows directly from exact repeated word boundaries.
+This lane is intentionally narrow. It handles two structural families:
+a completed take separated from a highly similar earlier take by one or two
+visibly truncated attempts, and an adjacent restart whose opening repeats the
+trailing words of the previous sentence. Unlike the section editor, it makes
+no semantic judgment and performs no model call: every emitted trim follows
+directly from exact repeated word boundaries.
 """
 from __future__ import annotations
 
@@ -19,6 +21,12 @@ _MIN_ENDPOINT_LENGTH_RATIO = 0.8
 _MIN_MIDDLE_CONTINUATION_WORDS = 3
 _MIN_SPLICE_SIMILARITY = 65.0
 _MIN_PREFIX_SIMILARITY = 85.0
+
+_ADJACENT_MIN_SPAN_TOKENS = 3
+_ADJACENT_MIN_SIMILARITY = 90.0
+_ADJACENT_MAX_GAP_SECONDS = 10.0
+_ADJACENT_LENGTH_SLACK = 2
+_ADJACENT_MIN_LATER_COVERAGE = 0.5
 
 
 def _indexed_tokens(sentence: Sentence) -> list[tuple[int, str]]:
@@ -159,10 +167,98 @@ def _derive_chain_flags(
     ]
 
 
+def _anchored(a: str, b: str) -> bool:
+    return a.startswith(b) or b.startswith(a)
+
+
+def _adjacent_repeat_match(
+    earlier_tokens: list[str], later_tokens: list[str]
+) -> tuple[int, int] | None:
+    """Return ``(suffix_length, prefix_length)`` for the longest anchored repeat.
+
+    The earlier sentence's trailing tokens must fuzzily match the later
+    sentence's opening tokens. Both span endpoints are anchored (equal tokens,
+    tolerating transcription merges like "od tud"/"odtud"), which rejects
+    order-flipped synonym pairs and paraphrased restarts.
+    """
+    for span in range(len(earlier_tokens), _ADJACENT_MIN_SPAN_TOKENS - 1, -1):
+        suffix = earlier_tokens[-span:]
+        lo = max(span - _ADJACENT_LENGTH_SLACK, 2)
+        hi = min(span + _ADJACENT_LENGTH_SLACK, len(later_tokens))
+        for prefix_length in sorted(range(lo, hi + 1), key=lambda k: abs(k - span)):
+            prefix = later_tokens[:prefix_length]
+            if not (_anchored(suffix[0], prefix[0]) and _anchored(suffix[-1], prefix[-1])):
+                continue
+            similarity = fuzz.ratio(" ".join(suffix), " ".join(prefix))
+            if similarity >= _ADJACENT_MIN_SIMILARITY:
+                return span, prefix_length
+    return None
+
+
+def _derive_adjacent_flags(
+    sentences: list[Sentence], earlier_index: int
+) -> list[DuplicateFlag]:
+    earlier = sentences[earlier_index]
+    later = sentences[earlier_index + 1]
+    if later.start - earlier.end > _ADJACENT_MAX_GAP_SECONDS:
+        return []
+    earlier_indexed = _indexed_tokens(earlier)
+    later_indexed = _indexed_tokens(later)
+    if len(earlier_indexed) < _ADJACENT_MIN_SPAN_TOKENS or len(later_indexed) < 2:
+        return []
+
+    match = _adjacent_repeat_match(
+        [token for _, token in earlier_indexed],
+        [token for _, token in later_indexed],
+    )
+    if match is None:
+        return []
+    span, prefix_length = match
+    if prefix_length < _ADJACENT_MIN_LATER_COVERAGE * len(later_indexed):
+        # The repeat is only a small opening fraction of the later sentence:
+        # that is the restate-and-elaborate teaching pattern ("...tlak od
+        # sedam bara." → "Tlak od sedam bara nalazi se..."), which the human
+        # keeps on both sides. A re-delivery covers most of the later take.
+        return []
+    note = (
+        "Mehanički prepoznat ponovljeni završetak odmah ponovljen na početku "
+        f"sljedeće rečenice; zadržana verzija je rečenica [{earlier_index + 1}]."
+    )
+
+    if span == len(earlier_indexed):
+        # A whole-sentence restart is only safe when the later sentence
+        # continues past the repeated opening; exact standalone twins are
+        # deliberate repetition (dictation, emphasis) and must stay.
+        if prefix_length >= len(later_indexed):
+            return []
+        return [DuplicateFlag(
+            idx=earlier_index,
+            reason=FlagReason.FALSE_START,
+            confidence=0.99,
+            note=note,
+        )]
+
+    reason = (
+        FlagReason.DUPLICATE
+        if prefix_length >= len(later_indexed)
+        else FlagReason.FALSE_START
+    )
+    cut_start = earlier_indexed[-span][0]
+    return [DuplicateFlag(
+        idx=earlier_index,
+        reason=reason,
+        confidence=0.99,
+        note=note,
+        word_trims=[_word_trim(earlier, cut_start, len(earlier.words))],
+    )]
+
+
 def detect_local_corrections(sentences: list[Sentence]) -> list[DuplicateFlag]:
-    """Return exact cuts for two-to-three-sentence local correction chains."""
+    """Return exact cuts for adjacent restarts and short local correction chains."""
     flags: list[DuplicateFlag] = []
     for earlier_index, earlier in enumerate(sentences):
+        if earlier_index + 1 < len(sentences):
+            flags.extend(_derive_adjacent_flags(sentences, earlier_index))
         for distance in (2, 3):
             later_index = earlier_index + distance
             if later_index >= len(sentences):

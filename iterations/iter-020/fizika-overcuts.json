@@ -1,0 +1,443 @@
+{
+  "word_agg": {
+    "P": 0.30434782608695654,
+    "R": 0.17587939698492464,
+    "F1": 0.22292993630573252,
+    "TP": 35,
+    "FP": 80,
+    "FN": 164,
+    "wrong_by_reason": {
+      "silence": 72,
+      "false_start": 2,
+      "duplicate": 6
+    },
+    "right_by_reason": {
+      "silence": 17,
+      "": 1,
+      "false_start": 16,
+      "duplicate": 1
+    }
+  },
+  "by_reason_words": [
+    [
+      "silence",
+      72
+    ],
+    [
+      "duplicate",
+      6
+    ],
+    [
+      "false_start",
+      2
+    ]
+  ],
+  "by_reason_sents": [
+    [
+      "silence",
+      1
+    ],
+    [
+      "duplicate",
+      1
+    ],
+    [
+      "false_start",
+      1
+    ]
+  ],
+  "per_video": [
+    {
+      "name": "fizika25ljeto-034",
+      "fp": 15,
+      "tp": 0,
+      "fn": 1,
+      "wrong": {
+        "silence": 14,
+        "false_start": 1
+      },
+      "p": 0.0,
+      "human_cut": 1,
+      "pipe_cut": 15
+    },
+    {
+      "name": "fizika25ljeto-002",
+      "fp": 14,
+      "tp": 1,
+      "fn": 23,
+      "wrong": {
+        "silence": 14
+      },
+      "p": 0.067,
+      "human_cut": 24,
+      "pipe_cut": 15
+    },
+    {
+      "name": "fizika25ljeto-009",
+      "fp": 11,
+      "tp": 1,
+      "fn": 11,
+      "wrong": {
+        "silence": 11
+      },
+      "p": 0.083,
+      "human_cut": 12,
+      "pipe_cut": 12
+    },
+    {
+      "name": "fizika25ljeto-033",
+      "fp": 8,
+      "tp": 1,
+      "fn": 17,
+      "wrong": {
+        "silence": 2,
+        "duplicate": 6
+      },
+      "p": 0.111,
+      "human_cut": 18,
+      "pipe_cut": 9
+    },
+    {
+      "name": "fizika25ljeto-008",
+      "fp": 6,
+      "tp": 2,
+      "fn": 1,
+      "wrong": {
+        "silence": 6
+      },
+      "p": 0.25,
+      "human_cut": 3,
+      "pipe_cut": 8
+    },
+    {
+      "name": "fizika25ljeto-026",
+      "fp": 6,
+      "tp": 0,
+      "fn": 3,
+      "wrong": {
+        "silence": 6
+      },
+      "p": 0.0,
+      "human_cut": 3,
+      "pipe_cut": 6
+    },
+    {
+      "name": "fizika25ljeto-010",
+      "fp": 4,
+      "tp": 0,
+      "fn": 3,
+      "wrong": {
+        "silence": 4
+      },
+      "p": 0.0,
+      "human_cut": 3,
+      "pipe_cut": 4
+    },
+    {
+      "name": "fizika25ljeto-025",
+      "fp": 3,
+      "tp": 0,
+      "fn": 30,
+      "wrong": {
+        "silence": 3
+      },
+      "p": 0.0,
+      "human_cut": 30,
+      "pipe_cut": 3
+    },
+    {
+      "name": "fizika25ljeto-001",
+      "fp": 2,
+      "tp": 0,
+      "fn": 4,
+      "wrong": {
+        "silence": 2
+      },
+      "p": 0.0,
+      "human_cut": 4,
+      "pipe_cut": 2
+    },
+    {
+      "name": "fizika25ljeto-003",
+      "fp": 2,
+      "tp": 3,
+      "fn": 8,
+      "wrong": {
+        "silence": 2
+      },
+      "p": 0.6,
+      "human_cut": 11,
+      "pipe_cut": 5
+    },
+    {
+      "name": "fizika25ljeto-027",
+      "fp": 2,
+      "tp": 0,
+      "fn": 2,
+      "wrong": {
+        "silence": 2
+      },
+      "p": 0.0,
+      "human_cut": 2,
+      "pipe_cut": 2
+    },
+    {
+      "name": "fizika25ljeto-028",
+      "fp": 2,
+      "tp": 0,
+      "fn": 1,
+      "wrong": {
+        "silence": 2
+      },
+      "p": 0.0,
+      "human_cut": 1,
+      "pipe_cut": 2
+    },
+    {
+      "name": "fizika25ljeto-035",
+      "fp": 2,
+      "tp": 0,
+      "fn": 4,
+      "wrong": {
+        "silence": 2
+      },
+      "p": 0.0,
+      "human_cut": 4,
+      "pipe_cut": 2
+    },
+    {
+      "name": "fizika25ljeto-005",
+      "fp": 1,
+      "tp": 0,
+      "fn": 3,
+      "wrong": {
+        "silence": 1
+      },
+      "p": 0.0,
+      "human_cut": 3,
+      "pipe_cut": 1
+    },
+    {
+      "name": "fizika25ljeto-029",
+      "fp": 1,
+      "tp": 16,
+      "fn": 7,
+      "wrong": {
+        "false_start": 1
+      },
+      "p": 0.941,
+      "human_cut": 23,
+      "pipe_cut": 17
+    },
+    {
+      "name": "fizika25ljeto-030",
+      "fp": 1,
+      "tp": 4,
+      "fn": 23,
+      "wrong": {
+        "silence": 1
+      },
+      "p": 0.8,
+      "human_cut": 27,
+      "pipe_cut": 5
+    },
+    {
+      "name": "fizika25ljeto-004",
+      "fp": 0,
+      "tp": 4,
+      "fn": 2,
+      "wrong": {},
+      "p": 1.0,
+      "human_cut": 6,
+      "pipe_cut": 4
+    },
+    {
+      "name": "fizika25ljeto-006",
+      "fp": 0,
+      "tp": 1,
+      "fn": 0,
+      "wrong": {},
+      "p": 1.0,
+      "human_cut": 1,
+      "pipe_cut": 1
+    },
+    {
+      "name": "fizika25ljeto-007",
+      "fp": 0,
+      "tp": 2,
+      "fn": 21,
+      "wrong": {},
+      "p": 1.0,
+      "human_cut": 23,
+      "pipe_cut": 2
+    }
+  ],
+  "examples": {
+    "silence": [
+      {
+        "video": "fizika25ljeto-001",
+        "si": 25,
+        "wi": 12,
+        "word": "evo,",
+        "sentence": "Da bismo dobili sami delta x, trebamo još korijenovati ovaj izraz, ali evo, možemo prvo kvadrirati brojeve.",
+        "ctx": "ovaj izraz, ali evo, možemo prvo kvadrirati"
+      },
+      {
+        "video": "fizika25ljeto-001",
+        "si": 28,
+        "wi": 1,
+        "word": "evo,",
+        "sentence": "I evo, pomak iznosi pedeset, a put iznosi sedamdeset kilometara, što znači da je točan odgovor odgovor d.",
+        "ctx": "I evo, pomak iznosi pedeset,"
+      },
+      {
+        "video": "fizika25ljeto-002",
+        "si": 2,
+        "wi": 0,
+        "word": "Ponuđeni",
+        "sentence": "Ponuđeni odgovori govore o tome da je očuvana ponuđeni odgovori govore o tome da je očuvana samo ukupna količina gibanje, samo kinetička ene",
+        "ctx": "Ponuđeni odgovori govore o"
+      },
+      {
+        "video": "fizika25ljeto-002",
+        "si": 2,
+        "wi": 1,
+        "word": "odgovori",
+        "sentence": "Ponuđeni odgovori govore o tome da je očuvana ponuđeni odgovori govore o tome da je očuvana samo ukupna količina gibanje, samo kinetička ene",
+        "ctx": "Ponuđeni odgovori govore o tome"
+      },
+      {
+        "video": "fizika25ljeto-002",
+        "si": 2,
+        "wi": 2,
+        "word": "govore",
+        "sentence": "Ponuđeni odgovori govore o tome da je očuvana ponuđeni odgovori govore o tome da je očuvana samo ukupna količina gibanje, samo kinetička ene",
+        "ctx": "Ponuđeni odgovori govore o tome da"
+      },
+      {
+        "video": "fizika25ljeto-002",
+        "si": 2,
+        "wi": 3,
+        "word": "o",
+        "sentence": "Ponuđeni odgovori govore o tome da je očuvana ponuđeni odgovori govore o tome da je očuvana samo ukupna količina gibanje, samo kinetička ene",
+        "ctx": "Ponuđeni odgovori govore o tome da je"
+      },
+      {
+        "video": "fizika25ljeto-002",
+        "si": 2,
+        "wi": 4,
+        "word": "tome",
+        "sentence": "Ponuđeni odgovori govore o tome da je očuvana ponuđeni odgovori govore o tome da je očuvana samo ukupna količina gibanje, samo kinetička ene",
+        "ctx": "odgovori govore o tome da je očuvana"
+      },
+      {
+        "video": "fizika25ljeto-002",
+        "si": 2,
+        "wi": 5,
+        "word": "da",
+        "sentence": "Ponuđeni odgovori govore o tome da je očuvana ponuđeni odgovori govore o tome da je očuvana samo ukupna količina gibanje, samo kinetička ene",
+        "ctx": "govore o tome da je očuvana ponuđeni"
+      },
+      {
+        "video": "fizika25ljeto-002",
+        "si": 2,
+        "wi": 6,
+        "word": "je",
+        "sentence": "Ponuđeni odgovori govore o tome da je očuvana ponuđeni odgovori govore o tome da je očuvana samo ukupna količina gibanje, samo kinetička ene",
+        "ctx": "o tome da je očuvana ponuđeni odgovori"
+      },
+      {
+        "video": "fizika25ljeto-002",
+        "si": 2,
+        "wi": 7,
+        "word": "očuvana",
+        "sentence": "Ponuđeni odgovori govore o tome da je očuvana ponuđeni odgovori govore o tome da je očuvana samo ukupna količina gibanje, samo kinetička ene",
+        "ctx": "tome da je očuvana ponuđeni odgovori govore"
+      },
+      {
+        "video": "fizika25ljeto-002",
+        "si": 5,
+        "wi": 8,
+        "word": "nakon",
+        "sentence": "Imamo dvije kugle koje se centralno sudare i nakon toga, nakon sudara se gibaju odvojeno.",
+        "ctx": "centralno sudare i nakon toga, nakon sudara"
+      },
+      {
+        "video": "fizika25ljeto-002",
+        "si": 5,
+        "wi": 9,
+        "word": "toga,",
+        "sentence": "Imamo dvije kugle koje se centralno sudare i nakon toga, nakon sudara se gibaju odvojeno.",
+        "ctx": "sudare i nakon toga, nakon sudara se"
+      }
+    ],
+    "false_start": [
+      {
+        "video": "fizika25ljeto-029",
+        "si": 25,
+        "wi": 0,
+        "word": "Dakle,",
+        "sentence": "Dakle, ukupna promjena volumena se ovdje neće dogoditi iz razloga.",
+        "ctx": "Dakle, ukupna promjena volumena"
+      },
+      {
+        "video": "fizika25ljeto-034",
+        "si": 36,
+        "wi": 0,
+        "word": "Dakle,",
+        "sentence": "Dakle,",
+        "ctx": "Dakle,"
+      }
+    ],
+    "duplicate": [
+      {
+        "video": "fizika25ljeto-033",
+        "si": 22,
+        "wi": 0,
+        "word": "Nama",
+        "sentence": "Nama je R1 ovaj zapravo dva DA.",
+        "ctx": "Nama je R1 ovaj"
+      },
+      {
+        "video": "fizika25ljeto-033",
+        "si": 22,
+        "wi": 1,
+        "word": "je",
+        "sentence": "Nama je R1 ovaj zapravo dva DA.",
+        "ctx": "Nama je R1 ovaj zapravo"
+      },
+      {
+        "video": "fizika25ljeto-033",
+        "si": 22,
+        "wi": 2,
+        "word": "R1",
+        "sentence": "Nama je R1 ovaj zapravo dva DA.",
+        "ctx": "Nama je R1 ovaj zapravo dva"
+      },
+      {
+        "video": "fizika25ljeto-033",
+        "si": 22,
+        "wi": 3,
+        "word": "ovaj",
+        "sentence": "Nama je R1 ovaj zapravo dva DA.",
+        "ctx": "Nama je R1 ovaj zapravo dva DA."
+      },
+      {
+        "video": "fizika25ljeto-033",
+        "si": 22,
+        "wi": 4,
+        "word": "zapravo",
+        "sentence": "Nama je R1 ovaj zapravo dva DA.",
+        "ctx": "je R1 ovaj zapravo dva DA."
+      },
+      {
+        "video": "fizika25ljeto-033",
+        "si": 22,
+        "wi": 5,
+        "word": "dva",
+        "sentence": "Nama je R1 ovaj zapravo dva DA.",
+        "ctx": "R1 ovaj zapravo dva DA."
+      }
+    ]
+  }
+}
