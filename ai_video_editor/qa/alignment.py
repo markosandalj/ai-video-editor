@@ -80,7 +80,6 @@ def build_alignment(
         raw_sentences,
         gt_sentences,
         pipeline_cuts=[is_cut for is_cut, _ in pipeline],
-        match_threshold=match_threshold,
     )
     take_swap_indices = verdicts.take_disagreement_indices
 

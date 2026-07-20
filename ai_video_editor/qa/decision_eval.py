@@ -16,13 +16,11 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal
-
 from loguru import logger
 from rapidfuzz import fuzz
 
 from ai_video_editor.duplicate.edl import EditAction, EditDecisionList
-from ai_video_editor.qa.ground_truth import _align_monotonic, derive_word_coverage
+from ai_video_editor.qa.ground_truth import derive_word_coverage
 from ai_video_editor.qa.models import CutDecisionResult
 from ai_video_editor.transcription.models import Sentence, Transcript, Word
 
@@ -163,27 +161,9 @@ def derive_human_verdicts(
     gt_sentences: list[Sentence],
     *,
     pipeline_cuts: list[bool] | None = None,
-    method: Literal["words", "sentences"] = "words",
-    match_threshold: float = MATCH_THRESHOLD,
     coverage_threshold: float = COVERAGE_THRESHOLD,
 ) -> HumanVerdicts:
-    """Derive human keep/cut verdicts for each raw sentence.
-
-    ``method="words"`` is the default QA path. ``method="sentences"`` preserves
-    the previous monotonic sentence-alignment behaviour for A/B comparisons.
-    """
-    if method == "sentences":
-        aligned = _align_monotonic(raw_sentences, gt_sentences, match_threshold)
-        kept_indices = {pi for pi, _, _ in aligned}
-        human_kept = [i in kept_indices for i in range(len(raw_sentences))]
-        return HumanVerdicts(
-            human_kept=human_kept,
-            coverage=[1.0 if kept else 0.0 for kept in human_kept],
-        )
-
-    if method != "words":
-        raise ValueError(f"Unknown human verdict method: {method!r}")
-
+    """Derive human keep/cut verdicts from full-stream word coverage."""
     coverage = derive_word_coverage(raw_sentences, gt_sentences)
     human_kept = [value >= coverage_threshold for value in coverage]
     take_disagreements: list[tuple[int, int]] = []
@@ -209,8 +189,6 @@ def evaluate_decisions(
     gt_sentences: list[Sentence],
     *,
     name: str = "",
-    match_threshold: float = MATCH_THRESHOLD,
-    method: Literal["words", "sentences"] = "words",
 ) -> DecisionScore:
     """Score the pipeline's keep/cut decisions for one video against ground truth."""
     pipeline = [_cut_reason(s, edl) for s in raw_sentences]
@@ -219,8 +197,6 @@ def evaluate_decisions(
         raw_sentences,
         gt_sentences,
         pipeline_cuts=pipeline_cuts,
-        method=method,
-        match_threshold=match_threshold,
     )
 
     score = DecisionScore(
@@ -364,7 +340,6 @@ def evaluate_fixture(
     name: str,
     *,
     edl_path: Path | None = None,
-    method: Literal["words", "sentences"] = "words",
 ) -> DecisionScore | None:
     """Evaluate one fixture by name using cached sidecars only (no network)."""
     raw_t = fixtures_dir / f"{name}-raw.transcript.json"
@@ -376,7 +351,7 @@ def evaluate_fixture(
     raw = _load_sentences(raw_t)
     edl = EditDecisionList.model_validate_json(edl_p.read_text("utf-8"))
     gt = _load_sentences(gt_t)
-    return evaluate_decisions(raw, edl, gt, name=name, method=method)
+    return evaluate_decisions(raw, edl, gt, name=name)
 
 
 def discover_fixture_names(fixtures_dir: Path) -> list[str]:

@@ -140,60 +140,16 @@ def build_reviewed_edl(
     payload: ReviewPayload,
     request: ReviewSaveRequest,
 ) -> EditDecisionList:
-    # Canonical path: free-form cut ranges. Keeps are the complement of the
-    # merged cut spans over the full source duration.
-    if request.cut_ranges is not None:
-        total = payload.video.duration
-        cuts = _merge_spans(
-            _clamp_spans(((r.start, r.end) for r in request.cut_ranges), total)
-        )
-        keep_spans = _complement_spans(cuts, total)
-        decisions = _spans_to_decisions(keep_spans, total)
-        return EditDecisionList(
-            decisions=decisions,
-            source_video=str(video_path),
-            total_duration=total,
-        )
-
-    return _build_reviewed_edl_from_words(video_path, payload, request)
-
-
-def _build_reviewed_edl_from_words(
-    video_path: Path,
-    payload: ReviewPayload,
-    request: ReviewSaveRequest,
-) -> EditDecisionList:
-    """Legacy path: reviewer decisions expressed as word indices to cut."""
-    cut = set(request.cut_words)
-    words = sorted(
-        (word for sentence in payload.sentences for word in sentence.words),
-        key=lambda word: word.idx,
+    total = payload.video.duration
+    cuts = _merge_spans(
+        _clamp_spans(((r.start, r.end) for r in request.cut_ranges), total)
     )
-
-    keep_spans: list[tuple[float, float]] = []
-    run_start: float | None = None
-    run_end: float = 0.0
-    for word in words:
-        if word.idx in cut:
-            if run_start is not None:
-                keep_spans.append((run_start, run_end))
-                run_start = None
-            continue
-        if run_start is None:
-            run_start = word.cut_in if word.cut_in is not None else word.start
-            run_end = word.cut_out if word.cut_out is not None else word.end
-        else:
-            word_end = word.cut_out if word.cut_out is not None else word.end
-            run_end = max(run_end, word_end)
-    if run_start is not None:
-        keep_spans.append((run_start, run_end))
-
-    merged = _merge_spans(keep_spans)
-    decisions = _spans_to_decisions(merged, payload.video.duration)
+    keep_spans = _complement_spans(cuts, total)
+    decisions = _spans_to_decisions(keep_spans, total)
     return EditDecisionList(
         decisions=decisions,
         source_video=str(video_path),
-        total_duration=payload.video.duration,
+        total_duration=total,
     )
 
 

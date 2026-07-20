@@ -1,6 +1,6 @@
 # Free-Form Timeline Editor
 
-Status: `in-progress`
+Status: `done`
 Phase: 6
 
 ## Progress log
@@ -10,8 +10,7 @@ Phase: 6
   `lib/review-model.ts`. No separate componentization pass was needed.
 - **M2 backend (range core)** — done. Introduced in `review.v3`; current payload is
   `review.v4` after removal of the retired annotation fields. `CutRange`, `cut_ranges` in
-  the payload (derived from current decisions) and save request (legacy
-  `cut_words` still honored when `cut_ranges` is omitted), range-based
+  the payload (derived from current decisions) and save request, range-based
   `build_reviewed_edl` (keeps = complement of merged cuts). Key realization: the
   on-disk `-review.edl.json` was *already* time-range based, so loading a legacy
   sidecar yields ranges with no migration code. 15 tests pass; verified live
@@ -20,7 +19,7 @@ Phase: 6
   cached `AudioEnvelope` (`<stem>.audio.json`) into normalized min/max buckets;
   no new ffmpeg path. Returns 2000+ peaks for a real video.
 - **M3 frontend (read-only timeline)** — done. `lib/timeline-model.ts`
-  (`deriveCutRanges` mirrors the backend EDL, `samplePeaks`, `clampWindow`,
+  (`samplePeaks`, `clampWindow`,
   attention bands), `usePeaks` query hook, and `components/timeline/
   timeline-strip.tsx`: collapsible strip with a full-duration minimap over a
   zoomable/pannable detail track (layered canvases so the waveform isn't
@@ -112,8 +111,8 @@ both views editing one shared cut state.
 - **Structure**: full componentization pass on `frontend/src/App.tsx` (~2000
   lines) as part of this feature. Lands as **one feature branch** with the
   milestone checkpoints below.
-- **Migration**: old `cut_words` saves and old word-set localStorage drafts are
-  converted to ranges on load — nobody loses in-flight work.
+- **Migration**: the compatibility window is complete; saves and localStorage
+  drafts now use time ranges exclusively.
 
 ## M4 interaction spec (grilled 2026-07-12)
 
@@ -206,12 +205,10 @@ consumes `TimeRange[]`, so only the producer changes.
 
 - `ai_video_editor/review/models.py`: range editing was introduced with `review.v3`.
   `CutRange {start, end}`. `ReviewSaveRequest` becomes `{cut_ranges: list[CutRange]}`
-  (accept legacy `cut_words` and convert server-side). `ReviewPayload` includes
-  the saved `cut_ranges` so the client restores exact state.
+  and `ReviewPayload` includes the saved `cut_ranges` so the client restores exact state.
 - `ai_video_editor/review/export.py`: `build_reviewed_edl` takes merged cut
   ranges and emits keeps as their complement over `[0, video_duration]` —
-  simpler than today's word-run reconstruction. Loader converts `review.v2`
-  sidecars (word indices → ranges via word timestamps).
+  simpler than word-run reconstruction.
 - New `GET /api/videos/{video_id}/peaks` in `ai_video_editor/web/app.py`:
   ffmpeg extracts mono audio, downsamples to ~4–8k min/max pairs, caches JSON
   next to the video keyed on source mtime/size.
@@ -307,16 +304,15 @@ failure. Timebox the peaks.js spike in M3 and decide build-vs-adopt from it.
 
 ## Acceptance criteria
 
-- [ ] Cut state is range-based end-to-end: timeline and transcript edit the
-      same ranges; save produces the current review schema; legacy saves and drafts load
-      correctly and render an identical EDL.
-- [ ] Timeline strip shows minimap + zoomable detail track with waveform,
+- [x] Cut state is range-based end-to-end: timeline and transcript edit the
+      same ranges and save produces the current review schema.
+- [x] Timeline strip shows minimap + zoomable detail track with waveform,
       confidence heat, cut regions, playhead; collapsible; click seeks video.
-- [ ] Free-form editing works: drag-select cut, edge-drag trim of any cut,
+- [x] Free-form editing works: drag-select cut, edge-drag trim of any cut,
       razor/in-out keys, click-restore — all with boundary snapping and Alt
       free-drag.
-- [ ] Partially cut words are visually distinct in the transcript and toggle
+- [x] Partially cut words are visually distinct in the transcript and toggle
       as whole words.
-- [ ] Undo/redo and localStorage drafts cover edits from both views.
-- [ ] `App.tsx` reduced to composition; editor logic lives in dedicated
+- [x] Undo/redo and localStorage drafts cover edits from both views.
+- [x] `App.tsx` reduced to composition; editor logic lives in dedicated
       modules with unit tests for range math and EDL building.

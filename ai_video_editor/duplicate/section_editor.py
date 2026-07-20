@@ -427,8 +427,9 @@ def detect_section_edits(
     health: SectionHealth | None = None,
     trace: SectionTrace | None = None,
 ) -> list[DuplicateFlag]:
-    """Run the section editor and return removal flags (same contract as
-    ``detect_duplicates``). Best-effort per section: a failed section is logged
+    """Run the section editor and return removal flags.
+
+    Best-effort per section: a failed section is logged
     and skipped rather than aborting the whole video. Pass *health* to collect
     plumbing telemetry (failed sections, rejected spans) — essential when
     comparing models, because a model whose calls fail looks identical to a

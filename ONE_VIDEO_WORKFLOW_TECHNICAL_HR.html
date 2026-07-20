@@ -700,9 +700,9 @@
         <h2>Trenutačna dokumentacija sustava · 17. srpnja 2026.</h2>
         <p>
           Ova stranica opisuje pipeline koji se trenutačno koristi na grani <code>main</code>.
-          Section editor uključen je prema zadanim postavkama. Stariji višekoračni detektor
-          duplikata još postoji u kodu, ali se ne pokreće na zadanom putu. Uklonjeni enrichment
-          sustav, arbitar, statusi rečenica, toplinske karte i red za vraćanje također se ne pokreću.
+          Section editor jedini je put za tekstualne odluke. Stariji višekoračni detektor
+          duplikata, enrichment sustav, arbitar, statusi rečenica, toplinske karte i red za
+          vraćanje uklonjeni su.
         </p>
       </section>
       <section class="hero" aria-labelledby="title">
@@ -827,7 +827,7 @@
                 <div class="fact"><b>Ugovor modela</b><span>Sol navodi tekst; kod ga preslikava u postojeće vremenske oznake riječi.</span></div>
                 <div class="fact"><b>Lokalne ispravke</b><span>RapidFuzz pravila; bez dodatnog poziva modela.</span></div>
                 <div class="fact"><b>Provjera digresija</b><span>Gemini 2.5 Flash samo za kratke kandidate blizu tišine ili STT audio događaja.</span></div>
-                <div class="fact"><b>Neaktivni put</b><span>Stariji leksički i embedding detektor duplikata preskače se dok je <code>section_editor.enabled</code> postavljen na true.</span></div>
+                <div class="fact"><b>Jedan put</b><span>Zamijenjeni leksički i embedding detektor duplikata uklonjen je.</span></div>
               </div>
             </div>
           </article>
@@ -1110,9 +1110,8 @@
             <h2 id="section-editor-title">Section editor: Sol navodi tekst, kod ga pretvara u rezove</h2>
           </div>
           <p>
-            Ovo je zadani put uređivanja teksta kada je
-            <code>section_editor.enabled = true</code>. Uobičajena pokretanja naredbi
-            <code>process</code> i <code>batch</code> preskaču stariji detektor parova rečenica.
+            Ovo je put uređivanja teksta koji koriste uobičajena pokretanja naredbi
+            <code>process</code> i <code>batch</code>.
           </p>
         </div>
 
@@ -1203,12 +1202,6 @@
                 <td>RapidFuzz</td>
                 <td>Podudara početak i čisti završetak lanca ispravaka kada je srednji pokušaj vidljivo prekinut.</td>
                 <td>Gotovo identično 98 %; splice ukupno 65 % i početak 85 %; razmak krajnjih točaka najviše 10 s.</td>
-              </tr>
-              <tr>
-                <td><strong>Naslijeđeni put duplikata</strong></td>
-                <td>SentenceTransformer paraphrase-multilingual-MiniLM-L12-v2</td>
-                <td>Mjeri značenjsku sličnost rečenica za stariji detektor duplikata. Ne poziva se dok je section editor uključen.</td>
-                <td>Neaktivan na zadanom putu.</td>
               </tr>
               <tr>
                 <td><strong>Provjera digresija</strong></td>

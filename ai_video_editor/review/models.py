@@ -120,16 +120,9 @@ class ReviewPayload(BaseModel):
 
 
 class ReviewSaveRequest(BaseModel):
-    """Reviewer decisions to persist.
+    """Free-form source-time ranges the reviewer wants removed."""
 
-    The canonical form is ``cut_ranges`` (free-form source-time spans). Legacy
-    clients may still send ``cut_words`` (word indices); it is used only when
-    ``cut_ranges`` is omitted (``None``). An explicit empty ``cut_ranges`` list
-    means "no cuts" (restore everything), which is distinct from omitting it.
-    """
-
-    cut_ranges: list[CutRange] | None = None
-    cut_words: list[int] = Field(default_factory=list)
+    cut_ranges: list[CutRange]
 
 
 class ReviewSaveResponse(BaseModel):

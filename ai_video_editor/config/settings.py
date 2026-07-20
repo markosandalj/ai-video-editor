@@ -104,119 +104,6 @@ class TranscriptionConfig(BaseModel):
         ),
     )
 
-class DuplicateDetectionConfig(BaseModel):
-    """Duplicate detection thresholds and behaviour."""
-
-    model_config = ConfigDict(extra="allow")
-
-    window_size: int = Field(
-        default=5,
-        ge=1,
-        description="Lookahead window: each sentence compared against the next N sentences.",
-    )
-
-    lexical_definite: float = Field(
-        default=90.0,
-        ge=0.0,
-        le=100.0,
-        description="Lexical score (0-100) at or above which a pair is an automatic duplicate.",
-    )
-    lexical_maybe: float = Field(
-        default=70.0,
-        ge=0.0,
-        le=100.0,
-        description="Lexical score (0-100) at or above which the pair advances to semantic tier.",
-    )
-
-    semantic_definite: float = Field(
-        default=0.95,
-        ge=0.0,
-        le=1.0,
-        description="Cosine similarity at or above which a pair is an automatic duplicate.",
-    )
-    semantic_maybe: float = Field(
-        default=0.75,
-        ge=0.0,
-        le=1.0,
-        description="Cosine similarity at or above which the pair advances to Gemini tier.",
-    )
-
-    gemini_confidence_threshold: float = Field(
-        default=0.8,
-        ge=0.0,
-        le=1.0,
-        description="Minimum Gemini confidence to accept a duplicate verdict.",
-    )
-
-    definite_min_words: int = Field(
-        default=4,
-        ge=0,
-        description=(
-            "Definite lexical/semantic pairs whose shorter sentence has fewer "
-            "words than this are demoted to Gemini review instead of auto-cut. "
-            "Short recurring interjections ('Dobro.', 'Ok.') score 100 lexical "
-            "similarity but are discourse markers, not retakes — on the fixture "
-            "corpus the human kept both copies in 9 of 10 such pairs."
-        ),
-    )
-
-    take_selection: Literal["last", "gemini"] = Field(
-        default="last",
-        description=(
-            "Which take to keep when a duplicate is confirmed. "
-            "'last' (default): always keep the later take, deterministically — the "
-            "LLM 'which to keep' pass is skipped, Gemini's preferred_index on "
-            "borderline pairs is ignored, and each retake cluster keeps its "
-            "highest-index member. A predictable rule professors can record for "
-            "(flub, pause, redo clean) beats a marginally more accurate but "
-            "unpredictable one, and the non-destructive review UI makes the rare "
-            "wrong cut a cheap restore. 'gemini': let the model arbitrate the keep "
-            "side (honours llm_keep_review and prefer_completeness) — higher "
-            "historical accuracy on pre-existing footage at the cost of determinism."
-        ),
-    )
-    llm_keep_review: bool = Field(
-        default=False,
-        description=(
-            "Re-ask Gemini which side of every confirmed duplicate pair to keep "
-            "(the pick_best_version pass). Only consulted when take_selection="
-            "'gemini'. On the fixture corpus the human kept the later take in 71% "
-            "of near-identical pairs and 82% of paraphrase pairs, so the "
-            "deterministic keep-later default beats a completeness-first LLM "
-            "re-litigation and removes a nondeterminism source."
-        ),
-    )
-
-    context_window: int = Field(
-        default=2,
-        ge=0,
-        description=(
-            "Number of neighbouring sentences shown to Gemini on each side of a "
-            "candidate duplicate pair. Context lets the model tell a retake "
-            "(seconds apart, false start between) from a pedagogical recap."
-        ),
-    )
-    cluster_retakes: bool = Field(
-        default=True,
-        description=(
-            "Group connected duplicate pairs into retake clusters and keep exactly "
-            "one survivor per cluster. Prevents chain inconsistencies where a "
-            "sentence is both a keep-side and a cut-side of different pairs."
-        ),
-    )
-    prefer_completeness: bool = Field(
-        default=False,
-        description=(
-            "When choosing which duplicate to keep, prefer the more complete "
-            "(longer) version over the later one. Only consulted when "
-            "take_selection='gemini'; ignored under 'last'. Off by default: on the "
-            "fixture corpus sentence length carried no signal (keep-longer was "
-            "right 11/23 on near-identical pairs, 61% on paraphrase pairs) while "
-            "keep-later was right 71%/82%."
-        ),
-    )
-
-
 class SectionEditorConfig(BaseModel):
     """Section-based cutting: a strong LLM reads paragraph-sized windows and
     proposes verbatim spans to delete (whole sentences *or* partial spans), which
@@ -226,13 +113,6 @@ class SectionEditorConfig(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
-    enabled: bool = Field(
-        default=True,
-        description=(
-            "Use the LLM section editor for text-judgment cuts instead of the "
-            "tiered duplicate detector."
-        ),
-    )
     llm: LangChainModelConfig = Field(
         default_factory=default_section_editor_model_config,
         description=(
@@ -308,8 +188,7 @@ class SectionEditorConfig(BaseModel):
         description=(
             "Whole-sentence retake deletions of sentences shorter than this are "
             "rejected — short near-identical lines ('Dobro.', 'Ok.') are usually "
-            "recurring discourse markers, not retakes (mirrors "
-            "DuplicateDetectionConfig.definite_min_words)."
+            "recurring discourse markers, not retakes."
         ),
     )
     retake_max_gap_s: float = Field(
@@ -508,7 +387,6 @@ class Settings(BaseSettings):
     general: GeneralConfig = Field(default_factory=GeneralConfig)
     audio: AudioConfig = Field(default_factory=AudioConfig)
     transcription: TranscriptionConfig = Field(default_factory=TranscriptionConfig)
-    duplicate_detection: DuplicateDetectionConfig = Field(default_factory=DuplicateDetectionConfig)
     section_editor: SectionEditorConfig = Field(default_factory=SectionEditorConfig)
     aside_detection: AsideDetectionConfig = Field(default_factory=AsideDetectionConfig)
     disruption: DisruptionConfig = Field(default_factory=DisruptionConfig)

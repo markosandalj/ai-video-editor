@@ -488,20 +488,9 @@ def eval_decisions(
         "-n",
         help="Restrict to specific fixture names (repeatable). Default: all.",
     ),
-    method: str = typer.Option(
-        "words",
-        "--method",
-        help="Human verdict derivation: words (default) or sentences (legacy).",
-    ),
-    compare_methods: bool = typer.Option(
-        False,
-        "--compare-methods",
-        help="Print aggregate legacy sentence scoring vs word-coverage scoring.",
-    ),
 ) -> None:
     """Compare pipeline cut/keep decisions to human ground truth, offline (no APIs)."""
     from ai_video_editor.qa.decision_eval import (
-        aggregate,
         discover_fixture_names,
         evaluate_fixture,
         format_report,
@@ -509,45 +498,9 @@ def eval_decisions(
 
     target_names = names or discover_fixture_names(fixtures_dir)
 
-    if compare_methods:
-        by_method = {}
-        for verdict_method in ("sentences", "words"):
-            scores = []
-            for name in target_names:
-                score = evaluate_fixture(fixtures_dir, name, method=verdict_method)
-                if score is not None:
-                    scores.append(score)
-            by_method[verdict_method] = aggregate(scores)
-
-        old = by_method["sentences"]
-        new = by_method["words"]
-        print("Decision-eval method comparison (aggregate)")
-        print("")
-        print(f"{'method':<10} {'cutP':>6} {'cutR':>6} {'cutF1':>6} {'acc':>6} {'TP':>5} {'FP':>5} {'FN':>5} {'swap':>5}")
-        print("-" * 65)
-        for label, score in (("sentences", old), ("words", new)):
-            print(
-                f"{label:<10} {score.cut_precision:>6.3f} {score.cut_recall:>6.3f} "
-                f"{score.cut_f1:>6.3f} {score.accuracy:>6.3f} "
-                f"{score.tp:>5} {score.fp:>5} {score.fn:>5} {score.take_disagreements:>5}"
-            )
-        print("-" * 65)
-        print(
-            f"{'delta':<10} {new.cut_precision - old.cut_precision:>+6.3f} "
-            f"{new.cut_recall - old.cut_recall:>+6.3f} "
-            f"{new.cut_f1 - old.cut_f1:>+6.3f} "
-            f"{new.accuracy - old.accuracy:>+6.3f} "
-            f"{new.tp - old.tp:>+5} {new.fp - old.fp:>+5} "
-            f"{new.fn - old.fn:>+5} {new.take_disagreements - old.take_disagreements:>+5}"
-        )
-        return
-
-    if method not in {"words", "sentences"}:
-        raise typer.BadParameter("method must be 'words' or 'sentences'")
-
     scores = []
     for name in target_names:
-        score = evaluate_fixture(fixtures_dir, name, method=method)
+        score = evaluate_fixture(fixtures_dir, name)
         if score is not None:
             scores.append(score)
     if not scores:

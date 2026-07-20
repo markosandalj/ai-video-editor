@@ -41,13 +41,3 @@ def simple_duplicate_pair() -> list[Sentence]:
         _sentence("Ovo je testna rečenica za provjeru", 0.0, 2.0),
         _sentence("Ovo je testna rečenica za provjeru", 3.0, 5.0),
     ]
-
-
-@pytest.fixture
-def no_duplicates() -> list[Sentence]:
-    """Three completely different sentences."""
-    return [
-        _sentence("Danas učimo o bazama podataka", 0.0, 2.0),
-        _sentence("Sutra ćemo raditi na frontendu", 3.0, 5.0),
-        _sentence("CSS animacije su jako korisne", 6.0, 8.0),
-    ]

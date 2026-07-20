@@ -23,7 +23,6 @@ from ai_video_editor.transcription.models import Sentence, Word
 def test_section_editor_is_the_default_cutter() -> None:
     settings = Settings()
 
-    assert settings.section_editor.enabled is True
     assert settings.section_editor.llm.id == "gpt-5.6-sol"
     assert settings.section_editor.llm.class_path == "langchain_openai.ChatOpenAI"
     assert settings.section_editor.llm.model == "openai/gpt-5.6-sol"
@@ -36,7 +35,6 @@ def test_section_editor_is_the_default_cutter() -> None:
     assert settings.section_editor.fallback_llm.api_key_env == "OPENAI_API_KEY"
     assert "base_url" not in settings.section_editor.fallback_llm.provider_kwargs
     assert settings.section_editor.fallback_llm.provider_kwargs["reasoning_effort"] == "low"
-    assert not hasattr(settings, "enrichment")
 
 
 def _sentence(text: str, start: float, end: float) -> Sentence:

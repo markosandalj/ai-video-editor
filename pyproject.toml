@@ -22,7 +22,6 @@ dependencies = [
     "langgraph>=0.4",
     "elevenlabs>=2.40",
     "rapidfuzz>=3.0",
-    "sentence-transformers>=5.0",
     "fastapi>=0.136.3",
     "uvicorn>=0.49.0",
     "langsmith>=0.7.22",

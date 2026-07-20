@@ -94,13 +94,13 @@ def test_save_reviewed_edl_cuts_mid_sentence(tmp_path: Path) -> None:
     # Cut a single word inside the otherwise-kept first sentence.
     first_word = payload.sentences[0].words[0]
     request = ReviewSaveRequest(
-        cut_words=[
-            word.idx
-            for sentence in payload.sentences
-            for word in sentence.words
-            if not word.ai_kept
-        ]
-        + [first_word.idx],
+        cut_ranges=[
+            *payload.cut_ranges,
+            CutRange(
+                start=first_word.cut_in if first_word.cut_in is not None else first_word.start,
+                end=first_word.cut_out if first_word.cut_out is not None else first_word.end,
+            ),
+        ],
     )
 
     response = save_reviewed_edl(video, request)
@@ -132,7 +132,18 @@ def test_reviewed_edl_uses_acoustic_split_instead_of_word_timestamp() -> None:
     reviewed = build_reviewed_edl(
         Path("lesson-raw.mp4"),
         payload,
-        ReviewSaveRequest(cut_words=[first_word.idx]),
+        ReviewSaveRequest(
+            cut_ranges=[
+                CutRange(
+                    start=first_word.cut_in
+                    if first_word.cut_in is not None
+                    else first_word.start,
+                    end=first_word.cut_out
+                    if first_word.cut_out is not None
+                    else first_word.end,
+                )
+            ]
+        ),
     )
 
     first_keep = next(d for d in reviewed.decisions if d.action == EditAction.KEEP)
@@ -161,7 +172,7 @@ def test_preview_and_automatic_edl_share_identical_split_points() -> None:
 def test_save_reviewed_edl_can_restore_ai_cut(tmp_path: Path) -> None:
     video = _write_fixture(tmp_path)
     # Cut nothing -> everything from the first word to the last is kept.
-    response = save_reviewed_edl(video, ReviewSaveRequest(cut_words=[]))
+    response = save_reviewed_edl(video, ReviewSaveRequest(cut_ranges=[]))
     assert response.keep_duration > _edl().keep_duration
 
 
@@ -181,7 +192,7 @@ def test_review_api_lists_loads_and_saves(tmp_path: Path) -> None:
 
     saved = client.post(
         "/api/videos/lesson-raw/review",
-        json={"cut_words": []},
+        json={"cut_ranges": []},
     )
     assert saved.status_code == 200
     assert (tmp_path / "lesson-raw-review.edl.json").exists()
@@ -206,20 +217,6 @@ def test_frontend_video_route_serves_spa_index(tmp_path: Path) -> None:
 
         assert response.status_code == 200
         assert response.text == "<main>review app</main>"
-
-
-def test_review_api_ignores_stale_enrichment_sidecar(tmp_path: Path) -> None:
-    video = _write_fixture(tmp_path)
-    video.with_suffix(".enrichment.json").write_text('{"stale": true}', encoding="utf-8")
-
-    client = TestClient(create_app(media_root=tmp_path, frontend_dist=tmp_path / "missing-dist"))
-    response = client.get("/api/videos/lesson-raw/review")
-
-    assert response.status_code == 200
-    sentence = response.json()["sentences"][0]
-    assert "status" not in sentence
-    assert "rationale" not in sentence
-    assert all("keep_score" not in word for word in sentence["words"])
 
 
 def test_payload_exposes_cut_ranges_from_ai_edl() -> None:
@@ -269,17 +266,6 @@ def test_range_save_round_trips_through_payload(tmp_path: Path) -> None:
 
     reloaded = load_review_payload(video)
     assert [(r.start, r.end) for r in reloaded.cut_ranges] == [(1.0, 3.0)]
-
-
-def test_legacy_cut_words_used_only_when_ranges_omitted(tmp_path: Path) -> None:
-    video = _write_fixture(tmp_path)
-    payload = build_review_payload(video, _transcript(), _edl())
-    first_word = payload.sentences[0].words[0]
-
-    # cut_ranges omitted (None) -> the word path runs and cuts the first word.
-    reviewed = build_reviewed_edl(video, payload, ReviewSaveRequest(cut_words=[first_word.idx]))
-    first_keep = next(d for d in reviewed.decisions if d.action == EditAction.KEEP)
-    assert first_keep.start >= first_word.end - 0.01
 
 
 def test_envelope_to_peaks_normalizes_speech_above_silence() -> None:

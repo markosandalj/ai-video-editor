@@ -12,22 +12,14 @@ import {
   wordStatus as computeWordStatus,
 } from '@/lib/cut-ranges'
 import { CUT_HISTORY_LIMIT, REVIEW_DRAFT_VERSION, buildInitialCutRanges } from '@/lib/review-model'
-import { type TimeRange, deriveCutRanges } from '@/lib/timeline-model'
+import type { TimeRange } from '@/lib/timeline-model'
 
 function draftStorageKey(videoId: string) {
   return `ai-video-editor:review-draft:${videoId}:v${REVIEW_DRAFT_VERSION}`
 }
 
-function legacyDraftKey(videoId: string) {
-  return `ai-video-editor:review-draft:${videoId}:v2`
-}
-
-/**
- * Load the working draft as cut ranges. Reads the current (v3) format, or
- * migrates a v2 word-index draft by converting it through the word timestamps —
- * so in-flight work survives the range migration.
- */
-function loadDraft(videoId: string, duration: number, words: ReviewWord[]): TimeRange[] | null {
+/** Load the current working draft as source-time cut ranges. */
+function loadDraft(videoId: string, duration: number): TimeRange[] | null {
   if (typeof window === 'undefined') return null
   try {
     const raw = window.localStorage.getItem(draftStorageKey(videoId))
@@ -35,19 +27,6 @@ function loadDraft(videoId: string, duration: number, words: ReviewWord[]): Time
       const parsed = JSON.parse(raw) as { cutRanges?: unknown }
       if (Array.isArray(parsed.cutRanges)) {
         return normalizeRanges(parsed.cutRanges as TimeRange[], duration, 0)
-      }
-    }
-    const legacy = window.localStorage.getItem(legacyDraftKey(videoId))
-    if (legacy) {
-      const parsed = JSON.parse(legacy) as { cutWords?: unknown }
-      if (Array.isArray(parsed.cutWords)) {
-        const valid = new Set<number>(words.map((word) => word.idx))
-        const set = new Set<number>(
-          (parsed.cutWords as unknown[]).filter(
-            (value): value is number => typeof value === 'number' && valid.has(value),
-          ),
-        )
-        return normalizeRanges(deriveCutRanges(words, set), duration, 0)
       }
     }
     return null
@@ -67,7 +46,6 @@ function saveDraft(videoId: string, ranges: TimeRange[]) {
 function clearDraft(videoId: string) {
   if (typeof window === 'undefined') return
   window.localStorage.removeItem(draftStorageKey(videoId))
-  window.localStorage.removeItem(legacyDraftKey(videoId))
 }
 
 export type FinishState = 'idle' | 'saving' | 'rendering' | 'done' | 'error'
@@ -139,7 +117,7 @@ export function useReviewSession(payload: ReviewPayload | null, videoId: string)
   useEffect(() => {
     if (!payload) return
     const initial = buildInitialCutRanges(payload)
-    const draft = loadDraft(payload.video.id, payload.video.duration, words)
+    const draft = loadDraft(payload.video.id, payload.video.duration)
     const restored = draft !== null && !sameRanges(draft, initial)
     setCutRanges(draft ?? initial)
     setSavedRanges(initial)
@@ -147,7 +125,7 @@ export function useReviewSession(payload: ReviewPayload | null, videoId: string)
     setRedoStack([])
     setDraftRestored(restored)
     setFinishState('idle')
-  }, [payload, words])
+  }, [payload])
 
   const isDirty = useMemo(
     () => payload !== null && !sameRanges(cutRanges, savedRanges),

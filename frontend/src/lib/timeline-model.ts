@@ -1,39 +1,4 @@
-import type { ReviewWord } from '@/api'
-
 export type TimeRange = { start: number; end: number }
-
-/**
- * Derive display cut ranges from the word-index cut set, mirroring how the
- * backend builds the reviewed EDL: contiguous cut words collapse into one
- * source-time span, using the shared acoustic split points (`cut_in`/`cut_out`)
- * when present so preview, timeline, and render all agree on the boundary.
- *
- * Forward-compatible with the canonical-range migration: the timeline consumes
- * `TimeRange[]`, so when cut ranges become the source of truth only the producer
- * of this array changes, not its consumers.
- */
-export function deriveCutRanges(words: ReviewWord[], cutSet: Set<number>): TimeRange[] {
-  const ranges: TimeRange[] = []
-  let start: number | null = null
-  let end = 0
-  for (const word of words) {
-    if (cutSet.has(word.idx)) {
-      const wStart = word.cut_in ?? word.start
-      const wEnd = word.cut_out ?? word.end
-      if (start === null) {
-        start = wStart
-        end = wEnd
-      } else {
-        end = Math.max(end, wEnd)
-      }
-    } else if (start !== null) {
-      ranges.push({ start, end })
-      start = null
-    }
-  }
-  if (start !== null) ranges.push({ start, end })
-  return ranges
-}
 
 /** Total seconds removed by the cut ranges (assumed non-overlapping). */
 export function cutDuration(cuts: TimeRange[]): number {

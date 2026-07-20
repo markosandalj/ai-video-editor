@@ -252,18 +252,11 @@ export interface components {
         };
         /**
          * ReviewSaveRequest
-         * @description Reviewer decisions to persist.
-         *
-         *     The canonical form is ``cut_ranges`` (free-form source-time spans). Legacy
-         *     clients may still send ``cut_words`` (word indices); it is used only when
-         *     ``cut_ranges`` is omitted (``None``). An explicit empty ``cut_ranges`` list
-         *     means "no cuts" (restore everything), which is distinct from omitting it.
+         * @description Free-form source-time ranges the reviewer wants removed.
          */
         ReviewSaveRequest: {
             /** Cut Ranges */
-            cut_ranges?: components["schemas"]["CutRange"][] | null;
-            /** Cut Words */
-            cut_words?: number[];
+            cut_ranges: components["schemas"]["CutRange"][];
         };
         /** ReviewSaveResponse */
         ReviewSaveResponse: {

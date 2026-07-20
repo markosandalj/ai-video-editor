@@ -15,7 +15,6 @@ from ai_video_editor.duplicate.aside import detect_asides
 from ai_video_editor.duplicate.edl import EditDecisionList, build_edl
 from ai_video_editor.duplicate.false_start_audio import detect_audio_false_starts
 from ai_video_editor.duplicate.models import DuplicateFlag, FlagReason
-from ai_video_editor.duplicate.pipeline import detect_duplicates
 from ai_video_editor.duplicate.section_editor import detect_section_edits
 from ai_video_editor.llm import LangChainModelConfig
 from ai_video_editor.transcription.models import Transcript
@@ -32,20 +31,11 @@ def detect_all_flags(
     """Duplicate/false-start/stutter/fragment flags, aside flags, and audio-driven
     (cough/noise) false starts."""
     llm_config = cutting_llm_config or settings.cutting_llm
-    if settings.section_editor.enabled:
-        # Section editor replaces the tiered duplicate detector for text-judgment
-        # cuts; the audio lane (disruptions, asides) below still runs.
-        flags = detect_section_edits(
-            transcript.sentences,
-            settings.section_editor,
-            llm_config=settings.section_editor.llm,
-        )
-    else:
-        flags = detect_duplicates(
-            transcript.sentences,
-            settings.duplicate_detection,
-            llm_config=llm_config,
-        )
+    flags = detect_section_edits(
+        transcript.sentences,
+        settings.section_editor,
+        llm_config=settings.section_editor.llm,
+    )
     flagged = {f.idx for f in flags if not f.word_trims}
 
     # Audio evidence can overlap a text-derived flag. In that case it should

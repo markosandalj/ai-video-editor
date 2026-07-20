@@ -700,9 +700,9 @@
         <h2>Current runtime documentation · 17 July 2026</h2>
         <p>
           This page describes the pipeline currently used on <code>main</code>. The section
-          editor is on by default. The older multi-step duplicate detector still exists in
-          code, but it does not run on the default path. The removed enrichment system,
-          arbiter, sentence statuses, heat maps, and restore queue do not run either.
+          editor is the only text-judgment path. The older multi-step duplicate detector and
+          the enrichment system, arbiter, sentence statuses, heat maps, and restore queue
+          have been removed.
         </p>
       </section>
       <section class="hero" aria-labelledby="title">
@@ -827,7 +827,7 @@
                 <div class="fact"><b>Model contract</b><span>Sol names text; code maps it to existing word timestamps.</span></div>
                 <div class="fact"><b>Local corrections</b><span>RapidFuzz rules; no extra model call.</span></div>
                 <div class="fact"><b>Aside verifier</b><span>Gemini 2.5 Flash only for short candidates near silence or STT audio events.</span></div>
-                <div class="fact"><b>Inactive path</b><span>The older lexical and embedding duplicate detector is skipped while <code>section_editor.enabled</code> is true.</span></div>
+                <div class="fact"><b>Single path</b><span>The replaced lexical and embedding duplicate detector has been removed.</span></div>
               </div>
             </div>
           </article>
@@ -1109,9 +1109,8 @@
             <h2 id="section-editor-title">Section editor: Sol names text, code turns it into cuts</h2>
           </div>
           <p>
-            This is the default text-editing path when
-            <code>section_editor.enabled = true</code>. Normal <code>process</code> and
-            <code>batch</code> runs skip the older sentence-pair detector.
+            This is the text-editing path used by normal <code>process</code> and
+            <code>batch</code> runs.
           </p>
         </div>
 
@@ -1202,12 +1201,6 @@
                 <td>RapidFuzz</td>
                 <td>Matches the beginning and clean ending of a correction chain when the middle attempt is visibly cut off.</td>
                 <td>Near-identical 98%; splice overall 65% and opening 85%; endpoint gap at most 10 s.</td>
-              </tr>
-              <tr>
-                <td><strong>Legacy duplicate path</strong></td>
-                <td>SentenceTransformer paraphrase-multilingual-MiniLM-L12-v2</td>
-                <td>Measures meaning-based sentence similarity for the older duplicate detector. It is not called while the section editor is enabled.</td>
-                <td>Inactive on the default path.</td>
               </tr>
               <tr>
                 <td><strong>Aside verification</strong></td>
