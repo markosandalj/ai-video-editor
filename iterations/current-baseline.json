@@ -1,0 +1,88 @@
+{
+  "schema_version": "iteration-baseline.v1",
+  "baseline_id": "iter-020-promoted-98-fixed-edl-v1",
+  "evaluation_protocol_id": "fixed-edl-word-coverage-repeat-audit-v1",
+  "status": "promoted",
+  "promoted_on": "2026-07-18",
+  "iteration": 20,
+  "next_iteration": 21,
+  "implementation": {
+    "adjacent_repeat_commit": "1dfe4eb5a9af434ca01b13d63fd945231e7649d6",
+    "promotion_commit": "61af91167588d2602e2db29da3cb5851e329fd55",
+    "full_archive_commit": "eb3e892c8edc2a7f1b90489a6660db327c46c3ed",
+    "primary_editor": "ai_video_editor.duplicate.section_editor",
+    "deterministic_corrections": "ai_video_editor.duplicate.local_corrections",
+    "acoustic_lane": [
+      "ai_video_editor.audio.disruption",
+      "ai_video_editor.duplicate.false_start_audio"
+    ]
+  },
+  "corpus": {
+    "root": "tests/fixtures",
+    "fixture_count": 98,
+    "raw_transcript_pattern": "*-raw.transcript.json",
+    "ground_truth_pattern": "*-edited.qa-transcript.json",
+    "fixture_name_set_sha256": "01a62ce69679552e7ec6cae6c3a38b43fe48cb9125429c3c5d74763af1dc2fa8",
+    "raw_and_ground_truth_sha256": "126f84057e3d50283412ad4a02a205cbd7d5ed05ec8fb546a99c705f1f936a6e"
+  },
+  "edl_population": {
+    "root": "tests/fixtures",
+    "pattern": "*-raw.edl.json",
+    "count": 98,
+    "sha256": "5dcf68e9cf49eac27f691197a4e52bb45bb30edb7000814a11c2155b76c845ff",
+    "authority": "ui_and_production"
+  },
+  "evaluation_protocol": {
+    "scorer": "ai_video_editor.qa.decision_eval.evaluate_decisions_word_level",
+    "unit": "word",
+    "positive_class": "cut",
+    "alignment": "raw transcript words to human edited transcript using word coverage",
+    "repeat_reconciliation": "position-aware repeated-span take-swap audit",
+    "caveat": "Raw LCS may attribute an identical repeated word to the discarded copy instead of the kept copy."
+  },
+  "metrics": {
+    "raw_word_decisions": {
+      "precision": 0.7948376599363952,
+      "recall": 0.6779158518892323,
+      "f1": 0.7317355484442023,
+      "tp": 10747,
+      "fp": 2774,
+      "fn": 5106
+    },
+    "repeat_reconciled_word_decisions": {
+      "precision": 0.8100732194364322,
+      "recall": 0.6887812853729091,
+      "f1": 0.7445195935152772,
+      "tp": 10953,
+      "fp": 2568,
+      "fn": 4949
+    },
+    "promotion_gates": {
+      "explicit_repeat_cases_before": 3,
+      "explicit_repeat_cases_after": 13,
+      "explicit_repeat_cases_total": 16,
+      "intentional_repeat_controls_passed": 14,
+      "intentional_repeat_controls_total": 17,
+      "repeat_spans_audited": 86,
+      "repeat_spans_correct": 86,
+      "repeat_span_words": 879,
+      "both_kept": 0,
+      "unlocated": 0,
+      "additional_edl_cut_words": 75,
+      "reconciled_score_changed_videos": 8,
+      "reconciled_regressed_videos": 0
+    }
+  },
+  "comparison_policy": {
+    "comparable_only_when_protocol_id_matches": true,
+    "protocol_breakers": [
+      "scorer code or function",
+      "alignment or reconciliation method",
+      "fixture name set",
+      "raw or ground-truth content",
+      "baseline EDL population",
+      "relevant model or pipeline configuration"
+    ],
+    "on_protocol_change": "Measure the unchanged pipeline, assign a new baseline ID, and begin a new comparison series."
+  }
+}

@@ -125,7 +125,11 @@ Phase 8+ (NLE interop, profiling, ML) come after the edit quality and review wor
 
 After Phase 7's QA tasks establish baseline scores, the project enters a **hypothesis-driven iteration loop** to maximize edit quality. The loop now also consumes the human review signal from Phase 6 (what editors actually kept/cut) and runs before locking production render settings.
 
-Each iteration is one isolated change, git-tagged for easy revert. See `.cursor/rules/iteration-workflow.mdc` for the full process and `iterations/ITERATION_LOG.md` for the running score table.
+Each iteration is one isolated change evaluated against an explicit, reproducible
+protocol. See `iterations/WORKFLOW.md` for the process,
+`iterations/CURRENT_BASELINE.md` for the only active baseline, and
+`iterations/DECISION_HISTORY.md` for compact historical decisions. The next
+iteration is 021.
 
 ```
 Phase 7 QA baseline
@@ -137,9 +141,9 @@ Phase 7 QA baseline
 │   Re-run pipeline + QA <── Implement ONE change <── Write hypothesis
 │         |
 │         v
-│   Compare scores
-│     ├── Improved → update log, loop back ─┐
-│     └── Regressed → git revert, loop back ─┘
+│   Compare within the same protocol
+│     ├── Promoted → update baseline + history ┐
+│     └── Rejected → revert + record lesson ───┘
 │                                            │
 └────────────────────────────────────────────┘
     |
@@ -153,7 +157,8 @@ Lock production render settings (phase-7/08)
 - One hypothesis per iteration (isolate cause and effect)
 - On regression: `git revert` the commit, record the failure
 - Never skip the grilling — user decides what to try next
-- All iterations tracked in `iterations/iter-NNN/` with analysis, hypothesis, and scores
+- Scorer, corpus, EDL, configuration, and audit identities must match; otherwise start a new baseline
+- Keep only the active `iterations/iter-NNN/`; compact closed work into the decision history and Git
 
 ## Quick Reference
 
