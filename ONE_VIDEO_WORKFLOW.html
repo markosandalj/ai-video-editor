@@ -536,18 +536,19 @@
     <main class="page">
       <section class="hero" aria-labelledby="page-title">
         <div class="hero-copy">
-          <p class="eyebrow">AI video editor workflow</p>
-          <h1 id="page-title">One video from raw recording to final reviewed output</h1>
+          <p class="eyebrow">Current AI video editor workflow · 17 July 2026</p>
+          <h1 id="page-title">One video from raw recording to reviewed output</h1>
           <p class="lead">
-            A plain-language explanation of how one educational recording is cleaned,
-            analyzed, automatically edited, reviewed by a person, and prepared for the next
-            Gradivo production step.
+            A plain-language explanation of the pipeline active on the current main branch:
+            prepare the recording, create a timed transcript, let the section editor make
+            an automatic first cut, review that cut on a timeline, and render a separate
+            reviewed video.
           </p>
           <div class="hero-meta" aria-label="Document summary">
-            <span class="pill"><span class="dot"></span> Non-destructive process</span>
-            <span class="pill"><span class="dot"></span> AI suggests, fixed rules decide</span>
-            <span class="pill"><span class="dot"></span> Human review before final</span>
-            <span class="pill"><span class="dot"></span> One raw video, one reviewed result</span>
+            <span class="pill"><span class="dot"></span> Section editor is the main text path</span>
+            <span class="pill"><span class="dot"></span> Raw source is never overwritten</span>
+            <span class="pill"><span class="dot"></span> Human review changes time ranges</span>
+            <span class="pill"><span class="dot"></span> No enrichment or annotation pass</span>
           </div>
         </div>
 
@@ -557,40 +558,40 @@
             <div class="rail-step">
               <div class="rail-number">1</div>
               <div>
-                <strong>Prepare the recording</strong>
-                <span>Clean the audio, find speech, and detect long pauses.</span>
+                <strong>Prepare audio</strong>
+                <span>Clean sound, detect long pauses, and measure audio disruptions.</span>
               </div>
               <div class="rail-owner owner-system">System</div>
             </div>
             <div class="rail-step">
               <div class="rail-number">2</div>
               <div>
-                <strong>Understand the spoken lesson</strong>
-                <span>Turn speech into timed, sentence-sized text for review.</span>
+                <strong>Create timed text</strong>
+                <span>Transcribe every word and correct obvious spelling mistakes.</span>
               </div>
               <div class="rail-owner owner-system">System</div>
             </div>
             <div class="rail-step">
               <div class="rail-number">3</div>
               <div>
-                <strong>Propose cuts</strong>
-                <span>Mark silence, repeated takes, false starts, and uncertain spots.</span>
+                <strong>Build the automatic edit</strong>
+                <span>Sol names exact text to remove; code verifies and maps it to time.</span>
               </div>
               <div class="rail-owner owner-system">System</div>
             </div>
             <div class="rail-step">
               <div class="rail-number">4</div>
               <div>
-                <strong>Review and correct</strong>
-                <span>A person checks the lesson and changes decisions when needed.</span>
+                <strong>Review on the timeline</strong>
+                <span>A person restores useful speech or adds missed cuts anywhere.</span>
               </div>
               <div class="rail-owner owner-human">Human</div>
             </div>
             <div class="rail-step">
               <div class="rail-number">5</div>
               <div>
-                <strong>Render final reviewed output</strong>
-                <span>The reviewed decision set becomes the handoff video.</span>
+                <strong>Render the reviewed video</strong>
+                <span>The saved review timeline becomes a separate output file.</span>
               </div>
               <div class="rail-owner owner-system">System</div>
             </div>
@@ -601,27 +602,27 @@
       <section class="section overview" aria-label="Main principles">
         <article class="panel">
           <div class="panel-icon icon-system">AI</div>
-          <h3>The system makes a first draft</h3>
+          <h3>AI makes a real first cut</h3>
           <p>
-            AI is used to spot likely mistakes, but it only suggests. What actually gets
-            cut is decided by fixed, predictable editing rules that were tested against
-            how real human editors edit these same lessons.
+            GPT-5.6 Sol reads the transcript in large sections and proposes exact spans to
+            delete. Proposals that pass code-level checks become automatic cuts. They are
+            not merely colored suggestions waiting in a separate queue.
           </p>
         </article>
         <article class="panel">
           <div class="panel-icon icon-human">OK</div>
-          <h3>A person confirms the lesson</h3>
+          <h3>A person remains the final editor</h3>
           <p>
-            Human review protects against cutting a useful explanation, keeping a bad take,
-            or making the pacing feel unnatural.
+            The review tool shows the video, transcript, waveform, and cut ranges. The
+            reviewer can change any cut directly and save a separate reviewed edit plan.
           </p>
         </article>
         <article class="panel">
           <div class="panel-icon icon-output">1</div>
-          <h3>The raw video stays safe</h3>
+          <h3>Every important layer stays separate</h3>
           <p>
-            Each layer is saved separately, so the team can inspect, compare, restore, or
-            rerun the process later.
+            The raw recording, transcript, automatic EDL, reviewed EDL, and rendered videos
+            are separate files. A bad decision never destroys the source.
           </p>
         </article>
       </section>
@@ -629,12 +630,13 @@
       <section class="section" aria-labelledby="flow-title">
         <div class="section-head">
           <div>
-            <p class="eyebrow">Visual process map</p>
-            <h2 id="flow-title">What moves through the workflow</h2>
+            <p class="eyebrow">The actual path</p>
+            <h2 id="flow-title">What happens to one recording</h2>
           </div>
           <p>
-            The raw recording stays as the source. The automatic edit is only a proposal.
-            The final reviewed output comes after a person checks and corrects that proposal.
+            There is one active AI text-editing path. The old duplicate cascade,
+            enrichment judge, sentence badges, heat map, and restore queue are not part
+            of this flow.
           </p>
         </div>
 
@@ -642,8 +644,8 @@
           <svg class="flow-svg" viewBox="0 0 1100 420" role="img" aria-labelledby="flow-svg-title flow-svg-desc">
             <title id="flow-svg-title">One video workflow diagram</title>
             <desc id="flow-svg-desc">
-              Raw recording goes through preparation, transcription, automatic edit proposal,
-              human review, and final reviewed output.
+              Raw recording goes through audio preparation, timed transcription, an
+              automatic EDL, human timeline review, and a separate reviewed output.
             </desc>
             <defs>
               <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
@@ -670,25 +672,25 @@
             <line x1="452" y1="100" x2="522" y2="100" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"></line>
 
             <rect x="522" y="34" width="188" height="132" rx="8" fill="#eef4ff" stroke="#aac4ff"></rect>
-            <text x="616" y="68" text-anchor="middle" font-size="15" font-weight="800" fill="#2563eb">Understand</text>
-            <text x="616" y="96" text-anchor="middle" font-size="13" fill="#43546f">Timed transcript</text>
-            <text x="616" y="116" text-anchor="middle" font-size="13" fill="#43546f">Sentence chunks</text>
-            <text x="616" y="136" text-anchor="middle" font-size="13" fill="#43546f">Review markers</text>
+            <text x="616" y="68" text-anchor="middle" font-size="15" font-weight="800" fill="#2563eb">Timed transcript</text>
+            <text x="616" y="96" text-anchor="middle" font-size="13" fill="#43546f">Word timestamps</text>
+            <text x="616" y="116" text-anchor="middle" font-size="13" fill="#43546f">Sentence sections</text>
+            <text x="616" y="136" text-anchor="middle" font-size="13" fill="#43546f">Spelling corrections</text>
 
             <line x1="710" y1="100" x2="780" y2="100" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"></line>
 
             <rect x="780" y="34" width="188" height="132" rx="8" fill="#e6f5f2" stroke="#8ac9bf"></rect>
-            <text x="874" y="68" text-anchor="middle" font-size="15" font-weight="800" fill="#0f766e">Propose edit</text>
-            <text x="874" y="96" text-anchor="middle" font-size="13" fill="#315b57">Keep useful parts</text>
-            <text x="874" y="116" text-anchor="middle" font-size="13" fill="#315b57">Cut likely mistakes</text>
-            <text x="874" y="136" text-anchor="middle" font-size="13" fill="#315b57">Flag uncertainty</text>
+            <text x="874" y="68" text-anchor="middle" font-size="15" font-weight="800" fill="#0f766e">Automatic EDL</text>
+            <text x="874" y="96" text-anchor="middle" font-size="13" fill="#315b57">Sol text decisions</text>
+            <text x="874" y="116" text-anchor="middle" font-size="13" fill="#315b57">Verified exact spans</text>
+            <text x="874" y="136" text-anchor="middle" font-size="13" fill="#315b57">Quiet cut boundaries</text>
 
             <line x1="874" y1="166" x2="874" y2="218" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"></line>
 
             <rect x="780" y="218" width="188" height="116" rx="8" fill="#fff1e8" stroke="#fdba74"></rect>
             <text x="874" y="252" text-anchor="middle" font-size="15" font-weight="800" fill="#9a3412">Human review</text>
             <text x="874" y="281" text-anchor="middle" font-size="13" fill="#6d412c">Watch, read, adjust</text>
-            <text x="874" y="301" text-anchor="middle" font-size="13" fill="#6d412c">Keep or cut decisions</text>
+            <text x="874" y="301" text-anchor="middle" font-size="13" fill="#6d412c">Edit source-time ranges</text>
 
             <line x1="780" y1="276" x2="710" y2="276" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"></line>
 
@@ -710,90 +712,94 @@
             <h2 id="stage-title">The six stages</h2>
           </div>
           <p>
-            These stages describe what happens to a single raw recording. Batch processing
-            repeats this same process for many videos.
+            These stages describe the active path for a single raw recording. Batch
+            processing repeats the same path for each video.
           </p>
         </div>
 
         <div class="stages">
           <article class="stage-card" data-step="1">
-            <h3>Prepare the recording</h3>
+            <h3>Prepare the audio</h3>
             <p>
-              The system separates the audio from the video, reduces steady background
-              noise, and finds where speech and long pauses occur.
+              The system extracts audio, reduces steady background noise, finds silences
+              of at least three seconds, and measures loud non-speech disruptions such as
+              coughs or microphone bumps.
             </p>
             <ul>
-              <li>Protects the original recording.</li>
-              <li>Makes speech easier to understand.</li>
-              <li>Finds pauses that may be shortened.</li>
+              <li>The original video picture is left untouched.</li>
+              <li>Long silence becomes an initial keep/cut outline.</li>
+              <li>Audio evidence can help identify a stranded false start.</li>
             </ul>
           </article>
 
           <article class="stage-card" data-step="2">
-            <h3>Create reviewable text</h3>
+            <h3>Create a timed transcript</h3>
             <p>
-              Spoken Croatian is turned into timed text, then split into sentence-sized
-              pieces that can be reviewed next to the video.
+              ElevenLabs Scribe turns Croatian speech into words with timestamps. Long
+              pauses can split a sentence into smaller editing units. Gemini then corrects
+              only obvious spelling mistakes; it does not rewrite the professor's style.
             </p>
             <ul>
-              <li>Shows what was said.</li>
-              <li>Knows when each sentence happened.</li>
-              <li>Gives reviewers manageable pieces.</li>
+              <li>Every word remains tied to its original place in the video.</li>
+              <li>Spoken fillers and imperfect grammar are preserved.</li>
+              <li>The transcript is cached so experiments do not need new transcription.</li>
             </ul>
           </article>
 
           <article class="stage-card" data-step="3">
-            <h3>Find likely mistakes</h3>
+            <h3>Decide what to cut</h3>
             <p>
-              The system searches for repeated takes, false starts, stutters, fragments,
-              side comments, long silence, and audio disruptions. AI helps spot them,
-              but fixed rules make the actual cut decisions.
+              GPT-5.6 Sol reads roughly 1,200 words at a time and returns exact transcript
+              spans for retakes, false starts, stutters, or filler. Code verifies each span
+              and converts it to timestamps. A narrow deterministic detector also catches
+              exceptionally clear local correction chains.
             </p>
             <ul>
-              <li>Uses both sound and transcript evidence.</li>
-              <li>When something was said twice, the later take always wins — a simple rule the professor can rely on while recording.</li>
-              <li>Risky or uncertain suggestions become flagged spots for the reviewer, not automatic cuts.</li>
+              <li>Sol is the main and only active text-judgment editor.</li>
+              <li>Risky "redundant" removals are rejected and remain kept.</li>
+              <li>Audio false starts and short off-lesson asides run as supporting lanes.</li>
             </ul>
           </article>
 
           <article class="stage-card" data-step="4">
-            <h3>Render the automatic first draft</h3>
+            <h3>Build and render the automatic draft</h3>
             <p>
-              The proposed edit is used to create an automatically edited video. This is
-              useful for review, but it is not treated as final.
+              Accepted decisions are merged into one edit decision list, or EDL. Each cut
+              keeps its source reason, confidence, and note. Cut edges are moved to nearby
+              quiet audio points before the automatic MP4 is rendered.
             </p>
             <ul>
-              <li>Uses the original video picture.</li>
-              <li>Uses cleaned audio.</li>
-              <li>Adds small fades around cut points.</li>
+              <li>Whole sentences and partial word spans can both be cut.</li>
+              <li>Real silence remains distinct from AI text cuts.</li>
+              <li>Short audio fades soften the joins.</li>
             </ul>
           </article>
 
           <article class="stage-card" data-step="5">
-            <h3>Review and correct</h3>
+            <h3>Review and correct the timeline</h3>
             <p>
-              A reviewer opens the review tool: the video and its transcript side by side,
-              with every proposed cut marked. Each suggestion comes with a plain-language
-              explanation of why it was made and how confident the system is.
+              The review app shows the video, waveform, transcript, and cut ranges. The
+              reviewer can select any source-time range to cut, restore existing cuts,
+              preview edited playback, save, and move between videos.
             </p>
             <ul>
-              <li>Restore useful explanations with one click.</li>
-              <li>Cut bad takes that were missed.</li>
-              <li>Check natural pacing and lesson continuity.</li>
-              <li>Produce the final video from the same screen.</li>
+              <li>Transcript and timeline are two views of the same ranges.</li>
+              <li>The Compare screen shows pipeline versus human cuts for QA fixtures.</li>
+              <li>There are no badges, heat maps, salience scores, or restore queue.</li>
+              <li>The reviewed video can be rendered from the same app.</li>
             </ul>
           </article>
 
           <article class="stage-card" data-step="6">
-            <h3>Render the final reviewed output</h3>
+            <h3>Save and render the reviewed result</h3>
             <p>
-              The reviewed decision set becomes the final reviewed video for the next
-              production step.
+              Review changes are saved as a separate reviewed EDL. Rendering uses the raw
+              video, cleaned audio, and reviewed keep ranges to create a separate reviewed MP4.
             </p>
             <ul>
-              <li>Keeps automatic and reviewed decisions separate.</li>
-              <li>Preserves a path back to the raw recording.</li>
-              <li>Hands off a video that has human approval.</li>
+              <li>The automatic EDL remains available for comparison.</li>
+              <li>An empty review cut list restores the entire source.</li>
+              <li>The reviewed render never overwrites the raw recording.</li>
             </ul>
           </article>
         </div>
@@ -802,12 +808,11 @@
       <section class="section" aria-labelledby="artifact-title">
         <div class="section-head">
           <div>
-            <p class="eyebrow">Safety model</p>
-            <h2 id="artifact-title">What gets saved along the way</h2>
+            <p class="eyebrow">Saved evidence</p>
+            <h2 id="artifact-title">What remains beside the video</h2>
           </div>
           <p>
-            The workflow is safer because each important layer is saved separately. A later
-            mistake can be inspected instead of guessed.
+            Separate files make a bad result inspectable and reversible.
           </p>
         </div>
 
@@ -817,50 +822,49 @@
             <div class="artifact-strip">
               <div class="artifact-item raw">
                 <div>
-                  <strong>Original raw recording</strong>
-                  <span>The untouched source. This is the recovery point.</span>
+                  <strong>Raw recording</strong>
+                  <span>The untouched recovery source.</span>
                 </div>
               </div>
               <div class="artifact-item auto">
                 <div>
-                  <strong>Automatic analysis</strong>
-                  <span>Transcript, timing, silence detection, and attention markers.</span>
+                  <strong>Transcript and grammar report</strong>
+                  <span>Timed words plus spelling-correction history.</span>
                 </div>
               </div>
               <div class="artifact-item auto">
                 <div>
-                  <strong>Automatic edit plan</strong>
-                  <span>The system's first proposal for what to keep and cut.</span>
+                  <strong>Audio envelope and automatic EDL</strong>
+                  <span>Waveform data and the system's keep/cut timeline.</span>
                 </div>
               </div>
               <div class="artifact-item review">
                 <div>
-                  <strong>Reviewed edit plan</strong>
-                  <span>The human-corrected decisions, saved separately from the automatic plan.</span>
+                  <strong>Reviewed EDL</strong>
+                  <span>The reviewer-corrected source-time cut ranges.</span>
                 </div>
               </div>
               <div class="artifact-item final">
                 <div>
-                  <strong>Final reviewed video</strong>
-                  <span>The output produced from the reviewed decisions.</span>
+                  <strong>Automatic and reviewed MP4s</strong>
+                  <span>Separate renders made from their matching EDLs.</span>
                 </div>
               </div>
             </div>
           </article>
 
           <article class="artifact-card">
-            <h3>Why this matters</h3>
+            <h3>Evaluation adds more evidence</h3>
             <p>
-              The process is designed to support correction. If the automatic edit cuts too
-              much, the reviewer can restore it. If someone later asks why a section was
-              removed, the team can compare the raw recording, the automatic proposal, and
-              the human-reviewed decision.
+              QA runs use cached raw transcripts and human-edited transcripts. They save
+              per-video EDLs, every section-editor proposal and its accepted or rejected
+              outcome, model and prompt metadata, aggregate scores, and reference comparisons.
             </p>
             <ul>
-              <li>The raw recording is not overwritten.</li>
-              <li>The automatic first draft is not the final authority.</li>
-              <li>The reviewed output can be traced back to decisions.</li>
-              <li>The team can rerun or improve the process without losing the source.</li>
+              <li>Runs checkpoint after each video and can resume.</li>
+              <li>Precision measures how often proposed cuts were right.</li>
+              <li>Recall measures how many human cuts the pipeline found.</li>
+              <li>The Compare screen exposes individual disagreements.</li>
             </ul>
           </article>
         </div>
@@ -873,10 +877,9 @@
             <h2 id="review-title">What the reviewer is checking</h2>
           </div>
           <p>
-            The reviewer does not need to understand the technical pipeline. Every
-            suggested cut explains itself in plain language, uncertain spots are
-            highlighted, and the reviewer only needs to verify that the final lesson
-            still makes sense and sounds natural.
+            The reviewer does not need annotation scores. The transcript and timeline show
+            what will actually be removed, and the reviewer checks that the lesson still
+            makes sense and sounds natural.
           </p>
         </div>
 
@@ -897,7 +900,7 @@
               <li><strong>Is a pause too short?</strong> Adjust the decision if it feels rushed.</li>
               <li><strong>Does a transition sound awkward?</strong> Review the nearby cut.</li>
               <li><strong>Is a short filler phrase actually natural?</strong> It can stay.</li>
-              <li><strong>Is the system uncertain?</strong> Inspect the highlighted area.</li>
+              <li><strong>Does the waveform hide an awkward edge?</strong> Move the cut range.</li>
             </ul>
           </article>
         </div>
@@ -906,37 +909,80 @@
       <section class="section" aria-labelledby="rules-title">
         <div class="section-head">
           <div>
-            <p class="eyebrow">Predictable by design</p>
-            <h2 id="rules-title">Why the AI is not the editor</h2>
+            <p class="eyebrow">Predictable boundaries</p>
+            <h2 id="rules-title">What the AI decides and what code decides</h2>
           </div>
           <p>
-            Early versions let the AI make more of the editorial choices. We measured
-            those choices against real human editors and replaced the ones a simple rule
-            does better — so the system behaves the same way every time.
+            Sol makes the semantic judgment about which spoken text looks removable. Code
+            then constrains that judgment before it can change the timeline.
           </p>
         </div>
 
         <div class="review-grid">
           <article class="check-card">
-            <h3>Fixed rules make the cuts</h3>
+            <h3>Automatic protections</h3>
             <ul>
-              <li><strong>Repeated something?</strong> The later take is always the one that stays. The professor can flub, pause, and simply say it again — the earlier attempt is cut, every time.</li>
-              <li><strong>Short phrases like "Dobro." or "Ok."?</strong> Never cut automatically, even when they repeat — they are natural speech, not mistakes.</li>
-              <li><strong>AI wants to remove a unique explanation?</strong> That never happens automatically. It becomes a flagged suggestion the reviewer decides on.</li>
-              <li><strong>Every AI suggestion is verified</strong> against the actual recording before it can become a cut.</li>
+              <li><strong>The text must exist:</strong> invented or badly matched spans are rejected.</li>
+              <li><strong>The section must own it:</strong> overlap context cannot double-cut it.</li>
+              <li><strong>Short whole-sentence retakes are protected:</strong> recurring lines such as "Dobro" are normally kept.</li>
+              <li><strong>Far-away retakes are recap risks:</strong> supplied evidence more than 60 seconds away is rejected.</li>
+              <li><strong>"Redundant" content stays:</strong> this risky deletion type is rejected, not queued for annotation review.</li>
             </ul>
           </article>
 
           <article class="check-card">
-            <h3>Measured against real editors</h3>
+            <h3>What the protections do not guarantee</h3>
             <ul>
-              <li><strong>The benchmark is human work:</strong> 98 lessons that human editors already edited, compared word by word.</li>
-              <li><strong>The keep-the-later-take rule comes from that data:</strong> it matches what human editors chose in the large majority of cases — better than the AI's own judgment did.</li>
-              <li><strong>Disagreements are visible, not hidden:</strong> a comparison view shows, on the same transcript, what the system cut versus what the human editor cut.</li>
-              <li><strong>Every change to the system is tested</strong> against this benchmark before it ships, so quality moves in one direction.</li>
-              <li><strong>Same video in, same edit out:</strong> predictable rules mean results the team can trust and reproduce.</li>
+              <li>A verbatim span can still be the wrong editorial choice.</li>
+              <li>Partial false starts, stutters, and filler currently have fewer semantic safeguards than whole retakes.</li>
+              <li>On an already-clean lesson, a few plausible AI guesses can dominate the small number of real cuts.</li>
+              <li>Human review is still required before the automatic result is final.</li>
+              <li>QA compares every change against the same 98 human-edited fixtures.</li>
             </ul>
           </article>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="status-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Current quality status</p>
+            <h2 id="status-title">What we know today</h2>
+          </div>
+          <p>
+            The latest complete corpus artifact is useful evidence, but it is not a fresh
+            run of every change now on the main branch.
+          </p>
+        </div>
+
+        <div class="review-grid">
+          <article class="check-card">
+            <h3>What passed</h3>
+            <ul>
+              <li>The section editor replaced the old tiered duplicate path as the default.</li>
+              <li>The latest evaluated 98-video artifact scored about 0.797 cut precision, 0.676 recall, and 0.732 F1.</li>
+              <li>The deterministic correction lane added 33 correct cut words and zero overcuts in its fixed-EDL projection.</li>
+              <li>Enrichment and its arbiter were removed because they did not reliably improve the new cutter.</li>
+            </ul>
+          </article>
+
+          <article class="check-card">
+            <h3>What still needs work</h3>
+            <ul>
+              <li>The 98-video review workspace uses older Sol EDLs plus the Iteration 19 projection, not a fresh current-main run.</li>
+              <li>Fizika is a weak spot: the reference cuts only about 1.8% of its words, so unnecessary partial cuts hurt badly.</li>
+              <li>On the saved Fizika cohort, only 35 of 115 pipeline-cut words match the reference; 80 are scored as overcuts.</li>
+              <li>The next honest measurement should rerun the clean-video cohort with current provenance and traces before another full corpus run.</li>
+            </ul>
+          </article>
+        </div>
+
+        <div class="note" style="margin-top: 16px">
+          <h3>Latest full result is not the same as fresh latest-code output</h3>
+          <p>
+            The review UI can point at the newest complete artifact while still showing
+            decisions generated before later provenance and tracing improvements.
+          </p>
         </div>
       </section>
 
@@ -958,9 +1004,10 @@
             <ul>
               <li>Temporary media needed for processing.</li>
               <li>Speech analysis and editing transcript.</li>
-              <li>Automatic edit decisions and attention markers.</li>
-              <li>Human-reviewed decisions.</li>
-              <li>Rendering the reviewed output.</li>
+              <li>Automatic EDL and acoustic boundary snapping.</li>
+              <li>Browser-based transcript and timeline review.</li>
+              <li>Separate automatic and reviewed renders.</li>
+              <li>Fixture QA, traces, and model comparisons.</li>
             </ul>
           </article>
 
@@ -987,7 +1034,7 @@
       </section>
 
       <p class="footer-note">
-        Core principle: AI suggests, predictable rules decide, and a human confirms the final lesson.
+        Core principle: AI proposes exact cuts, code constrains them, and a human owns the final timeline.
       </p>
     </main>
   </body>

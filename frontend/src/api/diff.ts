@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQueries, useQuery } from '@tanstack/react-query'
 
 // QA diff view types. Hand-written so the comparison surface stays decoupled
 // from the generated review API types.
@@ -41,24 +41,37 @@ export type DiffPayload = {
   sentences: DiffSentence[]
 }
 
+export async function fetchDiff(videoId: string): Promise<DiffPayload> {
+  const res = await fetch(`/api/videos/${encodeURIComponent(videoId)}/diff`)
+  if (!res.ok) {
+    let detail = 'Failed to load diff'
+    try {
+      const body = (await res.json()) as { detail?: unknown }
+      if (typeof body.detail === 'string') detail = body.detail
+    } catch {
+      // ignore non-JSON error bodies
+    }
+    throw new Error(detail)
+  }
+  return (await res.json()) as DiffPayload
+}
+
 /** Load the raw-transcript diff (pipeline vs human edit) for a single video. */
 export function useDiff(videoId: string) {
   return useQuery({
     queryKey: ['videos', videoId, 'diff'],
     enabled: videoId.length > 0,
-    queryFn: async () => {
-      const res = await fetch(`/api/videos/${encodeURIComponent(videoId)}/diff`)
-      if (!res.ok) {
-        let detail = 'Failed to load diff'
-        try {
-          const body = (await res.json()) as { detail?: unknown }
-          if (typeof body.detail === 'string') detail = body.detail
-        } catch {
-          // ignore non-JSON error bodies
-        }
-        throw new Error(detail)
-      }
-      return (await res.json()) as DiffPayload
-    },
+    queryFn: () => fetchDiff(videoId),
+  })
+}
+
+/** Load diffs for many videos (diff board). */
+export function useDiffs(videoIds: string[]) {
+  return useQueries({
+    queries: videoIds.map((videoId) => ({
+      queryKey: ['videos', videoId, 'diff'] as const,
+      queryFn: () => fetchDiff(videoId),
+      staleTime: 60_000,
+    })),
   })
 }

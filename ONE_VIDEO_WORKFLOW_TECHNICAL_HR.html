@@ -1,0 +1,1591 @@
+<!doctype html>
+<html lang="hr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tijek obrade jednog videa — tehnički prikaz</title>
+    <style>
+      :root {
+        --bg: #f4f6f8;
+        --paper: #ffffff;
+        --ink: #18212f;
+        --muted: #5c6675;
+        --line: #d8dee8;
+        --line-strong: #adb8c9;
+        --audio: #0f766e;
+        --speech: #2563eb;
+        --decision: #7c3aed;
+        --human: #b45309;
+        --output: #15803d;
+        --risk: #be123c;
+        --soft-audio: #e5f4f1;
+        --soft-speech: #edf4ff;
+        --soft-decision: #f3edff;
+        --soft-human: #fff4e6;
+        --soft-output: #e9f8ef;
+        --soft-risk: #fff0f3;
+        --shadow: 0 14px 34px rgba(24, 33, 47, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        line-height: 1.5;
+      }
+
+      .page {
+        max-width: 1220px;
+        margin: 0 auto;
+        padding: 34px 24px 60px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1,
+      h2,
+      h3 {
+        line-height: 1.1;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        font-size: clamp(36px, 5.8vw, 64px);
+      }
+
+      h2 {
+        font-size: clamp(25px, 3.2vw, 38px);
+      }
+
+      h3 {
+        font-size: 18px;
+      }
+
+      .kicker {
+        color: var(--decision);
+        font-size: 12px;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 0.95fr) minmax(360px, 1.05fr);
+        gap: 18px;
+        align-items: stretch;
+      }
+
+      .hero-title,
+      .hero-map,
+      .card,
+      .stage,
+      .table-card,
+      .callout {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+      }
+
+      .hero-title {
+        padding: 30px;
+      }
+
+      .hero-title h1 {
+        margin-top: 12px;
+      }
+
+      .hero-title p {
+        margin-top: 18px;
+        color: var(--muted);
+        font-size: 18px;
+      }
+
+      .hero-map {
+        padding: 22px;
+      }
+
+      .map-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      .map-node {
+        min-height: 108px;
+        padding: 15px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfcfe;
+      }
+
+      .map-node strong {
+        display: block;
+        margin-bottom: 7px;
+      }
+
+      .map-node span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .map-node.audio {
+        border-color: #9dd4ca;
+        background: var(--soft-audio);
+      }
+
+      .map-node.speech {
+        border-color: #b8cdf9;
+        background: var(--soft-speech);
+      }
+
+      .map-node.decision {
+        border-color: #c7b4f8;
+        background: var(--soft-decision);
+      }
+
+      .map-node.human {
+        border-color: #f3c38d;
+        background: var(--soft-human);
+      }
+
+      .section {
+        margin-top: 42px;
+      }
+
+      .section-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 18px;
+        align-items: end;
+        margin-bottom: 16px;
+      }
+
+      .section-head p {
+        max-width: 600px;
+        color: var(--muted);
+      }
+
+      .pipeline {
+        display: grid;
+        gap: 12px;
+      }
+
+      .stage {
+        display: grid;
+        grid-template-columns: 178px minmax(0, 1fr);
+        gap: 18px;
+        padding: 20px;
+      }
+
+      .stage-label {
+        border-right: 1px solid var(--line);
+        padding-right: 18px;
+      }
+
+      .stage-label .num {
+        display: grid;
+        place-items: center;
+        width: 42px;
+        height: 42px;
+        margin-bottom: 12px;
+        border-radius: 50%;
+        background: var(--soft-decision);
+        color: var(--decision);
+        font-weight: 900;
+      }
+
+      .stage-body {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(260px, 0.9fr);
+        gap: 18px;
+      }
+
+      .stage-body p {
+        color: var(--muted);
+      }
+
+      .facts {
+        display: grid;
+        gap: 8px;
+      }
+
+      .fact {
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfcfe;
+      }
+
+      .fact b {
+        display: block;
+        color: var(--ink);
+        font-size: 13px;
+      }
+
+      .fact span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .grid-2 {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .card {
+        padding: 20px;
+      }
+
+      .card h3 {
+        margin-bottom: 10px;
+      }
+
+      .card p,
+      .card li {
+        color: var(--muted);
+      }
+
+      ul {
+        margin: 12px 0 0;
+        padding-left: 19px;
+      }
+
+      li {
+        margin: 6px 0;
+      }
+
+      .tag-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 5px 9px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: #fbfcfe;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .tag.audio {
+        background: var(--soft-audio);
+        color: var(--audio);
+      }
+
+      .tag.speech {
+        background: var(--soft-speech);
+        color: var(--speech);
+      }
+
+      .tag.decision {
+        background: var(--soft-decision);
+        color: var(--decision);
+      }
+
+      .tag.human {
+        background: var(--soft-human);
+        color: var(--human);
+      }
+
+      .table-card {
+        overflow: hidden;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--paper);
+      }
+
+      caption {
+        padding: 18px 20px;
+        text-align: left;
+        font-size: 18px;
+        font-weight: 900;
+      }
+
+      th,
+      td {
+        padding: 13px 16px;
+        border-top: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #f8fafc;
+        color: var(--ink);
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      td {
+        color: var(--muted);
+      }
+
+      td strong {
+        color: var(--ink);
+      }
+
+      .flow {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+        padding: 20px;
+      }
+
+      .flow svg {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .callout {
+        padding: 20px;
+        box-shadow: none;
+      }
+
+      .callout.risk {
+        border-left: 6px solid var(--risk);
+        background: var(--soft-risk);
+      }
+
+      .callout.output {
+        border-left: 6px solid var(--output);
+        background: var(--soft-output);
+      }
+
+      .artifact-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .artifact {
+        display: grid;
+        grid-template-columns: 12px 1fr;
+        gap: 12px;
+        padding: 13px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfcfe;
+      }
+
+      .artifact::before {
+        width: 12px;
+        border-radius: 999px;
+        background: var(--decision);
+        content: "";
+      }
+
+      .artifact.raw::before {
+        background: var(--ink);
+      }
+
+      .artifact.audio::before {
+        background: var(--audio);
+      }
+
+      .artifact.speech::before {
+        background: var(--speech);
+      }
+
+      .artifact.human::before {
+        background: var(--human);
+      }
+
+      .artifact.final::before {
+        background: var(--output);
+      }
+
+      .artifact strong {
+        display: block;
+      }
+
+      .artifact span {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .prompt-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .prompt-card {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      .prompt-card summary {
+        cursor: pointer;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 12px;
+        align-items: center;
+        padding: 16px 18px;
+        font-weight: 900;
+      }
+
+      .prompt-card summary span {
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .prompt-body {
+        border-top: 1px solid var(--line);
+        background: #0f172a;
+        color: #eef4ff;
+        margin: 0;
+        overflow-x: auto;
+        padding: 18px;
+        white-space: pre-wrap;
+        word-break: normal;
+        font-family:
+          ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+          monospace;
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .trace-grid {
+        display: grid;
+        gap: 16px;
+      }
+
+      .trace-card {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+        padding: 20px;
+      }
+
+      .trace-head {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+      }
+
+      .trace-head h3 {
+        font-size: 20px;
+      }
+
+      .trace-id {
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .trace-kind {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 5px 9px;
+        border-radius: 999px;
+        background: var(--soft-decision);
+        color: var(--decision);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .trace-columns {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 12px;
+      }
+
+      .trace-panel {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfcfe;
+        padding: 14px;
+      }
+
+      .trace-panel h4 {
+        margin: 0 0 10px;
+        color: var(--ink);
+        font-size: 13px;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      .transcript-line {
+        margin: 8px 0 0;
+        padding: 10px 11px;
+        border-left: 4px solid var(--line-strong);
+        border-radius: 6px;
+        background: #ffffff;
+        color: var(--ink);
+        font-size: 14px;
+      }
+
+      .transcript-line b {
+        display: block;
+        margin-bottom: 3px;
+        color: var(--muted);
+        font-size: 11px;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      .transcript-line.keep {
+        border-left-color: var(--output);
+        background: var(--soft-output);
+      }
+
+      .transcript-line.cut {
+        border-left-color: var(--risk);
+        background: var(--soft-risk);
+      }
+
+      .transcript-line.restore {
+        border-left-color: var(--human);
+        background: var(--soft-human);
+      }
+
+      .trace-signal {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .signal {
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfcfe;
+      }
+
+      .signal b {
+        display: block;
+        margin-bottom: 3px;
+        color: var(--ink);
+        font-size: 12px;
+      }
+
+      .signal span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .trace-rationale {
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      @media (max-width: 940px) {
+        .hero,
+        .grid-2,
+        .grid-3,
+        .stage-body,
+        .trace-columns,
+        .trace-signal {
+          grid-template-columns: 1fr;
+        }
+
+        .stage {
+          grid-template-columns: 1fr;
+        }
+
+        .stage-label {
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+          padding-right: 0;
+          padding-bottom: 14px;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .page {
+          padding: 22px 14px 42px;
+        }
+
+        .hero-title,
+        .hero-map,
+        .stage,
+        .card,
+        .flow,
+        .callout {
+          padding: 16px;
+        }
+
+        .map-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .section-head {
+          display: block;
+        }
+
+        .section-head p {
+          margin-top: 8px;
+        }
+
+        table {
+          min-width: 720px;
+        }
+
+        .table-card {
+          overflow-x: auto;
+        }
+      }
+
+      @media print {
+        body {
+          background: #ffffff;
+        }
+
+        .page {
+          max-width: none;
+          padding: 0;
+        }
+
+        .hero-title,
+        .hero-map,
+        .stage,
+        .card,
+        .table-card,
+        .flow,
+        .callout,
+        .trace-card {
+          box-shadow: none;
+          break-inside: avoid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="callout output" aria-label="Status dokumenta">
+        <h2>Trenutačna dokumentacija sustava · 17. srpnja 2026.</h2>
+        <p>
+          Ova stranica opisuje pipeline koji se trenutačno koristi na grani <code>main</code>.
+          Section editor uključen je prema zadanim postavkama. Stariji višekoračni detektor
+          duplikata još postoji u kodu, ali se ne pokreće na zadanom putu. Uklonjeni enrichment
+          sustav, arbitar, statusi rečenica, toplinske karte i red za vraćanje također se ne pokreću.
+        </p>
+      </section>
+      <section class="hero" aria-labelledby="title">
+        <div class="hero-title">
+          <p class="kicker">Tehnički tijek</p>
+          <h1 id="title">Jedan video od sirove snimke do pregledanog rezultata</h1>
+        </div>
+
+        <aside class="hero-map" aria-label="Karta pipelinea">
+          <p class="kicker">Slojevi obrade</p>
+          <div class="map-grid">
+            <div class="map-node audio">
+              <strong>Audio sloj</strong>
+              <span>FFmpeg izdvaja zvuk. Spektralno filtriranje smanjuje šum. Analiza glasnoće pronalazi tišinu i glasne smetnje.</span>
+            </div>
+            <div class="map-node speech">
+              <strong>Sloj govora</strong>
+              <span>ElevenLabs Scribe v2 stvara hrvatski tekst i vremenske oznake riječi. Pravila za stanke dijele rečenice. Gemini ispravlja pravopis.</span>
+            </div>
+            <div class="map-node decision">
+              <strong>Sloj odluka</strong>
+              <span>GPT-5.6 Sol pronalazi rezove. Provjere temeljene na pravilima hvataju jasne lokalne ispravke i audio lažne početke. Gemini provjerava digresije. Lista montažnih odluka (EDL) čuva izvor svakog reza i pomiče granice na tihe dijelove zvuka.</span>
+            </div>
+            <div class="map-node human">
+              <strong>Sloj pregleda</strong>
+              <span>FastAPI + React aplikacija omogućuje pregledavatelju uređivanje bilo kojeg vremenskog raspona izvora. Nudi prikaze Transcript i Compare, review.v4 payload te zasebne pregledane EDL i videodatoteke.</span>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="section" aria-labelledby="pipeline-title">
+        <div class="section-head">
+          <div>
+            <p class="kicker">Slijedni pipeline</p>
+            <h2 id="pipeline-title">Faze obrade</h2>
+          </div>
+          <p>
+            Svaka faza predaje rezultat sljedećoj. Ako poziv section editora ne uspije,
+            pipeline ga ponavlja i može se prebaciti s OpenRoutera na OpenAI. Ako oba ne
+            uspiju, taj odjeljak ostaje neuređen. Izvještaj evaluacije bilježi neuspjeh.
+          </p>
+        </div>
+
+        <div class="pipeline">
+          <article class="stage">
+            <div class="stage-label">
+              <div class="num">1</div>
+              <h3>Izdvajanje i normalizacija zvuka</h3>
+            </div>
+            <div class="stage-body">
+              <p>
+                Pipeline pronalazi prvi audio stream i izdvaja ga kao mono 16-bitni PCM WAV.
+                Zadržava izvornu frekvenciju uzorkovanja. WAV služi za analizu, a izvorni
+                video ostaje izvor slike pri renderiranju.
+              </p>
+              <div class="facts">
+                <div class="fact"><b>Alati</b><span>FFmpeg i ffprobe.</span></div>
+                <div class="fact"><b>Izlaz</b><span>Sirovi mono WAV u privremenom radnom prostoru.</span></div>
+                <div class="fact"><b>Svrha</b><span>Svim koracima audio analize dati isti stabilan ulaz.</span></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="stage">
+            <div class="stage-label">
+              <div class="num">2</div>
+              <h3>Smanjenje šuma i karta tišine</h3>
+            </div>
+            <div class="stage-body">
+              <p>
+                Nestacionarno spektralno filtriranje smanjuje stalni pozadinski šum. Zadana
+                postavka je blaga kako ne bi oštetila govor. FFmpeg zatim pronalazi tihe
+                dijelove. Pipeline ostatak zvuka smatra govorom i dodaje zaštitni razmak oko njega.
+              </p>
+              <div class="facts">
+                <div class="fact"><b>Algoritam</b><span>Nestacionarno spektralno filtriranje bibliotekom noisereduce.</span></div>
+                <div class="fact"><b>Prag tišine</b><span>−40 dB, zadano najmanje 3 sekunde.</span></div>
+                <div class="fact"><b>Zaštitni razmak govora</b><span>500 ms prije i nakon pronađenih područja govora.</span></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="stage">
+            <div class="stage-label">
+              <div class="num">3</div>
+              <h3>Pretvorba govora u tekst i ispravci</h3>
+            </div>
+            <div class="stage-body">
+              <p>
+                ElevenLabs pretvara očišćeni zvuk u hrvatski tekst s vremenskom oznakom svake
+                riječi. Oznake kašlja i smijeha spremaju se odvojeno od izgovorenih riječi.
+                Interpunkcija i duge stanke dijele riječi u rečenice. Gemini ispravlja očite
+                pravopisne pogreške bez promjene vremenskih oznaka, gramatike, stila govora
+                ili poštapalica.
+              </p>
+              <div class="facts">
+                <div class="fact"><b>STT model</b><span>ElevenLabs Scribe v2, jezik hr, vremenske oznake riječi.</span></div>
+                <div class="fact"><b>Audio događaji</b><span>Zadano uključeni i spremljeni odvojeno.</span></div>
+                <div class="fact"><b>Model za ispravke</b><span>Gemini 2.5 Flash, strukturirani izlaz, do 5 prolaza.</span></div>
+                <div class="fact"><b>Dijeljenje rečenica</b><span>Interpunkcija te zadano dijeljenje na stanci od 1,5 sekundi.</span></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="stage">
+            <div class="stage-label">
+              <div class="num">4</div>
+              <h3>Uređivanje teksta i pomoćni detektori</h3>
+            </div>
+            <div class="stage-body">
+              <p>
+                GPT-5.6 Sol čita velike odjeljke transkripta i navodi točan tekst koji želi
+                ukloniti. Svaki raspon označava kao retake, false start, stutter, filler ili
+                redundant text. Kod provjerava tekst i preslikava ga u vremenske oznake.
+                Zasebni detektori temeljeni na pravilima obrađuju vrlo jasne lokalne ispravke
+                i audio lažne početke. Gemini provjerava kratke moguće digresije.
+              </p>
+              <div class="facts">
+                <div class="fact"><b>Glavni editor</b><span>GPT-5.6 Sol preko OpenRoutera; izravni OpenAI kao fallback.</span></div>
+                <div class="fact"><b>Veličina odjeljka</b><span>Cilj 1.200 riječi, najviše 2.000, preklapanje od dvije rečenice.</span></div>
+                <div class="fact"><b>Ugovor modela</b><span>Sol navodi tekst; kod ga preslikava u postojeće vremenske oznake riječi.</span></div>
+                <div class="fact"><b>Lokalne ispravke</b><span>RapidFuzz pravila; bez dodatnog poziva modela.</span></div>
+                <div class="fact"><b>Provjera digresija</b><span>Gemini 2.5 Flash samo za kratke kandidate blizu tišine ili STT audio događaja.</span></div>
+                <div class="fact"><b>Neaktivni put</b><span>Stariji leksički i embedding detektor duplikata preskače se dok je <code>section_editor.enabled</code> postavljen na true.</span></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="stage">
+            <div class="stage-label">
+              <div class="num">5</div>
+              <h3>Izgradnja EDL-a i prilagodba granica reza</h3>
+            </div>
+            <div class="stage-body">
+              <p>
+                Pipeline spaja područja tišine i prihvaćene oznake reza u jedan EDL (listu
+                montažnih odluka). Oznaka može ukloniti cijelu rečenicu ili samo odabrane
+                riječi. Ako jedna praznina sadrži i tišinu i tekstualni rez, dijeli se kako bi
+                svaki dio zadržao točan razlog. RMS (root-mean-square) ovojnica glasnoće zatim
+                pomiče svaku granicu reza prema obližnjem tihom zvuku. Ne smije zahvatiti više
+                od polovice susjedne riječi.
+              </p>
+              <div class="facts">
+                <div class="fact"><b>Polja odluke</b><span>start, end, action, reason, confidence, note.</span></div>
+                <div class="fact"><b>Izvor reza</b><span>Tekstualni rezovi čuvaju razlog i hrvatsku bilješku; stvarna tišina ostaje označena kao silence.</span></div>
+                <div class="fact"><b>Audio ovojnica</b><span>RMS okviri od 25 ms, pomak 10 ms, spremljeno kao &lt;stem&gt;.audio.json.</span></div>
+                <div class="fact"><b>Bez arbitraže</b><span>EDL se koristi izravno; nakon njega nema enrichment prolaza.</span></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="stage">
+            <div class="stage-label">
+              <div class="num">6</div>
+              <h3>Automatsko renderiranje</h3>
+            </div>
+            <div class="stage-body">
+              <p>
+                FFmpeg renderira automatski EDL kao probni MP4. Video uzima iz sirove snimke,
+                a zvuk iz očišćenog WAV-a. Reže svaki zadržani segment, poništava njegove
+                vremenske oznake i spaja segmente. Kratki audio fadeovi smanjuju klikove i
+                grube prijelaze na spojevima.
+              </p>
+              <div class="facts">
+                <div class="fact"><b>Renderer</b><span>FFmpeg filter graph s operacijama trim, atrim, concat i audio fadeovima.</span></div>
+                <div class="fact"><b>Zadani kodek</b><span>libx264, CRF 28, postavka ultrafast.</span></div>
+                <div class="fact"><b>Ublažavanje spojeva</b><span>Audio fade-in i fade-out od 30 ms na granicama segmenata.</span></div>
+                <div class="fact"><b>Status</b><span>Postavke produkcijskog renderiranja još trebaju završnu validaciju.</span></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="stage">
+            <div class="stage-label">
+              <div class="num">7</div>
+              <h3>Ljudski pregled i pregledano renderiranje</h3>
+            </div>
+            <div class="stage-body">
+              <p>
+                Lokalna FastAPI + React aplikacija prikazuje video, valni oblik, transkript i
+                raspone rezova. Valni oblik i transkript uređuju isti popis vremenskih raspona
+                izvora. Pregledavatelj može vratiti rez, dodati novi rez bilo gdje, pregledati
+                rezultat, spremiti zaseban pregledani EDL i renderirati pregledani MP4. Za QA
+                fixturee prikaz Compare zajedno pokazuje rezove pipelinea i ljudskog editora.
+                Sirovi video i automatski EDL nikada se ne prepisuju.
+              </p>
+              <div class="facts">
+                <div class="fact"><b>Shema</b><span><code>review.v4</code>; <code>cut_ranges</code> je izvor istine za trenutačnu montažu.</span></div>
+                <div class="fact"><b>Prikazi</b><span>Transcript i Compare; nema reda anotacija ni legende statusa rečenica.</span></div>
+                <div class="fact"><b>Pregledani artefakt</b><span>Zaseban pregledani EDL; ne prepisuje automatski EDL.</span></div>
+                <div class="fact"><b>Pregledani izlaz</b><span>Renderiran iz sučelja za pregled sa sufiksom <code>_reviewed</code>.</span></div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="decision-title">
+        <div class="section-head">
+          <div>
+            <p class="kicker">Orkestracija odluka</p>
+            <h2 id="decision-title">Kako nastaju odluke keep i cut</h2>
+          </div>
+          <p>
+            Sol odlučuje koje riječi djeluju uklonjivo. Kod temeljen na pravilima zatim
+            provjerava predložene raspone, dodaje nekoliko rezova poduprtih snažnim
+            mehaničkim dokazom, čuva razlog svakog reza i bira sigurne audio granice.
+            Svaki prihvaćeni prijedlog postaje automatski rez u EDL-u.
+          </p>
+        </div>
+
+        <div class="flow" aria-label="Dijagram slijeda odluka">
+          <svg viewBox="0 0 1160 360" role="img" aria-labelledby="decision-svg-title decision-svg-desc">
+            <title id="decision-svg-title">Slijed odluka</title>
+            <desc id="decision-svg-desc">Audio signali i signali transkripta prolaze kroz aktivne putove odluka, izgradnju EDL-a prema pravilima, odabir tihih granica i renderiranje.</desc>
+            <defs>
+              <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                <path d="M0,0 L10,5 L0,10 Z" fill="#64748b"></path>
+              </marker>
+            </defs>
+            <rect x="24" y="45" width="180" height="76" rx="8" fill="#e5f4f1" stroke="#8fcfc5"></rect>
+            <text x="114" y="77" text-anchor="middle" font-size="15" font-weight="800" fill="#0f766e">Audio signali</text>
+            <text x="114" y="101" text-anchor="middle" font-size="13" fill="#315b57">tišina, naleti šuma</text>
+
+            <rect x="24" y="190" width="180" height="76" rx="8" fill="#edf4ff" stroke="#abc5fb"></rect>
+            <text x="114" y="222" text-anchor="middle" font-size="15" font-weight="800" fill="#2563eb">Signali transkripta</text>
+            <text x="114" y="246" text-anchor="middle" font-size="13" fill="#43546f">rečenice, riječi, vrijeme</text>
+
+            <line x1="204" y1="83" x2="284" y2="139" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"></line>
+            <line x1="204" y1="228" x2="284" y2="190" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"></line>
+
+            <rect x="284" y="112" width="205" height="106" rx="8" fill="#ffffff" stroke="#d8dee8"></rect>
+            <text x="386" y="144" text-anchor="middle" font-size="15" font-weight="800" fill="#18212f">Aktivni putovi odluka</text>
+            <text x="386" y="169" text-anchor="middle" font-size="13" fill="#5c6675">Sol + lokalne ispravke</text>
+            <text x="386" y="190" text-anchor="middle" font-size="13" fill="#5c6675">audio lažni počeci + digresije</text>
+
+            <line x1="489" y1="165" x2="569" y2="165" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"></line>
+
+            <rect x="569" y="86" width="212" height="158" rx="8" fill="#f3edff" stroke="#c7b4f8"></rect>
+            <text x="675" y="120" text-anchor="middle" font-size="15" font-weight="800" fill="#7c3aed">Izgradnja EDL-a</text>
+            <text x="675" y="145" text-anchor="middle" font-size="13" fill="#5b4585">spoji keep područja</text>
+            <text x="675" y="166" text-anchor="middle" font-size="13" fill="#5b4585">ukloni označene raspone</text>
+            <text x="675" y="187" text-anchor="middle" font-size="13" fill="#5b4585">sačuvaj rezove riječi</text>
+            <text x="675" y="208" text-anchor="middle" font-size="13" fill="#5b4585">sačuvaj izvorne metapodatke</text>
+
+            <line x1="675" y1="244" x2="675" y2="292" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"></line>
+            <rect x="552" y="292" width="246" height="52" rx="8" fill="#fff4e6" stroke="#f3c38d"></rect>
+            <text x="675" y="324" text-anchor="middle" font-size="14" font-weight="800" fill="#b45309">Pomicanje na akustičke granice</text>
+
+            <line x1="781" y1="165" x2="861" y2="165" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"></line>
+
+            <rect x="861" y="112" width="126" height="106" rx="8" fill="#e9f8ef" stroke="#91d8a7"></rect>
+            <text x="924" y="152" text-anchor="middle" font-size="15" font-weight="800" fill="#15803d">Završni EDL</text>
+            <text x="924" y="178" text-anchor="middle" font-size="13" fill="#365c43">keep i cut</text>
+
+            <line x1="987" y1="165" x2="1062" y2="165" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"></line>
+            <rect x="1062" y="112" width="74" height="106" rx="8" fill="#ffffff" stroke="#d8dee8"></rect>
+            <text x="1099" y="154" text-anchor="middle" font-size="14" font-weight="800" fill="#18212f">Renderiranje</text>
+            <text x="1099" y="179" text-anchor="middle" font-size="12" fill="#5c6675">MP4</text>
+          </svg>
+        </div>
+      </section>
+
+      <section class="section grid-3" aria-label="Detalji algoritama">
+        <article class="card">
+          <h3>Sol section editor</h3>
+          <p>
+            Sol čita okolni odlomak, a ne samo jedan izolirani par rečenica.
+          </p>
+          <ul>
+            <li>Vraća točno kopirani tekst označen kao retake, false_start, stutter, filler ili redundant.</li>
+            <li>Smije uređivati samo rečenice koje pripadaju odjeljku. Preklopne rečenice daju kontekst, ali se ne mogu mijenjati.</li>
+            <li>Neispravan strukturirani izlaz ponavlja se do tri puta po odjeljku.</li>
+            <li>OpenRouter je primarni pružatelj; izravni OpenAI zadani je fallback za Sol.</li>
+            <li>Ako oba pružatelja zakažu, taj odjeljak ostaje neuređen i broji se kao neuspješan. Obrada ostatka videa nastavlja se.</li>
+          </ul>
+          <div class="tag-row">
+            <span class="tag decision">cilj 1200 riječi</span>
+            <span class="tag decision">najviše 2000 riječi</span>
+            <span class="tag decision">preklapanje 2 rečenice</span>
+            <span class="tag decision">3 pokušaja</span>
+          </div>
+        </article>
+
+        <article class="card">
+          <h3>Validacija raspona i lokalne ispravke</h3>
+          <p>
+            Kod pretvara Solov tekst u rezove s vremenskim oznakama. Mali detektor temeljen
+            na pravilima zatim dodaje samo jasno dokazive lance lokalnih ispravaka, bez još
+            jednog AI poziva.
+          </p>
+          <ul>
+            <li>Predloženi tekst mora odgovarati najmanje 80 % jednog neprekinutog raspona riječi u navedenoj rečenici.</li>
+            <li>Ako pokriva najmanje 90 % rečenice, reže se cijela rečenica. Inače se režu samo podudarne riječi.</li>
+            <li>Cijeli retake kraći od četiri riječi odbija se. Odbija se i retake čija je navedena podudarna rečenica udaljena više od 60 sekundi.</li>
+            <li>Svaki <code>redundant</code> prijedlog odbija se jer sučelje nema red prijedloga za pregled.</li>
+            <li>Lokalna ispravka temeljena na pravilima zahtijeva vidljivo prekinut srednji pokušaj i vrlo slične krajnje dijelove udaljene najviše deset sekundi.</li>
+          </ul>
+          <div class="tag-row">
+            <span class="tag decision">podudaranje raspona ≥ 0,8</span>
+            <span class="tag decision">cijela rečenica ≥ 0,9</span>
+            <span class="tag decision">rez na razini riječi</span>
+            <span class="tag decision">lokalne oznake 0,99</span>
+          </div>
+        </article>
+
+        <article class="card">
+          <h3>Digresije i akustičke smetnje</h3>
+          <p>
+            Šum i kratki komentari izvan lekcije razlikuju se od retakeova pa ih obrađuju
+            zasebni detektori.
+          </p>
+          <ul>
+            <li>Moguća digresija mora biti blizu duge tišine ili imati STT oznaku audio događaja.</li>
+            <li>Gemini 2.5 Flash odlučuje pripada li taj kratki kandidat lekciji.</li>
+            <li>Analiza RMS energije traži glasne negovorne nalete u prazninama između transkribiranih riječi.</li>
+            <li>Pravilo audio lažnog početka reže kratku napuštenu frazu kada nakon smetnje i duge stanke ubrzo slijedi novi govor.</li>
+          </ul>
+          <div class="tag-row">
+            <span class="tag audio">RMS okvir 25 ms</span>
+            <span class="tag audio">pomak 10 ms</span>
+            <span class="tag audio">percentil razine šuma 10</span>
+            <span class="tag audio">prag +22 dB</span>
+          </div>
+        </article>
+      </section>
+
+      <section class="section" aria-labelledby="policy-title">
+        <div class="section-head">
+          <div>
+            <p class="kicker">Pravila odlučivanja</p>
+            <h2 id="policy-title">Sol bira tekst; kod ga provjerava i primjenjuje</h2>
+          </div>
+          <p>
+            Sol odlučuje što riječi znače i koji se tekst može ukloniti. Kod ne ponavlja tu
+            jezičnu prosudbu. Provjerava prijedlog, blokira poznate nesigurne slučajeve,
+            preslikava tekst u vrijeme i bilježi dokaz za pregled i QA.
+          </p>
+        </div>
+
+        <div class="grid-3">
+          <article class="card">
+            <h3>Što Sol kontrolira</h3>
+            <p>
+              Sol bira vrstu reza, točno kopirani tekst i hrvatsko objašnjenje. Za retake
+              također navodi kasniju rečenicu koja treba ostati.
+            </p>
+            <ul>
+              <li>Prihvaćene oznake modela imaju confidence 0,9.</li>
+              <li>Nakon provjere raspona djelomični false startovi, stutteri i filler postaju automatski rezovi.</li>
+              <li>Nijedan drugi model ne pregledava niti anotira Solove odluke.</li>
+              <li>Zato dva pokretanja modela i dalje mogu proizvesti različite automatske rezove.</li>
+            </ul>
+            <div class="tag-row">
+              <span class="tag decision">strukturirani izlaz</span>
+              <span class="tag decision">confidence 0,9</span>
+            </div>
+          </article>
+
+          <article class="card">
+            <h3>Zaštitna pravila iznad modela</h3>
+            <p>
+              Fiksni kod provjerava svaki prijedlog i može ga odbiti.
+            </p>
+            <ul>
+              <li>Odbijaju se tekst koji se ne može podudariti i indeksi rečenica izvan uređivog odjeljka.</li>
+              <li>Retakeovi cijele rečenice kraći od četiri riječi odbijaju se.</li>
+              <li>Navedena podudarna rečenica odbija se ako je ranija ili udaljena više od 60 sekundi.</li>
+              <li>Rizična <code>redundant</code> uklanjanja ostaju zadržana. Ne postaju skriveni prijedlozi.</li>
+            </ul>
+            <div class="tag-row">
+              <span class="tag decision">protect_min_words 4</span>
+              <span class="tag decision">retake_max_gap_s 60</span>
+              <span class="tag decision">odbij redundant</span>
+            </div>
+          </article>
+
+          <article class="card">
+            <h3>Mjereno prema ljudskim editorima</h3>
+            <p>
+              QA alat uspoređuje rezove pipelinea s 98 videa koje su uredili ljudi. Tim
+              rezultatima odlučujemo je li promjena pipelinea sigurna.
+            </p>
+            <ul>
+              <li>Ljudski rezovi mjere se pokrivenošću riječi u ljudski uređenom videu, a ne podudaranjem cijelih rečenica.</li>
+              <li>Precision, recall i F1 na razini riječi ispravno ocjenjuju djelomične rezove rečenice.</li>
+              <li><code>eval-section-editor</code> testira modele na predmemoriranim transkriptima te sprema EDL-ove, tragove prijedloga, podatke o zdravlju, metapodatke pokretanja i izvještaje.</li>
+              <li>Razvojni diff prikaz označava rezove pipelinea i ljudskog editora na istom sirovom transkriptu.</li>
+              <li>Kada je uključen, LangSmith tracing može zabilježiti svaki LLM poziv.</li>
+              <li>Obrasci pogrešaka katalogizirani su u <code>MISTAKE_PATTERNS.md</code> i usmjeravaju plan razvoja.</li>
+            </ul>
+            <div class="tag-row">
+              <span class="tag decision">ground truth od 98 videa</span>
+              <span class="tag decision">ocjenjivanje na razini riječi</span>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="section-editor-title">
+        <div class="section-head">
+          <div>
+            <p class="kicker">Aktivna arhitektura</p>
+            <h2 id="section-editor-title">Section editor: Sol navodi tekst, kod ga pretvara u rezove</h2>
+          </div>
+          <p>
+            Ovo je zadani put uređivanja teksta kada je
+            <code>section_editor.enabled = true</code>. Uobičajena pokretanja naredbi
+            <code>process</code> i <code>batch</code> preskaču stariji detektor parova rečenica.
+          </p>
+        </div>
+
+        <div class="grid-2">
+          <article class="card">
+            <h3>Dizajn</h3>
+            <p>
+              Sol čita velike odjeljke transkripta i kopira točan tekst koji želi ukloniti.
+              Fiksni kod pretvara taj tekst u vremenske oznake.
+            </p>
+            <ul>
+              <li>Transkript se na granicama stanki dijeli u odjeljke od približno 1.200 riječi. Susjedne rečenice preklapaju se radi konteksta, ali svaka rečenica pripada samo jednom uređivom odjeljku.</li>
+              <li>Sol vraća cijele rečenice ili djelomične raspone označene kao retake, false start, stutter, filler ili redundant.</li>
+              <li>Ako kopirani tekst ne može dosegnuti podudaranje od 80 % unutar navedene rečenice, prijedlog se odbija.</li>
+              <li>Kod preslikava prihvaćeni tekst u postojeće vremenske oznake riječi. Sol nikada ne stvara niti mijenja vremenske oznake.</li>
+              <li>Zaštitna pravila za vremenski razmak i kratke retakeove blokiraju rizične prijedloge. <code>redundant</code> prijedlozi ostaju zadržani jer nema reda prijedloga.</li>
+            </ul>
+            <div class="tag-row">
+              <span class="tag decision">zadano uključeno</span>
+              <span class="tag decision">podudaranje raspona ≥ 0,8</span>
+              <span class="tag decision">zaštiti &lt; 4 riječi</span>
+              <span class="tag decision">razmak retakea ≤ 60 s</span>
+            </div>
+          </article>
+
+          <article class="card">
+            <h3>Trenutačno evaluirano stanje</h3>
+            <p>
+              Section editor odabrali smo nakon usporedbe modela na svih 98 ljudski uređenih
+              fixturea. Iteracija 19 zatim je dodala detektor lokalnih ispravaka temeljen na
+              pravilima. Nije promijenila Solov prompt.
+            </p>
+            <ul>
+              <li>Najnoviji rezultat nakon primjene fiksne EDL logike na sve fixturee: precision 0,7973, recall 0,6762, F1 0,7318.</li>
+              <li>U tom izoliranom ponovnom izračunu Iteracija 19 dodala je 33 ispravno izrezane riječi, nije dodala nijednu prekomjerno izrezanu riječ i uklonila je 33 propuštene riječi za rez.</li>
+              <li>Podaci o zdravlju bilježe neuspjele odjeljke i odbijene raspone pa pokvareno pokretanje ne može izgledati kao sigurno konzervativno pokretanje.</li>
+              <li>Artefakt za 98 videa spaja Solove EDL-ove od 14. srpnja s ponovnim izračunom od 15. srpnja. To nije svježe pokretanje trenutačne grane <code>main</code>.</li>
+              <li>Čisti videozapisi Fizike i Hrvatskog i dalje se prečesto prekomjerno režu. Precision Fizike u tom artefaktu iznosi 0,304.</li>
+            </ul>
+            <div class="tag-row">
+              <span class="tag decision">98 fixturea</span>
+              <span class="tag decision">F1 0.7318</span>
+              <span class="tag risk">čeka se svježe pokretanje</span>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="models-title">
+        <div class="section-head">
+          <div>
+            <p class="kicker">Modeli i biblioteke</p>
+            <h2 id="models-title">Trenutačni skup modela</h2>
+          </div>
+          <p>
+            LangChain daje jedno sučelje za sve LLM pozive. Modeli ispod zadani su odabiri,
+            a ne fiksne ovisnosti. Manifesti eksperimenata mogu ih zamijeniti OpenAI,
+            OpenRouter ili Anthropic modelima za usporedna pokretanja.
+          </p>
+        </div>
+
+        <div class="table-card">
+          <table>
+            <caption>Vanjski modeli i algoritamske biblioteke</caption>
+            <thead>
+              <tr>
+                <th>Sloj</th>
+                <th>Model ili biblioteka</th>
+                <th>Namjena</th>
+                <th>Ključne postavke</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Govor u tekst</strong></td>
+                <td>ElevenLabs Scribe v2</td>
+                <td>Stvara hrvatski tekst, vremensku oznaku svake riječi i opcionalne oznake audio događaja.</td>
+                <td>jezik hr, granularnost vremenskih oznaka word, audio događaji uključeni.</td>
+              </tr>
+              <tr>
+                <td><strong>Pravopisni ispravci</strong></td>
+                <td>Gemini 2.5 Flash kroz strukturirani izlaz</td>
+                <td>Ispravlja pravopis u ponovljenim prolazima bez promjene vremenskih oznaka.</td>
+                <td>temperature 0,1, najviše 5 prolaza, strogi prvi i blaži kasniji prolazi.</td>
+              </tr>
+              <tr>
+                <td><strong>Podudaranje lokalnih ispravaka</strong></td>
+                <td>RapidFuzz</td>
+                <td>Podudara početak i čisti završetak lanca ispravaka kada je srednji pokušaj vidljivo prekinut.</td>
+                <td>Gotovo identično 98 %; splice ukupno 65 % i početak 85 %; razmak krajnjih točaka najviše 10 s.</td>
+              </tr>
+              <tr>
+                <td><strong>Naslijeđeni put duplikata</strong></td>
+                <td>SentenceTransformer paraphrase-multilingual-MiniLM-L12-v2</td>
+                <td>Mjeri značenjsku sličnost rečenica za stariji detektor duplikata. Ne poziva se dok je section editor uključen.</td>
+                <td>Neaktivan na zadanom putu.</td>
+              </tr>
+              <tr>
+                <td><strong>Provjera digresija</strong></td>
+                <td>Gemini 2.5 Flash</td>
+                <td>Provjerava kratke moguće digresije blizu duge tišine ili STT oznake audio događaja.</td>
+                <td>Strukturirani izlaz; prag confidencea za prihvaćenu digresiju 0,7.</td>
+              </tr>
+              <tr>
+                <td><strong>Section editor</strong></td>
+                <td>GPT-5.6 Sol</td>
+                <td>Čita velike odjeljke transkripta i kopira točan tekst za uklanjanje. Kod ga provjerava, preslikava u vremenske oznake riječi i primjenjuje zaštitna pravila.</td>
+                <td>OpenRouter primarni, izravni OpenAI fallback; temperature 1,0, low reasoning, izlaz 16k, zadano uključeno.</td>
+              </tr>
+              <tr>
+                <td><strong>Deterministički put ispravaka</strong></td>
+                <td>RapidFuzz + točne vremenske oznake transkripta</td>
+                <td>Dodaje samo lance lokalnih ispravaka koji se mogu dokazati oblikom teksta i vremenskim rasporedom. Pokreće se nakon Sola i ne poziva model.</td>
+                <td>Confidence 0,99; lanci od dvije ili tri rečenice; potreban je vidljivo prekinut srednji dio.</td>
+              </tr>
+              <tr>
+                <td><strong>Čišćenje zvuka</strong></td>
+                <td>noisereduce</td>
+                <td>Nestacionarnim spektralnim filtriranjem smanjuje pozadinski šum u zvuku za analizu i renderiranje.</td>
+                <td>prop_decrease zadano 0,3.</td>
+              </tr>
+              <tr>
+                <td><strong>Obrada medija</strong></td>
+                <td>FFmpeg</td>
+                <td>Izdvaja zvuk, otkriva tišinu, reže i spaja segmente te stvara MP4 datoteke.</td>
+                <td>silencedetect na −40 dB tijekom 3 sekunde; render zadano libx264 CRF 28 ultrafast.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="fixture-title">
+        <div class="section-head">
+          <div>
+            <p class="kicker">Tragovi fixturea</p>
+            <h2 id="fixture-title">Stvarni primjeri transkripta iz pokretanja fixturea</h2>
+          </div>
+          <p>
+            Ovi primjeri dolaze iz spremljenih datoteka fixturea. Prikazuju oblik stvarnih
+            rezova, ali ne dokazuju da će novo Solovo pokretanje donijeti istu odluku.
+            Trenutačna QA pokretanja spremaju zaseban trag za svaki prijedlog.
+          </p>
+        </div>
+
+        <div class="trace-grid">
+          <article class="trace-card">
+            <div class="trace-head">
+              <div>
+                <span class="trace-kind">Digresija izvan teme</span>
+                <h3>Uklonjena smetnja iz okoline</h3>
+              </div>
+              <span class="trace-id">test-13 · sirova rečenica 40 · 208.49-209.70s</span>
+            </div>
+
+            <div class="trace-columns">
+              <div class="trace-panel">
+                <h4>Prozor sirovog transkripta</h4>
+                <p class="transcript-line keep"><b>Prije</b>Znači, samo još moramo primijetiti da od ove nule do jedinice imamo pet kućica.</p>
+                <p class="transcript-line cut"><b>Kandidat za rez</b>Čekaj, otvaraju se vrata.</p>
+                <p class="transcript-line keep"><b>Poslije</b>Dakle, ako je pet kućica, nama je svaka ta jedinična mjera podijeljena na pet jednakih dijelova.</p>
+              </div>
+
+              <div class="trace-panel">
+                <h4>Završni uređeni transkript</h4>
+                <p class="transcript-line keep"><b>Završna rečenica 33</b>Znači, samo još moramo primijetiti da od ove nule do jedinice imamo pet kućica.</p>
+                <p class="transcript-line keep"><b>Završna rečenica 34</b>Dakle, ako je pet kućica, nama je svaka ta jedinična mjera podijeljena na pet jednakih dijelova.</p>
+              </div>
+            </div>
+
+            <div class="trace-signal">
+              <div class="signal"><b>EDL</b><span>Razlog izrezane praznine: aside, confidence 1,0.</span></div>
+              <div class="signal"><b>Izvor</b><span>Kratki kandidat za digresiju blizu granice prekida.</span></div>
+              <div class="signal"><b>Rezultat</b><span>Rečenice lekcije postaju susjedne; prekid je uklonjen.</span></div>
+            </div>
+            <p class="trace-rationale">Zašto je korisno: prekid nestaje, a obje rečenice lekcije ostaju netaknute.</p>
+          </article>
+
+          <article class="trace-card">
+            <div class="trace-head">
+              <div>
+                <span class="trace-kind">Ponovljeni pokušaj</span>
+                <h3>Nedovršeni pokušaj zamijenjen dovršenim</h3>
+              </div>
+              <span class="trace-id">test-22 · sirova rečenica 29 · 228.06-232.06s</span>
+            </div>
+
+            <div class="trace-columns">
+              <div class="trace-panel">
+                <h4>Prozor sirovog transkripta</h4>
+                <p class="transcript-line keep"><b>Prije</b>Zato što na engleskom se to kaže choose, a na engleskom je isto tako choose naziv za ovaj tu povrh koji se kod nas tako zove.</p>
+                <p class="transcript-line cut"><b>Kandidat za rez</b>I onda još jedna dobra stvar, taj povrh zapravo imamo i u kalkulatoru iz...</p>
+                <p class="transcript-line keep"><b>Čisti ponovljeni pokušaj</b>I onda još jedna dobra stvar, taj povrh zapravo imamo i u kalkulatoru.</p>
+              </div>
+
+              <div class="trace-panel">
+                <h4>Završni uređeni transkript</h4>
+                <p class="transcript-line keep"><b>Završna rečenica 22</b>Zato što na engleskom se to kaže choose, a na engleskom je isto tako choose naziv za ovaj tu povrh koji se kod nas tako zove.</p>
+                <p class="transcript-line keep"><b>Završna rečenica 23</b>I onda još jedna dobra stvar, taj povrh zapravo imamo i u kalkulatoru.</p>
+                <p class="transcript-line keep"><b>Završna rečenica 24</b>Evo i tu je zapravo označen istim tim slovom za riječ choose, sa c.</p>
+              </div>
+            </div>
+
+            <div class="trace-signal">
+              <div class="signal"><b>EDL</b><span>Razlog reza: duplicate, confidence 1,0.</span></div>
+              <div class="signal"><b>Oblik</b><span>Raniji nedovršeni pokušaj odmah slijedi dovršeni pokušaj.</span></div>
+              <div class="signal"><b>Rezultat</b><span>Nedovršeni početak uklonjen je; dovršena rečenica ostaje.</span></div>
+            </div>
+            <p class="trace-rationale">Zašto je korisno: dovršena verzija ostaje, a nedovršeni početak nestaje.</p>
+          </article>
+
+          <article class="trace-card">
+            <div class="trace-head">
+              <div>
+                <span class="trace-kind">Lažni početak</span>
+                <h3>Uklonjeno dugo prekinuto objašnjenje</h3>
+              </div>
+              <span class="trace-id">test-22 · sirova rečenica 47 · 305.34-312.80s</span>
+            </div>
+
+            <div class="trace-columns">
+              <div class="trace-panel">
+                <h4>Prozor sirovog transkripta</h4>
+                <p class="transcript-line keep"><b>Prije</b>Okej, super i time smo sad riješili ovaj prvi dio.</p>
+                <p class="transcript-line cut"><b>Kandidat za rez</b>Znači mi smo uspješno od dvadeset učenika odabrali tročlani tim i vidimo da se to može napraviti na tisuću sto četrdeset i na-</p>
+                <p class="transcript-line keep"><b>Čisti ponovni početak</b>Okej, time smo uspješno riješili ovaj prvi dio.</p>
+              </div>
+
+              <div class="trace-panel">
+                <h4>Završni uređeni transkript</h4>
+                <p class="transcript-line keep"><b>Završna rečenica 38</b>Okej, super i time smo sad riješili ovaj prvi dio.</p>
+                <p class="transcript-line keep"><b>Završna rečenica 39</b>Okej, time smo uspješno riješili ovaj prvi dio.</p>
+                <p class="transcript-line keep"><b>Završna rečenica 40</b>Znači mi smo prebrojali na koliko različitih načina možemo izabrati tročlani tim od dvadeset učenika.</p>
+              </div>
+            </div>
+
+            <div class="trace-signal">
+              <div class="signal"><b>EDL</b><span>Razlog reza: false_start, confidence 1,0.</span></div>
+              <div class="signal"><b>Oblik</b><span>Kandidat vidljivo završava prekinutom riječi.</span></div>
+              <div class="signal"><b>Rezultat</b><span>Rečenice koja završava s „na-“ nema u završnom transkriptu.</span></div>
+            </div>
+            <p class="trace-rationale">Zašto je korisno: prekinuta rečenica nestaje, a čisti ponovni početak ostaje.</p>
+          </article>
+
+          <article class="trace-card">
+            <div class="trace-head">
+              <div>
+                <span class="trace-kind">Ostatak nefluentnosti</span>
+                <h3>Uklonjena poštapalica puna ponavljanja</h3>
+              </div>
+              <span class="trace-id">test-25 · sirova rečenica 40 · 195.02-199.32s</span>
+            </div>
+
+            <div class="trace-columns">
+              <div class="trace-panel">
+                <h4>Prozor sirovog transkripta</h4>
+                <p class="transcript-line keep"><b>Prije</b>Znači imamo X kroz dva X plus jedan.</p>
+                <p class="transcript-line cut"><b>Kandidat za rez</b>Dobro i sada ono ka, dobro i sada, kao što smo rekli, idemo ovo gore malo srediti.</p>
+                <p class="transcript-line keep"><b>Poslije</b>Znači imamo X puta pet X.</p>
+              </div>
+
+              <div class="trace-panel">
+                <h4>Završni uređeni transkript</h4>
+                <p class="transcript-line keep"><b>Završna rečenica 34</b>Znači imamo X kroz dva X plus jedan.</p>
+                <p class="transcript-line keep"><b>Završna rečenica 35</b>Znači imamo X puta pet X.</p>
+                <p class="transcript-line keep"><b>Završna rečenica 36</b>Vidimo da je jedini broj petica pa nju napišemo samo tako, a onda ovdje imamo X puta X.</p>
+              </div>
+            </div>
+
+            <div class="trace-signal">
+              <div class="signal"><b>EDL</b><span>Razlog reza: duplicate, confidence 1,0.</span></div>
+              <div class="signal"><b>Oblik</b><span>Ponovljene uvodne riječi prethode nastavku matematičkog objašnjenja.</span></div>
+              <div class="signal"><b>Rezultat</b><span>Matematičko objašnjenje nastavlja se bez ponovljene uvodne fraze.</span></div>
+            </div>
+            <p class="trace-rationale">Zašto je korisno: primjer čini mogući rez nefluentnosti vidljivim za ljudski pregled.</p>
+          </article>
+
+        </div>
+      </section>
+
+      <section class="section grid-2" aria-label="Artefakti i pregled">
+        <article class="card">
+          <h3>Artefakti stvoreni za jedan video</h3>
+          <div class="artifact-list">
+            <div class="artifact raw">
+              <div><strong>Sirovi izvorni video</strong><span>Netaknuti ulaz i izvor slike za sva renderiranja.</span></div>
+            </div>
+            <div class="artifact audio">
+              <div><strong>Sirovi izdvojeni WAV</strong><span>Mono datoteka za analizu u privremenoj pohrani.</span></div>
+            </div>
+            <div class="artifact audio">
+              <div><strong>WAV sa smanjenim šumom</strong><span>Zvuk sa smanjenim šumom koji koriste faze tišine, smetnji i renderiranja.</span></div>
+            </div>
+            <div class="artifact speech">
+              <div><strong>Prateća datoteka transkripta</strong><span>Prateća datoteka s vremenski označenim riječima, rečenicama, izvornim metapodacima, jezikom i audio događajima.</span></div>
+            </div>
+            <div class="artifact speech">
+              <div><strong>Prateća datoteka gramatičkog izvještaja</strong><span>Prateća datoteka s Geminijevim prolazima, prijedlozima, zamjenama, statistikama prolaza i parovima ispravaka.</span></div>
+            </div>
+            <div class="artifact">
+              <div><strong>Prateća datoteka automatskog EDL-a</strong><span>Poredani keep i cut segmenti s razlogom i confidenceom.</span></div>
+            </div>
+            <div class="artifact audio">
+              <div><strong>Prateća datoteka audio ovojnice</strong><span>Prateća datoteka s komprimiranim RMS podacima glasnoće za valni oblik i tihe točke reza.</span></div>
+            </div>
+            <div class="artifact human">
+              <div><strong>Payload pregleda</strong><span>review.v4 metapodaci videa, automatski segmenti vremenske crte, riječi transkripta i trenutačni rasponi rezova.</span></div>
+            </div>
+            <div class="artifact human">
+              <div><strong>Prateća datoteka pregledanog EDL-a</strong><span>Ljudski ispravljena lista odluka izgrađena iz slobodnih vremenskih raspona reza izvora.</span></div>
+            </div>
+            <div class="artifact final">
+              <div><strong>Automatski i pregledani MP4 izlazi</strong><span>Zasebna renderiranja; nijedno ne prepisuje sirovi izvor.</span></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <h3>Semantika payloada pregleda</h3>
+          <p>
+            Pregled mijenja spremljene odluke o rezovima, a ne sirovi video. Te su odluke
+            vremenski rasponi izvora povezani s riječima transkripta i segmentima vremenske crte.
+          </p>
+          <ul>
+            <li>Svaka riječ čuva izvorno vrijeme, izvorno AI keep/cut stanje, trenutačno stanje, razlog, confidence i obližnje tihe točke reza.</li>
+            <li>Svaka rečenica čuva trenutačnu i izvornu akciju, pokrivenost zadržanih riječi, razlog, confidence, bilješku i riječi.</li>
+            <li><code>cut_ranges</code> je izvor istine. Dolazi iz pregledanog EDL-a kada on postoji; inače dolazi iz automatskog EDL-a.</li>
+            <li>Promjene pregledavatelja spremaju se kao bilo koji vremenski raspon izvora, a ne samo cijele riječi. Spremanje prema indeksu riječi postoji samo za starije API klijente.</li>
+            <li>Pregledani EDL ponovno se gradi spajanjem svih raspona rezova i zadržavanjem svega ostalog unutar trajanja izvora.</li>
+            <li>Pregledano renderiranje koristi isti sirovi video i putanju očišćenog zvuka, ali s pregledanim odlukama.</li>
+            <li>Zaseban diff endpoint precrtava rezove oba editora na sirovom transkriptu. Rezovi pipelinea dolaze iz EDL-a. Ljudski rezovi dolaze iz poravnanja na razini riječi s novim transkriptom ljudski uređenog videa.</li>
+          </ul>
+          <div class="tag-row">
+            <span class="tag human">slobodni vremenski rasponi</span>
+            <span class="tag human">review.v4 payload</span>
+            <span class="tag human">zasebni pregledani EDL</span>
+            <span class="tag human">diff prikaz</span>
+          </div>
+        </article>
+      </section>
+
+      <section class="section" aria-labelledby="prompts-title">
+        <div class="section-head">
+          <div>
+            <p class="kicker">Referenca promptova</p>
+            <h2 id="prompts-title">Točni predlošci LLM promptova</h2>
+          </div>
+          <p>
+            Vrijednosti u vitičastim zagradama umeću se tijekom izvođenja. Stranica prikazuje
+            samo promptove zadanog puta: pravopisne ispravke, Solovo uređivanje odjeljaka i
+            provjeru digresija. Tekst ispod potpuno odgovara kodu.
+          </p>
+        </div>
+
+        <div class="prompt-list">
+          <details class="prompt-card">
+            <summary>PROMPT_STRICT <span>pravopisni ispravci, rani prolazi</span></summary>
+            <pre class="prompt-body">Pregledaj sljedeći transkript video lekcije na hrvatskom jeziku i pronađi SVE krivo napisane riječi.
+
+VAŽNO - Ovo je transkript govornog jezika:
+- NE ispravljaj stilske odabire, poštapalice ili razgovorni jezik
+- NE ispravljaj gramatiku rečenica - ljudi ne govore u savršenim rečenicama
+- Ispravi SAMO pravopisne pogreške (zatipci, krivo napisane riječi)
+- Zadrži TOČAN oblik riječi (veliko/malo slovo) - npr. ako je "Znači" na početku rečenice, vrati "Znači" a ne "znači"
+- Vrati samo parove riječi koje su stvarno krivo napisane
+
+PRIMJERI:
+✓ "zomirali" → "zumirali" (zatipak)
+✓ "korjen" → "korijen" (zatipak)
+✗ "znači" → NE ispravljaj (poštapalica, ali ispravno napisana)
+✗ nepotpune rečenice → NE ispravljaj (tako je govornik govorio)
+
+{skipped_words_section}Transkript:
+{transcript}</pre>
+          </details>
+
+          <details class="prompt-card">
+            <summary>PROMPT_LENIENT <span>pravopisni ispravci, kasniji prolazi</span></summary>
+            <pre class="prompt-body">Pregledaj sljedeći transkript video lekcije na hrvatskom jeziku i pronađi SAMO OČITE pravopisne pogreške.
+
+VAŽNO - Ovo je već nekoliko puta provjereni tekst:
+- Budi IZUZETNO STROG - ispravi samo ako je POTPUNO SIGURNO da je pogreška
+- NE traži pogreške ako ih nema
+- NE ispravljaj riječi koje bi MOGLE biti ispravne u kontekstu
+- NE ispravljaj gramatiku ili stil govora
+- Ispravi SAMO očite zatipke i potpuno pogrešno napisane riječi
+
+{skipped_words_section}Transkript:
+{transcript}</pre>
+          </details>
+
+
+
+
+
+
+
+          <details class="prompt-card">
+            <summary>ASIDE_PROMPT <span>off-lesson aside i production noise verification</span></summary>
+            <pre class="prompt-body">Ti si profesionalni video editor za edukacijske lekcije na hrvatskom. Pregledaj sljedeće kandidate u kontekstu okolnih rečenica.
+
+ODGOVOR: Vrati isključivo validan json koji odgovara zadanoj structured-output shemi. Ne koristi Markdown, code blockove ni dodatni tekst.
+
+Tvoj zadatak: za SVAKI kandidat odluči je li dio LEKCIJE ili je usputni komentar / smetnja koju treba izbaciti.
+
+IZBACI (is_aside=true) ako je kandidat:
+- usputni komentar koji ne pripada lekciji ("Čekaj, otvaraju se vrata.", "Ne mogu više pričati.")
+- zvuk/smetnja ((kašalj), (smijeh), nakašljavanje "Khm.")
+- prekid snimanja ili obraćanje nekome izvan lekcije
+
+ZADRŽI (is_aside=false) ako kandidat:
+- nosi bilo kakav sadržaj lekcije (korak, definicija, prijelaz, najava sljedećeg koraka)
+- je prirodan govorni prijelaz ("Dobro", "Evo", "Idemo dalje")
+
+Budi oprezan: ako nisi siguran, ZADRŽI (is_aside=false).
+
+Kandidati (svaki s kontekstom; kandidat označen s &lt;&lt;&lt;):
+{candidates_text}</pre>
+          </details>
+
+          <details class="prompt-card">
+            <summary>SECTION_PROMPT <span>aktivni Sol editor — točan tekst za brisanje provjerava fiksni kod</span></summary>
+            <pre class="prompt-body">Ti si iskusan video editor za edukacijske lekcije na hrvatskom. Dobivaš ODLOMAK transkripta snimke. Govornik snima u jednom dahu i često pogriješi pa ponovi — tvoj zadatak je označiti dijelove koje treba IZBACITI da montaža bude čista, a da se ne izgubi sadržaj.
+
+ODGOVOR: Vrati isključivo validan JSON prema shemi. Bez Markdowna, bez dodatnog teksta.
+
+ŠTO IZBACITI (delete_type):
+- "retake": govornik je istu misao rekao dva puta (lažni pa ispravan pokušaj). Izbaci RANIJU verziju, zadrži KASNIJU. U kept_index navedi indeks verzije koju zadržavaš.
+- "false_start": započeta pa prekinuta misao ("Dakle, ovaj-", "Kako bismo, kako bismo..."), nakon koje slijedi potpuna verzija.
+- "stutter": ponovljene/zamuckane riječi UNUTAR rečenice ("Firstly, youngsters s- Firstly, youngsters spend..."). Izbaci SAMO zamuckani dio, ne cijelu rečenicu.
+- "filler": prazne poštapalice bez sadržaja ("znači", "evo", "ovaj" same za sebe).
+- "redundant": rečenica koja ne dodaje NIŠTA novo jer je sadržaj već rečen (npr. suvišno prepričavanje). Budi OPREZAN — ovo je najrizičnije.
+
+KLJUČNA PRAVILA:
+- verbatim_text MORA biti točno prepisan iz rečenice (može biti dio rečenice za djelomično izbacivanje).
+- Za zamuckivanje/lažni početak izbaci samo pogrešni dio, ne cijelu rečenicu.
+- Ako govornik ponovi kratku frazu radi naglaska ili se vraća temi kao PODSJETNIKU (velik vremenski razmak), NE briši — to nije retake.
+- Kad nisi siguran, radije NE briši (montažer lakše doda cut nego što vrati izgubljen sadržaj).
+- Označavaj SAMO rečenice s indeksima koji su u rasponu za uređivanje: {editable_range}. Rečenice označene (kontekst) su samo za razumijevanje — NE vraćaj brisanja za njih.
+
+Odlomak (indeksi su globalni):
+{section_text}</pre>
+          </details>
+
+
+        </div>
+      </section>
+
+      <section class="section grid-2" aria-label="Granice i nedostaci">
+        <div class="callout output">
+          <h3>Granica produkcijskog sustava</h3>
+          <ul>
+            <li>Ovaj transkript služi za montažu i pregled. Nije završni transkript koji vide učenici na Gradivu.</li>
+            <li>Gradivo treba ponovno transkribirati završni pregledani Mux video. Tako poglavlja, objašnjenja i vremenske oznake ostaju usklađeni s objavljenim videom.</li>
+            <li>AI editor trenutačno koristi lokalne putanje i prateće datoteke. Još ne koristi trajne Gradivo ID-eve poslova.</li>
+            <li>Gradivo i dalje upravlja vezom sa sirovom snimkom, mapiranjem zadataka, statusom objave, završnim Mux videom, poglavljima, objašnjenjima i Notion sinkronizacijom.</li>
+          </ul>
+        </div>
+
+        <div class="callout risk">
+          <h3>Poznati tehnički nedostaci prije produkcijske uporabe</h3>
+          <ul>
+            <li>Section editor zadano je uključen, ali najnoviji pregledni artefakt za 98 videa ponovno je izračunan iz starijeg Solova izlaza. Nije riječ o svježem pokretanju trenutačne grane <code>main</code>.</li>
+            <li>Čisti videozapisi Fizike i Hrvatskog i dalje postižu loše rezultate. Spremljena kohorta Fizike ima precision 0,304, recall 0,176, F1 0,223 i 80 prekomjerno izrezanih riječi.</li>
+            <li>Trebamo jači dokaz da su djelomični rezovi false startova, stuttera i fillera sigurni na lekcijama kojima treba malo montaže.</li>
+            <li>Zadane postavke renderiranja namijenjene su razvoju i još trebaju produkcijsku validaciju.</li>
+            <li>Umetanje uvoda i odjave nije implementirano.</li>
+            <li>Izvoz u profesionalni nelinearni editor (NLE) planiran je, ali nije implementiran.</li>
+            <li>Postavke specifične za profesora i trenirani prilagođeni modeli budući su rad.</li>
+            <li>Produkcijski servis još treba trajne ID-eve poslova, autentificirani pristup datotekama, redove, ponavljanja, otkazivanje, stanja napretka i neuspjeha te adaptere pohrane.</li>
+          </ul>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

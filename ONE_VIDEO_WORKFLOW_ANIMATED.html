@@ -1,0 +1,1870 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src 'unsafe-inline' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Pipeline Example Flow</title>
+<style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24))}html,body{margin:0}body{box-sizing:border-box;padding:1rem;background:inherit}iframe{display:block;width:100%;max-width:736px;height:calc(100vh - 2rem);margin:0 auto;border:0}</style>
+</head>
+<body>
+<iframe sandbox="allow-scripts" referrerpolicy="no-referrer" title="Pipeline Example Flow" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+&lt;meta name=&quot;referrer&quot; content=&quot;no-referrer&quot;&gt;
+&lt;meta http-equiv=&quot;Content-Security-Policy&quot; content=&quot;default-src &#x27;none&#x27;; script-src &#x27;unsafe-inline&#x27; &#x27;unsafe-eval&#x27; &#x27;wasm-unsafe-eval&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src &#x27;unsafe-inline&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src &#x27;none&#x27;; object-src &#x27;none&#x27;; base-uri &#x27;none&#x27;; form-action &#x27;none&#x27;&quot;&gt;
+&lt;title&gt;Pipeline Example Flow&lt;/title&gt;
+&lt;style&gt;:root {
+  color-scheme: light dark;
+  background-color: var(--background) !important;
+
+  /* Agent-facing contract; keep in sync with SKILL.md. */
+  --background: light-dark(rgb(255 255 255), rgb(24 24 24));
+  --foreground: light-dark(rgb(26 28 31), rgb(255 255 255));
+  --card: color-mix(in oklab, var(--foreground) 5%, transparent);
+  --card-foreground: var(--foreground);
+  --popover: light-dark(rgb(255 255 255), rgb(45 45 45));
+  --popover-foreground: var(--foreground);
+  --primary: light-dark(rgb(51 156 255), rgb(131 195 255));
+  --primary-foreground: light-dark(rgb(255 255 255), rgb(13 13 13));
+  --secondary: light-dark(rgb(255 255 255 / 96%), rgb(54 54 54 / 96%));
+  --secondary-foreground: var(--foreground);
+  --muted: color-mix(in srgb, var(--foreground) 10%, transparent);
+  --muted-foreground: light-dark(
+    rgb(26 28 31 / 49.4%),
+    rgb(255 255 255 / 49.8%)
+  );
+  --accent: light-dark(rgb(229 242 255), rgb(13 39 63));
+  --accent-foreground: var(--primary);
+  --destructive: light-dark(rgb(226 85 7), rgb(255 133 73));
+  --border: light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%));
+  --input: light-dark(
+    rgb(26 28 31 / 11.8%),
+    color-mix(in oklab, rgb(0 0 0) 10%, transparent)
+  );
+  --ring: light-dark(rgb(51 156 255), rgb(131 195 255 / 76%));
+  --font-size-base: 14px;
+  --viz-series-1: var(--primary);
+  --viz-series-2: light-dark(rgb(243 136 59), rgb(245 154 86));
+  --viz-series-3: light-dark(rgb(93 201 119), rgb(116 213 139));
+  --viz-series-4: light-dark(rgb(235 119 177), rgb(240 143 192));
+  --viz-series-5: light-dark(rgb(155 121 236), rgb(170 145 239));
+  --viz-series-6: light-dark(rgb(58 185 177), rgb(90 203 194));
+
+  /* Internal implementation variables; not part of the agent contract. */
+  --font-sans: -apple-system, system-ui, &quot;Segoe UI&quot;, sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, Menlo, Consolas, &quot;Liberation Mono&quot;,
+    monospace;
+  --font-size-normal: max(11px, var(--font-size-base));
+  --font-size-tooltip: calc(var(--font-size-base) - 1px);
+  --font-size-small: max(11px, calc(var(--font-size-base) - 2px));
+  --font-size-h1: calc(var(--font-size-normal) * 1.7142857143);
+  --font-size-h2: calc(var(--font-size-normal) * 1.4285714286);
+  --font-size-h3: calc(var(--font-size-normal) * 1.2857142857);
+  --font-weight-normal: 430;
+  --font-weight-medium: 500;
+  --line-height-normal: calc(var(--font-size-normal) * 1.5);
+  --line-height-tooltip: calc(var(--font-size-tooltip) * 1.4285714286);
+  --line-height-small: calc(var(--font-size-small) + 4px);
+  --radius: 12.5px;
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-2xl: calc(var(--radius) * 1.6);
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px -1px rgb(0 0 0 / 8%);
+  --checkmark-image: url(&quot;data:image/svg+xml,%3Csvg xmlns=&#x27;http://www.w3.org/2000/svg&#x27; viewBox=&#x27;0 0 17 17&#x27;%3E%3Cpath d=&#x27;M12.8961 3.64101C13.1297 3.41418 13.4984 3.37523 13.7779 3.56581C14.0571 3.75635 14.1554 4.11331 14.0299 4.41347L13.9615 4.53847L7.71151 13.7045C7.59411 13.8767 7.4063 13.9877 7.19881 14.0072C6.99136 14.0267 6.78564 13.9533 6.63826 13.806L2.88826 10.056L2.79842 9.9457C2.6192 9.67407 2.64927 9.30496 2.88826 9.06581C3.12738 8.82669 3.49647 8.79676 3.76815 8.97597L3.8785 9.06581L7.03084 12.2182L12.8053 3.74941L12.8961 3.64101Z&#x27;/%3E%3C/svg%3E&quot;);
+
+  /* Legacy aliases; not part of the current agent contract. */
+  --viz-bg: transparent;
+  --viz-panel: var(--card);
+  --viz-border: var(--border);
+  --viz-text: var(--foreground);
+  --viz-muted: var(--muted-foreground);
+  --viz-accent: var(--primary);
+  --viz-accent-text: var(--primary-foreground);
+  --viz-accent-bg: var(--accent);
+  --viz-font-size: var(--font-size-base);
+  --viz-warning: var(--destructive);
+  --color-background-primary: var(--background);
+  --color-text-primary: var(--foreground);
+  --color-border-secondary: var(--border);
+}
+
+:root[data-theme=&quot;light&quot;] {
+  color-scheme: light;
+}
+
+:root[data-theme=&quot;dark&quot;] {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html &gt; body {
+  margin: 0;
+  padding: 5px;
+  color: var(--foreground);
+  background: transparent !important;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-normal);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+}
+
+a {
+  color: color-mix(in srgb, var(--viz-accent) 80%, var(--viz-text) 20%);
+  cursor: pointer;
+  font-weight: var(--viz-font-weight-medium);
+  text-decoration: none;
+  text-underline-offset: 2px;
+}
+
+a:is(:hover, :focus-visible) {
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+  text-decoration-thickness: 0.5px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin-block: 0;
+}
+
+h1 {
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h2 {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h3,
+h4,
+h5,
+h6 {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.3;
+}
+
+b,
+strong,
+th {
+  font-weight: var(--font-weight-medium);
+}
+
+code:not(pre code) {
+  display: inline;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  corner-shape: superellipse(1.5);
+  background: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  overflow-wrap: anywhere;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  word-break: break-word;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--foreground);
+  font: inherit;
+  text-align: start;
+}
+
+.table :is(th, td) {
+  padding-block: 10px;
+  padding-inline: 0 24px;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid var(--border);
+  text-align: start;
+  vertical-align: top;
+}
+
+.table-responsive &gt; .table :is(th, td) {
+  overflow-wrap: break-word;
+}
+
+.table :is(th, td):last-child {
+  padding-inline-end: 0;
+}
+
+.table :is(caption, thead th) {
+  font-weight: 600;
+}
+
+.table thead th {
+  padding-block: 8px;
+  border-bottom-color: color-mix(in srgb, var(--foreground) 16%, transparent);
+}
+
+.table tbody tr:last-child :is(th, td) {
+  border-bottom: 0;
+}
+
+.table.table-sm :is(th, td) {
+  padding-block: 6px;
+}
+
+.table.table-sm :is(th, td):not(:last-child) {
+  padding-inline-end: 16px;
+}
+
+.table :is(.text-end, [align=&quot;right&quot;]) {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.table :is(.text-center, [align=&quot;center&quot;]) {
+  text-align: center;
+}
+
+.table .text-nowrap {
+  white-space: nowrap;
+}
+
+#widget {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  background: transparent !important;
+}
+
+.card {
+  min-width: 0;
+  padding: 12px;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  border-radius: var(--radius-2xl);
+  corner-shape: superellipse(1.5);
+  color: var(--card-foreground);
+  background: var(--card);
+}
+
+#widget &gt; :not(.card) {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 50;
+  top: 0;
+  left: 0;
+  width: max-content;
+  max-width: min(
+    20rem,
+    var(--tooltip-available-width, calc(100vw - 10px)),
+    calc(100vw - 10px)
+  );
+  max-height: min(
+    var(--tooltip-available-height, calc(100vh - 10px)),
+    calc(100vh - 10px)
+  );
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--popover-foreground);
+  background: var(--popover);
+  box-shadow: none;
+  font-size: var(--font-size-tooltip);
+  line-height: var(--line-height-tooltip);
+  overflow-wrap: break-word;
+  white-space: normal;
+  pointer-events: none;
+  user-select: none;
+}
+
+.viz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(max(180px, 24%), 1fr));
+  gap: 10px;
+}
+
+.viz-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.viz-stat-value {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+.viz-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.viz-badge {
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  color: var(--accent-foreground);
+  background: var(--accent);
+  font-weight: var(--font-weight-medium);
+}
+
+small,
+.text-small,
+.viz-badge {
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
+}
+
+.text-muted {
+  color: var(--muted-foreground);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.viz-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.viz-controls &gt; .form-label {
+  display: grid;
+  min-width: min(100%, 260px);
+  flex: 1 1 280px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin-bottom: 0;
+}
+
+.viz-controls &gt; .form-label &gt; :is(.form-control, .form-range, .form-select) {
+  grid-column: 1 / -1;
+}
+
+.btn,
+.form-check-input,
+.form-control,
+.form-range,
+.form-select {
+  font: inherit;
+}
+
+.btn {
+  appearance: button;
+  display: inline-flex;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0 8px;
+  -webkit-app-region: no-drag;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: var(--cursor-interaction, pointer);
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+.btn:is(.btn-block, .viz-tile) {
+  inline-size: 100%;
+}
+
+.btn.viz-tile {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+a.btn {
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.btn-primary {
+  border-color: transparent;
+  color: var(--primary-foreground);
+  background: var(--foreground);
+  background-clip: padding-box;
+}
+
+.btn-primary .text-muted {
+  color: color-mix(in srgb, var(--primary-foreground) 50%, transparent);
+}
+
+.btn-primary:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 80%, transparent);
+  background-clip: padding-box;
+}
+
+.btn-ghost {
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.btn-ghost:not(:disabled):hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+[data-lucide] {
+  stroke-width: 1.6;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--foreground);
+}
+
+.form-control {
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--foreground);
+  background: var(--secondary);
+}
+
+.form-control::placeholder {
+  color: var(--muted-foreground);
+}
+
+.form-control[type=&quot;file&quot;] {
+  padding: 0;
+  overflow: hidden;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control[type=&quot;file&quot;]::file-selector-button {
+  min-height: 26px;
+  margin-right: 8px;
+  padding: 0 8px;
+  border: 0;
+  border-right: 1px solid var(--input);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: inherit;
+  font: inherit;
+}
+
+.form-control[type=&quot;file&quot;]:not(:disabled):hover::file-selector-button {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-control-color[type=&quot;color&quot;] {
+  width: 40px;
+  height: 28px;
+  padding: 3px;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch {
+  border: 0;
+  border-radius: calc(var(--radius-lg) - 4px);
+  corner-shape: superellipse(1.5);
+}
+
+textarea.form-control {
+  height: auto;
+  min-height: 72px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.form-control:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-control:disabled,
+.form-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.form-select {
+  appearance: none;
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  margin: 0;
+  padding: 0 32px 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--foreground);
+  background-color: var(--secondary);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted-foreground) 50%),
+    linear-gradient(135deg, var(--muted-foreground) 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) 50%,
+    calc(100% - 10px) 50%;
+  background-repeat: no-repeat;
+  background-size: 4px 4px;
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-select:not(:disabled):hover {
+  background-color: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-select:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-check {
+  display: flex;
+  min-height: 20px;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-check-input {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin: 0;
+  border: 1px solid var(--input);
+  color: var(--primary-foreground);
+  background-color: transparent;
+  cursor: var(--cursor-interaction, default);
+  transition:
+    background-color 150ms,
+    border-color 150ms,
+    box-shadow 150ms;
+}
+
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;] {
+  border-color: var(--input);
+  border-radius: var(--radius-sm);
+  corner-shape: superellipse(1.5);
+  background-color: var(--secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input:not(:disabled):not(:checked):hover {
+  background-color: var(--card);
+}
+
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;]:checked {
+  border-color: var(--primary);
+  background-color: var(--primary);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input[type=&quot;checkbox&quot;]:checked::before {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--primary-foreground);
+  content: &quot;&quot;;
+  mask: var(--checkmark-image) center / 12px 12px no-repeat;
+}
+
+.form-check-input[type=&quot;radio&quot;] {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+}
+
+.form-check-input[type=&quot;radio&quot;]:checked {
+  border: 2px solid var(--primary);
+  background:
+    radial-gradient(circle, var(--primary-foreground) 0 2.5px, transparent 3px),
+    var(--primary);
+}
+
+.form-check:not(.form-switch) .form-check-input:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+}
+
+.form-switch .form-check-input:disabled,
+.form-switch .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.form-check-label {
+  color: var(--foreground);
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-switch .form-check-input {
+  position: relative;
+  width: 32px;
+  height: 20px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+  box-shadow: none;
+  transition: background-color 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1px solid light-dark(var(--primary-foreground), var(--foreground));
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+  box-shadow: var(--shadow-sm);
+  content: &quot;&quot;;
+  transform: translate(2px, -50%);
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input:checked {
+  background: var(--primary);
+}
+
+.form-switch .form-check-input:checked::before {
+  transform: translate(14px, -50%);
+}
+
+.form-switch .form-check-input:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.form-range {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 28px;
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  outline: none;
+  border: 0;
+  accent-color: var(--primary);
+  background: linear-gradient(
+      color-mix(in srgb, var(--foreground) 7%, transparent),
+      color-mix(in srgb, var(--foreground) 7%, transparent)
+    )
+    center / 100% 2px no-repeat;
+}
+
+.form-range::-webkit-slider-runnable-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-webkit-slider-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range::-moz-range-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-moz-range-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.btn:not(.btn-primary, .viz-tile):is(
+    [aria-pressed=&quot;true&quot;],
+    [aria-selected=&quot;true&quot;],
+    .is-selected
+  ) {
+  border-color: var(--primary);
+  color: var(--primary-foreground);
+  background: var(--primary);
+}
+
+.btn.viz-tile:is([aria-pressed=&quot;true&quot;], [aria-selected=&quot;true&quot;], .is-selected) {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+#widget &gt; svg {
+  width: 100%;
+}
+
+.text-warning,
+.text-destructive {
+  color: var(--destructive);
+}
+
+html&gt;body{padding:0}&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;style&gt;
+  #pipeline-example-flow {
+    --step-progress: 0%;
+    color: var(--foreground);
+    font-size: var(--font-size-base);
+  }
+
+  #pipeline-example-flow * {
+    box-sizing: border-box;
+  }
+
+  #pipeline-example-flow .case-line,
+  #pipeline-example-flow .controls-line,
+  #pipeline-example-flow .stage-heading,
+  #pipeline-example-flow .stage-meta,
+  #pipeline-example-flow .artifact-head,
+  #pipeline-example-flow .legend-line {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  #pipeline-example-flow .case-line {
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  #pipeline-example-flow .controls-line {
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  #pipeline-example-flow .trace-layout {
+    display: grid;
+    grid-template-columns: minmax(10rem, 0.34fr) minmax(0, 1fr);
+    gap: 1.25rem;
+    align-items: start;
+  }
+
+  #pipeline-example-flow .step-rail {
+    position: relative;
+    padding-left: 0.35rem;
+  }
+
+  #pipeline-example-flow .step-rail::before,
+  #pipeline-example-flow .step-progress {
+    content: &quot;&quot;;
+    position: absolute;
+    left: 1rem;
+    top: 1rem;
+    width: 2px;
+    height: calc(100% - 2rem);
+  }
+
+  #pipeline-example-flow .step-rail::before {
+    background: var(--border);
+  }
+
+  #pipeline-example-flow .step-progress {
+    height: var(--step-progress);
+    max-height: calc(100% - 2rem);
+    background: var(--viz-series-1);
+    transition: height 420ms ease;
+  }
+
+  #pipeline-example-flow .step-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  #pipeline-example-flow .step-item {
+    position: relative;
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr);
+    gap: 0.65rem;
+    align-items: center;
+    min-height: 2.7rem;
+  }
+
+  #pipeline-example-flow .step-dot {
+    position: relative;
+    z-index: 2;
+    width: 1.45rem;
+    height: 1.45rem;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    background: var(--background);
+    border: 2px solid var(--border);
+    color: var(--muted-foreground);
+    transition: background 220ms ease, color 220ms ease, border-color 220ms ease, transform 220ms ease;
+  }
+
+  #pipeline-example-flow .step-item.is-done .step-dot {
+    border-color: var(--viz-series-1);
+    color: var(--foreground);
+  }
+
+  #pipeline-example-flow .step-item.is-active .step-dot {
+    background: var(--primary);
+    color: var(--primary-foreground);
+    border-color: var(--primary);
+    transform: scale(1.12);
+  }
+
+  #pipeline-example-flow .step-label {
+    color: var(--muted-foreground);
+  }
+
+  #pipeline-example-flow .step-item.is-active .step-label,
+  #pipeline-example-flow .step-item.is-done .step-label {
+    color: var(--foreground);
+  }
+
+  #pipeline-example-flow .stage-heading {
+    justify-content: space-between;
+    margin-bottom: 0.6rem;
+  }
+
+  #pipeline-example-flow .stage-heading h2 {
+    margin: 0;
+  }
+
+  #pipeline-example-flow .stage-meta {
+    margin-bottom: 1rem;
+  }
+
+  #pipeline-example-flow .packet-track {
+    position: relative;
+    height: 1.4rem;
+    margin: 0.5rem 0 1rem;
+  }
+
+  #pipeline-example-flow .packet-track::before {
+    content: &quot;&quot;;
+    position: absolute;
+    left: 0.5rem;
+    right: 0.5rem;
+    top: 50%;
+    height: 2px;
+    background: var(--border);
+  }
+
+  #pipeline-example-flow .packet {
+    position: absolute;
+    left: 0.5rem;
+    top: calc(50% - 0.38rem);
+    width: 0.76rem;
+    height: 0.76rem;
+    border-radius: 999px;
+    background: var(--viz-series-1);
+  }
+
+  #pipeline-example-flow .packet.is-moving {
+    animation: packet-travel 900ms ease both;
+  }
+
+  @keyframes packet-travel {
+    0% { left: 0.5rem; transform: scale(0.8); }
+    48% { transform: scale(1.25); }
+    100% { left: calc(100% - 1.26rem); transform: scale(1); }
+  }
+
+  #pipeline-example-flow .io-flow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: 0.75rem;
+    align-items: stretch;
+    margin-bottom: 1rem;
+  }
+
+  #pipeline-example-flow .io-block {
+    min-width: 0;
+    padding: 0.25rem 0;
+  }
+
+  #pipeline-example-flow .io-block + .io-block {
+    border-left: 1px solid var(--border);
+    padding-left: 0.75rem;
+  }
+
+  #pipeline-example-flow .io-label {
+    display: block;
+    margin-bottom: 0.35rem;
+    color: var(--muted-foreground);
+  }
+
+  #pipeline-example-flow .io-arrow {
+    align-self: center;
+    color: var(--muted-foreground);
+  }
+
+  #pipeline-example-flow .artifact {
+    border-top: 1px solid var(--border);
+    padding-top: 1rem;
+  }
+
+  #pipeline-example-flow .artifact-head {
+    justify-content: space-between;
+    margin-bottom: 0.7rem;
+  }
+
+  #pipeline-example-flow .artifact-view {
+    min-height: 14rem;
+  }
+
+  #pipeline-example-flow .artifact-view.is-changing {
+    animation: artifact-enter 420ms ease both;
+  }
+
+  @keyframes artifact-enter {
+    from { opacity: 0.25; transform: translateY(0.4rem); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  #pipeline-example-flow .waveform {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    height: 5rem;
+    color: var(--viz-series-1);
+    padding: 0.5rem 0;
+  }
+
+  #pipeline-example-flow .waveform span {
+    flex: 1;
+    min-width: 2px;
+    height: var(--h);
+    background: currentColor;
+    opacity: 0.7;
+  }
+
+  #pipeline-example-flow .timeline {
+    display: flex;
+    min-height: 3rem;
+    margin: 0.7rem 0;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+
+  #pipeline-example-flow .timeline-segment {
+    min-width: 0;
+    display: grid;
+    place-items: center;
+    padding: 0.35rem;
+    text-align: center;
+    background: color-mix(in srgb, var(--viz-series-2) 14%, transparent);
+    color: var(--foreground);
+  }
+
+  #pipeline-example-flow .timeline-segment.cut {
+    background: color-mix(in srgb, var(--destructive) 18%, transparent);
+  }
+
+  #pipeline-example-flow .timeline-segment.silence {
+    background: var(--muted);
+    color: var(--muted-foreground);
+  }
+
+  #pipeline-example-flow .sentence-list,
+  #pipeline-example-flow .check-list,
+  #pipeline-example-flow .output-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.65rem;
+  }
+
+  #pipeline-example-flow .sentence-row,
+  #pipeline-example-flow .check-row,
+  #pipeline-example-flow .output-row {
+    display: grid;
+    grid-template-columns: minmax(5.5rem, auto) minmax(0, 1fr);
+    gap: 0.75rem;
+    align-items: start;
+    padding-bottom: 0.65rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  #pipeline-example-flow .sentence-row:last-child,
+  #pipeline-example-flow .check-row:last-child,
+  #pipeline-example-flow .output-row:last-child {
+    border-bottom: 0;
+  }
+
+  #pipeline-example-flow .sentence-row.is-cut {
+    text-decoration: line-through;
+    text-decoration-color: var(--destructive);
+    text-decoration-thickness: 2px;
+  }
+
+  #pipeline-example-flow .check-symbol {
+    color: var(--viz-series-2);
+  }
+
+  #pipeline-example-flow pre {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    color: var(--foreground);
+    background: var(--muted);
+    padding: 0.9rem;
+    border: 1px solid var(--border);
+  }
+
+  #pipeline-example-flow .split-comparison {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  #pipeline-example-flow .split-value {
+    display: block;
+    margin-top: 0.25rem;
+  }
+
+  #pipeline-example-flow .legend-line {
+    margin-top: 0.75rem;
+  }
+
+  #pipeline-example-flow .legend-swatch {
+    width: 0.75rem;
+    height: 0.75rem;
+    display: inline-block;
+    margin-right: 0.25rem;
+    background: color-mix(in srgb, var(--viz-series-2) 14%, transparent);
+    border: 1px solid var(--border);
+  }
+
+  #pipeline-example-flow .legend-swatch.cut {
+    background: color-mix(in srgb, var(--destructive) 18%, transparent);
+  }
+
+  #pipeline-example-flow .review-choice {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  @media (max-width: 680px) {
+    #pipeline-example-flow .trace-layout {
+      grid-template-columns: 1fr;
+    }
+
+    #pipeline-example-flow .step-list {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.5rem;
+    }
+
+    #pipeline-example-flow .step-rail {
+      padding-left: 0;
+    }
+
+    #pipeline-example-flow .step-rail::before,
+    #pipeline-example-flow .step-progress {
+      display: none;
+    }
+
+    #pipeline-example-flow .step-item {
+      grid-template-columns: 1.6rem minmax(0, 1fr);
+      min-height: 2.25rem;
+      gap: 0.4rem;
+    }
+
+    #pipeline-example-flow .step-dot {
+      width: 1.3rem;
+      height: 1.3rem;
+    }
+
+    #pipeline-example-flow .io-flow {
+      grid-template-columns: 1fr;
+    }
+
+    #pipeline-example-flow .io-arrow {
+      transform: rotate(90deg);
+      justify-self: center;
+    }
+
+    #pipeline-example-flow .io-block + .io-block {
+      border-left: 0;
+      border-top: 1px solid var(--border);
+      padding-left: 0;
+      padding-top: 0.75rem;
+    }
+  }
+
+  @media (max-width: 430px) {
+    #pipeline-example-flow .step-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    #pipeline-example-flow .sentence-row,
+    #pipeline-example-flow .check-row,
+    #pipeline-example-flow .output-row,
+    #pipeline-example-flow .split-comparison,
+    #pipeline-example-flow .review-choice {
+      grid-template-columns: 1fr;
+    }
+
+    #pipeline-example-flow .timeline-segment span {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #pipeline-example-flow *,
+    #pipeline-example-flow *::before,
+    #pipeline-example-flow *::after {
+      animation-duration: 1ms !important;
+      transition-duration: 1ms !important;
+    }
+  }
+&lt;/style&gt;
+
+&lt;div id=&quot;pipeline-example-flow&quot;&gt;
+  &lt;div class=&quot;case-line&quot;&gt;
+    &lt;div&gt;
+      &lt;span class=&quot;viz-badge&quot;&gt;Concrete case&lt;/span&gt;
+      &lt;strong&gt;test-22 · 303.20–323.36 s&lt;/strong&gt;
+    &lt;/div&gt;
+    &lt;span class=&quot;text-small text-muted&quot;&gt;Saved audio + transcript · current-main algorithms&lt;/span&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;controls-line&quot;&gt;
+    &lt;div class=&quot;viz-controls&quot; aria-label=&quot;Animation controls&quot;&gt;
+      &lt;button type=&quot;button&quot; class=&quot;btn btn-ghost&quot; id=&quot;pef-prev&quot;&gt;
+        &lt;i data-lucide=&quot;chevron-left&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;
+        Previous
+      &lt;/button&gt;
+      &lt;button type=&quot;button&quot; class=&quot;btn btn-primary&quot; id=&quot;pef-play&quot;&gt;
+        &lt;i data-lucide=&quot;play&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;
+        Play flow
+      &lt;/button&gt;
+      &lt;button type=&quot;button&quot; class=&quot;btn btn-ghost&quot; id=&quot;pef-next&quot;&gt;
+        Next
+        &lt;i data-lucide=&quot;chevron-right&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;
+      &lt;/button&gt;
+    &lt;/div&gt;
+    &lt;span id=&quot;pef-counter&quot; class=&quot;text-small text-muted&quot; aria-live=&quot;polite&quot;&gt;Step 1 of 9&lt;/span&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;trace-layout&quot;&gt;
+    &lt;nav class=&quot;step-rail&quot; aria-label=&quot;Pipeline stages&quot;&gt;
+      &lt;div class=&quot;step-progress&quot; aria-hidden=&quot;true&quot;&gt;&lt;/div&gt;
+      &lt;ol class=&quot;step-list&quot; id=&quot;pef-steps&quot;&gt;&lt;/ol&gt;
+    &lt;/nav&gt;
+
+    &lt;section class=&quot;card&quot; id=&quot;pef-stage&quot; aria-live=&quot;polite&quot; aria-atomic=&quot;true&quot;&gt;
+      &lt;div class=&quot;stage-heading&quot;&gt;
+        &lt;h2 id=&quot;pef-stage-title&quot;&gt;Raw source&lt;/h2&gt;
+        &lt;span class=&quot;viz-badge&quot; id=&quot;pef-actor&quot;&gt;System&lt;/span&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;stage-meta text-small text-muted&quot; id=&quot;pef-stage-meta&quot;&gt;&lt;/div&gt;
+
+      &lt;div class=&quot;packet-track&quot; aria-hidden=&quot;true&quot;&gt;
+        &lt;span class=&quot;packet&quot; id=&quot;pef-packet&quot;&gt;&lt;/span&gt;
+      &lt;/div&gt;
+
+      &lt;div class=&quot;io-flow&quot; aria-label=&quot;Current step input, decision, and output&quot;&gt;
+        &lt;div class=&quot;io-block&quot;&gt;
+          &lt;span class=&quot;io-label text-small&quot;&gt;Input&lt;/span&gt;
+          &lt;strong id=&quot;pef-input&quot;&gt;&lt;/strong&gt;
+        &lt;/div&gt;
+        &lt;span class=&quot;io-arrow&quot; aria-hidden=&quot;true&quot;&gt;→&lt;/span&gt;
+        &lt;div class=&quot;io-block&quot;&gt;
+          &lt;span class=&quot;io-label text-small&quot;&gt;Decision or operation&lt;/span&gt;
+          &lt;strong id=&quot;pef-decision&quot;&gt;&lt;/strong&gt;
+        &lt;/div&gt;
+        &lt;span class=&quot;io-arrow&quot; aria-hidden=&quot;true&quot;&gt;→&lt;/span&gt;
+        &lt;div class=&quot;io-block&quot;&gt;
+          &lt;span class=&quot;io-label text-small&quot;&gt;Output&lt;/span&gt;
+          &lt;strong id=&quot;pef-output&quot;&gt;&lt;/strong&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+
+      &lt;div class=&quot;artifact&quot;&gt;
+        &lt;div class=&quot;artifact-head&quot;&gt;
+          &lt;strong id=&quot;pef-artifact-title&quot;&gt;Artifact after this step&lt;/strong&gt;
+          &lt;span class=&quot;text-small text-muted&quot; id=&quot;pef-artifact-name&quot;&gt;&lt;/span&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;artifact-view&quot; id=&quot;pef-artifact&quot;&gt;&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/section&gt;
+  &lt;/div&gt;
+
+  &lt;p class=&quot;sr-only&quot; id=&quot;pef-description&quot;&gt;
+    Interactive nine-step trace of a false-start cut from raw video through review.
+  &lt;/p&gt;
+&lt;/div&gt;
+
+&lt;script&gt;
+  (() =&gt; {
+    const root = document.getElementById(&#x27;pipeline-example-flow&#x27;);
+    const stages = [
+      {
+        label: &#x27;Raw source&#x27;,
+        actor: &#x27;System&#x27;,
+        meta: &#x27;The original recording remains unchanged throughout the pipeline.&#x27;,
+        input: &#x27;test-22-raw.mp4&#x27;,
+        decision: &#x27;Select the first audio stream&#x27;,
+        output: &#x27;Raw video + mono WAV&#x27;,
+        artifactName: &#x27;source excerpt&#x27;,
+        artifact: `
+          &lt;div class=&quot;waveform&quot; aria-label=&quot;Waveform for the 20.16 second source excerpt&quot;&gt;
+            ${[22,38,56,30,68,42,78,52,64,34,72,48,82,36,58,70,46,28,66,54,76,44,62,32,74,50,80,40,60,26,69,47,77,35,57,71,45,31,65,53].map(value =&gt; `&lt;span style=&quot;--h:${value}%&quot;&gt;&lt;/span&gt;`).join(&#x27;&#x27;)}
+          &lt;/div&gt;
+          &lt;ul class=&quot;output-list&quot;&gt;
+            &lt;li class=&quot;output-row&quot;&gt;&lt;span class=&quot;text-small text-muted&quot;&gt;Excerpt&lt;/span&gt;&lt;span&gt;303.20–323.36 s · 20.16 s&lt;/span&gt;&lt;/li&gt;
+            &lt;li class=&quot;output-row&quot;&gt;&lt;span class=&quot;text-small text-muted&quot;&gt;Picture&lt;/span&gt;&lt;span&gt;Always read from the untouched MP4&lt;/span&gt;&lt;/li&gt;
+            &lt;li class=&quot;output-row&quot;&gt;&lt;span class=&quot;text-small text-muted&quot;&gt;Analysis audio&lt;/span&gt;&lt;span&gt;Mono 16-bit PCM WAV at the source sample rate&lt;/span&gt;&lt;/li&gt;
+          &lt;/ul&gt;`
+      },
+      {
+        label: &#x27;Audio analysis&#x27;,
+        actor: &#x27;FFmpeg + noisereduce&#x27;,
+        meta: &#x27;Noise reduction is mild. Silence requires at least 3.00 seconds below −40 dB.&#x27;,
+        input: &#x27;Raw mono WAV&#x27;,
+        decision: &#x27;Denoise and measure quiet gaps&#x27;,
+        output: &#x27;Denoised WAV + speech map&#x27;,
+        artifactName: &#x27;audio result&#x27;,
+        artifact: `
+          &lt;div class=&quot;timeline&quot; aria-label=&quot;Audio timeline showing speech, a 2.28 second pause, and resumed speech&quot;&gt;
+            &lt;div class=&quot;timeline-segment&quot; style=&quot;flex:9.60&quot;&gt;&lt;span&gt;speech&lt;/span&gt;&lt;/div&gt;
+            &lt;div class=&quot;timeline-segment silence&quot; style=&quot;flex:2.28&quot;&gt;&lt;span&gt;2.28 s pause&lt;/span&gt;&lt;/div&gt;
+            &lt;div class=&quot;timeline-segment&quot; style=&quot;flex:8.28&quot;&gt;&lt;span&gt;speech&lt;/span&gt;&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;ul class=&quot;check-list&quot;&gt;
+            &lt;li class=&quot;check-row&quot;&gt;&lt;span class=&quot;check-symbol&quot;&gt;✓ Measured&lt;/span&gt;&lt;span&gt;Pause from 312.80 to 315.08 s = 2.28 s.&lt;/span&gt;&lt;/li&gt;
+            &lt;li class=&quot;check-row&quot;&gt;&lt;span class=&quot;check-symbol&quot;&gt;✓ Decision&lt;/span&gt;&lt;span&gt;2.28 s is below the 3.00 s long-silence threshold, so silence detection alone does not explain the false-start cut.&lt;/span&gt;&lt;/li&gt;
+            &lt;li class=&quot;check-row&quot;&gt;&lt;span class=&quot;check-symbol&quot;&gt;→ Output&lt;/span&gt;&lt;span&gt;The denoised WAV continues to transcription. RMS frames are later reused for cut-boundary snapping.&lt;/span&gt;&lt;/li&gt;
+          &lt;/ul&gt;`
+      },
+      {
+        label: &#x27;Transcription&#x27;,
+        actor: &#x27;ElevenLabs + Gemini&#x27;,
+        meta: &#x27;Scribe v2 provides word timestamps. Gemini changes spelling only; it does not rewrite the speech.&#x27;,
+        input: &#x27;Denoised WAV&#x27;,
+        decision: &#x27;Transcribe Croatian and correct spelling&#x27;,
+        output: &#x27;Timed transcript&#x27;,
+        artifactName: &#x27;transcript sentences 46–48&#x27;,
+        artifact: `
+          &lt;ul class=&quot;sentence-list&quot;&gt;
+            &lt;li class=&quot;sentence-row&quot;&gt;&lt;span class=&quot;text-small text-muted&quot;&gt;[46] 303.20–305.30&lt;/span&gt;&lt;span&gt;Okej, super i time smo sad riješili ovaj prvi dio.&lt;/span&gt;&lt;/li&gt;
+            &lt;li class=&quot;sentence-row&quot;&gt;&lt;span class=&quot;text-small text-muted&quot;&gt;[47] 305.34–312.80&lt;/span&gt;&lt;span&gt;Znači mi smo uspješno od dvadeset učenika odabrali tročlani tim i vidimo da se to može napraviti na tisuću sto četrdeset i na-&lt;/span&gt;&lt;/li&gt;
+            &lt;li class=&quot;sentence-row&quot;&gt;&lt;span class=&quot;text-small text-muted&quot;&gt;[48] 315.08–317.00&lt;/span&gt;&lt;span&gt;Okej, time smo uspješno riješili ovaj prvi dio.&lt;/span&gt;&lt;/li&gt;
+            &lt;li class=&quot;sentence-row&quot;&gt;&lt;span class=&quot;text-small text-muted&quot;&gt;[49] 317.06–323.36&lt;/span&gt;&lt;span&gt;Znači mi smo prebrojali na koliko različitih načina možemo izabrati tročlani tim od dvadeset učenika.&lt;/span&gt;&lt;/li&gt;
+          &lt;/ul&gt;`
+      },
+      {
+        label: &#x27;Sol judgment&#x27;,
+        actor: &#x27;GPT-5.6 Sol&#x27;,
+        meta: &#x27;Sol sees this passage inside a roughly 1,200-word section and returns structured text-only edits.&#x27;,
+        input: &#x27;Section transcript + context&#x27;,
+        decision: &#x27;Identify exact removable text&#x27;,
+        output: &#x27;SectionDeletion proposal&#x27;,
+        artifactName: &#x27;structured response used in this walkthrough&#x27;,
+        artifact: `&lt;pre&gt;&lt;code id=&quot;pef-sol-json&quot;&gt;&lt;/code&gt;&lt;/pre&gt;`
+      },
+      {
+        label: &#x27;Code checks&#x27;,
+        actor: &#x27;Deterministic guardrails&#x27;,
+        meta: &#x27;Code verifies Sol’s claim. It does not ask another model to judge the meaning again.&#x27;,
+        input: &#x27;SectionDeletion&#x27;,
+        decision: &#x27;Verify span and apply guardrails&#x27;,
+        output: &#x27;DuplicateFlag&#x27;,
+        artifactName: &#x27;accepted flag&#x27;,
+        artifact: `
+          &lt;ul class=&quot;check-list&quot;&gt;
+            &lt;li class=&quot;check-row&quot;&gt;&lt;span class=&quot;check-symbol&quot;&gt;✓ Owned&lt;/span&gt;&lt;span&gt;Sentence 47 belongs to the editable section.&lt;/span&gt;&lt;/li&gt;
+            &lt;li class=&quot;check-row&quot;&gt;&lt;span class=&quot;check-symbol&quot;&gt;✓ Match&lt;/span&gt;&lt;span&gt;Copied text match = 1.00, above the required 0.80.&lt;/span&gt;&lt;/li&gt;
+            &lt;li class=&quot;check-row&quot;&gt;&lt;span class=&quot;check-symbol&quot;&gt;✓ Coverage&lt;/span&gt;&lt;span&gt;Sentence coverage = 1.00, above 0.90, so this becomes a full-sentence cut.&lt;/span&gt;&lt;/li&gt;
+            &lt;li class=&quot;check-row&quot;&gt;&lt;span class=&quot;check-symbol&quot;&gt;✓ Type&lt;/span&gt;&lt;span&gt;&lt;code&gt;false_start&lt;/code&gt; is allowed. The rejected &lt;code&gt;redundant&lt;/code&gt; type is not involved.&lt;/span&gt;&lt;/li&gt;
+            &lt;li class=&quot;check-row&quot;&gt;&lt;span class=&quot;check-symbol&quot;&gt;✓ Guards&lt;/span&gt;&lt;span&gt;The four-word retake guard and 60-second retake gap guard do not apply to a false start.&lt;/span&gt;&lt;/li&gt;
+          &lt;/ul&gt;
+          &lt;pre&gt;&lt;code id=&quot;pef-flag-json&quot;&gt;&lt;/code&gt;&lt;/pre&gt;`
+      },
+      {
+        label: &#x27;EDL build&#x27;,
+        actor: &#x27;EDL builder&#x27;,
+        meta: &#x27;The builder combines speech regions and accepted flags, while keeping the reason for each part of a cut gap.&#x27;,
+        input: &#x27;Speech map + accepted flag&#x27;,
+        decision: &#x27;Split the timeline into keep and cut&#x27;,
+        output: &#x27;Ordered EDL segments&#x27;,
+        artifactName: &#x27;pre-snap EDL excerpt&#x27;,
+        artifact: `
+          &lt;div class=&quot;timeline&quot; aria-label=&quot;EDL timeline before acoustic boundary snapping&quot;&gt;
+            &lt;div class=&quot;timeline-segment&quot; style=&quot;flex:2.10&quot;&gt;&lt;span&gt;keep&lt;br&gt;2.10 s&lt;/span&gt;&lt;/div&gt;
+            &lt;div class=&quot;timeline-segment silence&quot; style=&quot;flex:0.04&quot; aria-label=&quot;cut silence 0.04 seconds&quot;&gt;&lt;/div&gt;
+            &lt;div class=&quot;timeline-segment cut&quot; style=&quot;flex:7.46&quot;&gt;&lt;span&gt;false_start&lt;br&gt;7.46 s&lt;/span&gt;&lt;/div&gt;
+            &lt;div class=&quot;timeline-segment silence&quot; style=&quot;flex:2.28&quot;&gt;&lt;span&gt;silence&lt;br&gt;2.28 s&lt;/span&gt;&lt;/div&gt;
+            &lt;div class=&quot;timeline-segment&quot; style=&quot;flex:8.28&quot;&gt;&lt;span&gt;keep&lt;br&gt;8.28 s&lt;/span&gt;&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;ul class=&quot;output-list&quot;&gt;
+            &lt;li class=&quot;output-row&quot;&gt;&lt;span class=&quot;text-small text-muted&quot;&gt;KEEP&lt;/span&gt;&lt;span&gt;303.20–305.30 · speech&lt;/span&gt;&lt;/li&gt;
+            &lt;li class=&quot;output-row&quot;&gt;&lt;span class=&quot;text-small text-muted&quot;&gt;CUT&lt;/span&gt;&lt;span&gt;305.30–305.34 · silence&lt;/span&gt;&lt;/li&gt;
+            &lt;li class=&quot;output-row&quot;&gt;&lt;span class=&quot;text-small text-muted&quot;&gt;CUT&lt;/span&gt;&lt;span&gt;305.34–312.80 · false_start · confidence 0.90&lt;/span&gt;&lt;/li&gt;
+            &lt;li class=&quot;output-row&quot;&gt;&lt;span class=&quot;text-small text-muted&quot;&gt;CUT&lt;/span&gt;&lt;span&gt;312.80–315.08 · silence&lt;/span&gt;&lt;/li&gt;
+            &lt;li class=&quot;output-row&quot;&gt;&lt;span class=&quot;text-small text-muted&quot;&gt;KEEP&lt;/span&gt;&lt;span&gt;315.08–323.36 · speech&lt;/span&gt;&lt;/li&gt;
+          &lt;/ul&gt;`
+      },
+      {
+        label: &#x27;Boundary snap&#x27;,
+        actor: &#x27;RMS envelope&#x27;,
+        meta: &#x27;This result was recomputed from the saved test-22 audio with the current boundary-snapping code.&#x27;,
+        input: &#x27;Pre-snap EDL + 25 ms RMS frames&#x27;,
+        decision: &#x27;Choose nearby quiet split points&#x27;,
+        output: &#x27;Acoustically snapped EDL&#x27;,
+        artifactName: &#x27;measured boundary result&#x27;,
+        artifact: `
+          &lt;div class=&quot;split-comparison&quot;&gt;
+            &lt;div&gt;
+              &lt;span class=&quot;text-small text-muted&quot;&gt;Text-derived cut&lt;/span&gt;
+              &lt;strong class=&quot;split-value&quot;&gt;305.300–315.080 s&lt;/strong&gt;
+            &lt;/div&gt;
+            &lt;div&gt;
+              &lt;span class=&quot;text-small text-muted&quot;&gt;Quiet audio boundaries&lt;/span&gt;
+              &lt;strong class=&quot;split-value&quot;&gt;305.332–313.792 s&lt;/strong&gt;
+            &lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;timeline&quot; aria-label=&quot;Timeline after acoustic snapping&quot;&gt;
+            &lt;div class=&quot;timeline-segment&quot; style=&quot;flex:2.132&quot;&gt;&lt;span&gt;keep&lt;/span&gt;&lt;/div&gt;
+            &lt;div class=&quot;timeline-segment cut&quot; style=&quot;flex:8.46&quot;&gt;&lt;span&gt;cut 8.46 s&lt;/span&gt;&lt;/div&gt;
+            &lt;div class=&quot;timeline-segment&quot; style=&quot;flex:9.568&quot;&gt;&lt;span&gt;keep&lt;/span&gt;&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;ul class=&quot;check-list&quot;&gt;
+            &lt;li class=&quot;check-row&quot;&gt;&lt;span class=&quot;check-symbol&quot;&gt;✓ Start&lt;/span&gt;&lt;span&gt;305.300 moves to the nearby quiet point at 305.332.&lt;/span&gt;&lt;/li&gt;
+            &lt;li class=&quot;check-row&quot;&gt;&lt;span class=&quot;check-symbol&quot;&gt;✓ End&lt;/span&gt;&lt;span&gt;315.080 moves backward to quiet audio at 313.792, leaving a natural lead-in before the next spoken word.&lt;/span&gt;&lt;/li&gt;
+            &lt;li class=&quot;check-row&quot;&gt;&lt;span class=&quot;check-symbol&quot;&gt;✓ Safety&lt;/span&gt;&lt;span&gt;The split-point search is constrained so it cannot consume more than half of a neighboring word.&lt;/span&gt;&lt;/li&gt;
+          &lt;/ul&gt;`
+      },
+      {
+        label: &#x27;Render&#x27;,
+        actor: &#x27;FFmpeg&#x27;,
+        meta: &#x27;The renderer keeps original video, uses denoised audio, and adds 30 ms fades at joins.&#x27;,
+        input: &#x27;Snapped EDL + source media&#x27;,
+        decision: &#x27;Trim, reset timestamps, join&#x27;,
+        output: &#x27;Automatic edited MP4&#x27;,
+        artifactName: &#x27;edited transcript excerpt&#x27;,
+        artifact: `
+          &lt;ul class=&quot;sentence-list&quot;&gt;
+            &lt;li class=&quot;sentence-row&quot;&gt;&lt;span class=&quot;text-small text-muted&quot;&gt;kept&lt;/span&gt;&lt;span&gt;Okej, super i time smo sad riješili ovaj prvi dio.&lt;/span&gt;&lt;/li&gt;
+            &lt;li class=&quot;sentence-row is-cut&quot;&gt;&lt;span class=&quot;text-small text-muted&quot;&gt;removed&lt;/span&gt;&lt;span&gt;Znači mi smo uspješno od dvadeset učenika odabrali tročlani tim i vidimo da se to može napraviti na tisuću sto četrdeset i na-&lt;/span&gt;&lt;/li&gt;
+            &lt;li class=&quot;sentence-row&quot;&gt;&lt;span class=&quot;text-small text-muted&quot;&gt;kept&lt;/span&gt;&lt;span&gt;Okej, time smo uspješno riješili ovaj prvi dio.&lt;/span&gt;&lt;/li&gt;
+            &lt;li class=&quot;sentence-row&quot;&gt;&lt;span class=&quot;text-small text-muted&quot;&gt;kept&lt;/span&gt;&lt;span&gt;Znači mi smo prebrojali na koliko različitih načina možemo izabrati tročlani tim od dvadeset učenika.&lt;/span&gt;&lt;/li&gt;
+          &lt;/ul&gt;
+          &lt;div class=&quot;legend-line text-small&quot;&gt;
+            &lt;span&gt;&lt;span class=&quot;legend-swatch&quot;&gt;&lt;/span&gt;kept speech&lt;/span&gt;
+            &lt;span&gt;&lt;span class=&quot;legend-swatch cut&quot;&gt;&lt;/span&gt;removed from render&lt;/span&gt;
+          &lt;/div&gt;`
+      },
+      {
+        label: &#x27;Human review&#x27;,
+        actor: &#x27;Reviewer&#x27;,
+        meta: &#x27;The reviewer edits source-time ranges. The raw video and automatic EDL stay unchanged.&#x27;,
+        input: &#x27;Automatic EDL + review.v4 payload&#x27;,
+        decision: &#x27;Accept this cut&#x27;,
+        output: &#x27;Separate reviewed EDL + MP4&#x27;,
+        artifactName: &#x27;final saved state&#x27;,
+        artifact: `
+          &lt;div class=&quot;review-choice&quot;&gt;
+            &lt;div&gt;
+              &lt;span class=&quot;text-small text-muted&quot;&gt;Automatic decision&lt;/span&gt;
+              &lt;strong class=&quot;split-value&quot;&gt;CUT 305.332–313.792&lt;/strong&gt;
+            &lt;/div&gt;
+            &lt;span aria-hidden=&quot;true&quot;&gt;→&lt;/span&gt;
+            &lt;div&gt;
+              &lt;span class=&quot;text-small text-muted&quot;&gt;Reviewer decision&lt;/span&gt;
+              &lt;strong class=&quot;split-value&quot;&gt;Accept without change&lt;/strong&gt;
+            &lt;/div&gt;
+          &lt;/div&gt;
+          &lt;ul class=&quot;output-list&quot;&gt;
+            &lt;li class=&quot;output-row&quot;&gt;&lt;span class=&quot;text-small text-muted&quot;&gt;review.v4&lt;/span&gt;&lt;span&gt;&lt;code&gt;cut_ranges&lt;/code&gt; contains 305.332–313.792 s.&lt;/span&gt;&lt;/li&gt;
+            &lt;li class=&quot;output-row&quot;&gt;&lt;span class=&quot;text-small text-muted&quot;&gt;Reviewed EDL&lt;/span&gt;&lt;span&gt;Saved separately from the automatic EDL.&lt;/span&gt;&lt;/li&gt;
+            &lt;li class=&quot;output-row&quot;&gt;&lt;span class=&quot;text-small text-muted&quot;&gt;Reviewed MP4&lt;/span&gt;&lt;span&gt;The interrupted sentence is absent; all surrounding lesson content remains.&lt;/span&gt;&lt;/li&gt;
+            &lt;li class=&quot;output-row&quot;&gt;&lt;span class=&quot;text-small text-muted&quot;&gt;Raw source&lt;/span&gt;&lt;span&gt;Still untouched and available for any later correction.&lt;/span&gt;&lt;/li&gt;
+          &lt;/ul&gt;`
+      }
+    ];
+
+    const stageList = root.querySelector(&#x27;#pef-steps&#x27;);
+    const stageTitle = root.querySelector(&#x27;#pef-stage-title&#x27;);
+    const actor = root.querySelector(&#x27;#pef-actor&#x27;);
+    const meta = root.querySelector(&#x27;#pef-stage-meta&#x27;);
+    const input = root.querySelector(&#x27;#pef-input&#x27;);
+    const decision = root.querySelector(&#x27;#pef-decision&#x27;);
+    const output = root.querySelector(&#x27;#pef-output&#x27;);
+    const artifactName = root.querySelector(&#x27;#pef-artifact-name&#x27;);
+    const artifact = root.querySelector(&#x27;#pef-artifact&#x27;);
+    const packet = root.querySelector(&#x27;#pef-packet&#x27;);
+    const counter = root.querySelector(&#x27;#pef-counter&#x27;);
+    const prev = root.querySelector(&#x27;#pef-prev&#x27;);
+    const next = root.querySelector(&#x27;#pef-next&#x27;);
+    const play = root.querySelector(&#x27;#pef-play&#x27;);
+
+    let current = 0;
+    let timer = null;
+
+    stages.forEach((stage, index) =&gt; {
+      const item = document.createElement(&#x27;li&#x27;);
+      item.className = &#x27;step-item&#x27;;
+      item.innerHTML = `&lt;span class=&quot;step-dot text-small&quot;&gt;${index + 1}&lt;/span&gt;&lt;span class=&quot;step-label text-small&quot;&gt;${stage.label}&lt;/span&gt;`;
+      stageList.appendChild(item);
+    });
+
+    const solProposal = {
+      sentence_index: 47,
+      verbatim_text: &#x27;Znači mi smo uspješno od dvadeset učenika odabrali tročlani tim i vidimo da se to može napraviti na tisuću sto četrdeset i na-&#x27;,
+      delete_type: &#x27;false_start&#x27;,
+      reason: &quot;Misao završava prekinutom riječi &#x27;na-&#x27; i zatim slijedi čisti nastavak.&quot;,
+      kept_index: null
+    };
+
+    const acceptedFlag = {
+      idx: 47,
+      reason: &#x27;false_start&#x27;,
+      confidence: 0.9,
+      note: &quot;Misao završava prekinutom riječi &#x27;na-&#x27; i zatim slijedi čisti nastavak.&quot;,
+      word_trims: []
+    };
+
+    function setPlayLabel() {
+      const playing = timer !== null;
+      const icon = playing ? &#x27;pause&#x27; : (current === stages.length - 1 ? &#x27;rotate-ccw&#x27; : &#x27;play&#x27;);
+      const label = playing ? &#x27;Pause&#x27; : (current === stages.length - 1 ? &#x27;Replay&#x27; : &#x27;Play flow&#x27;);
+      play.innerHTML = `&lt;i data-lucide=&quot;${icon}&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;${label}`;
+      if (window.lucide) window.lucide.createIcons({ attrs: { width: 16, height: 16 } });
+    }
+
+    function animateCurrent() {
+      packet.classList.remove(&#x27;is-moving&#x27;);
+      artifact.classList.remove(&#x27;is-changing&#x27;);
+      void packet.offsetWidth;
+      packet.classList.add(&#x27;is-moving&#x27;);
+      artifact.classList.add(&#x27;is-changing&#x27;);
+    }
+
+    function renderStage(index, animate = true) {
+      current = Math.max(0, Math.min(stages.length - 1, index));
+      const stage = stages[current];
+      stageTitle.textContent = stage.label;
+      actor.textContent = stage.actor;
+      meta.textContent = stage.meta;
+      input.textContent = stage.input;
+      decision.textContent = stage.decision;
+      output.textContent = stage.output;
+      artifactName.textContent = stage.artifactName;
+      artifact.innerHTML = stage.artifact;
+      counter.textContent = `Step ${current + 1} of ${stages.length}`;
+      root.style.setProperty(&#x27;--step-progress&#x27;, `${(current / (stages.length - 1)) * 100}%`);
+
+      Array.from(stageList.children).forEach((item, itemIndex) =&gt; {
+        item.classList.toggle(&#x27;is-active&#x27;, itemIndex === current);
+        item.classList.toggle(&#x27;is-done&#x27;, itemIndex &lt; current);
+      });
+
+      prev.disabled = current === 0;
+      next.disabled = current === stages.length - 1;
+
+      const solJson = artifact.querySelector(&#x27;#pef-sol-json&#x27;);
+      if (solJson) solJson.textContent = JSON.stringify({ deletions: [solProposal] }, null, 2);
+      const flagJson = artifact.querySelector(&#x27;#pef-flag-json&#x27;);
+      if (flagJson) flagJson.textContent = JSON.stringify(acceptedFlag, null, 2);
+
+      if (animate) animateCurrent();
+      setPlayLabel();
+    }
+
+    function stop() {
+      if (timer !== null) window.clearInterval(timer);
+      timer = null;
+      setPlayLabel();
+    }
+
+    function start() {
+      if (current === stages.length - 1) renderStage(0);
+      timer = window.setInterval(() =&gt; {
+        if (current &gt;= stages.length - 1) {
+          stop();
+          return;
+        }
+        renderStage(current + 1);
+        if (current === stages.length - 1) stop();
+      }, 3600);
+      setPlayLabel();
+    }
+
+    prev.addEventListener(&#x27;click&#x27;, () =&gt; {
+      stop();
+      renderStage(current - 1);
+    });
+
+    next.addEventListener(&#x27;click&#x27;, () =&gt; {
+      stop();
+      renderStage(current + 1);
+    });
+
+    play.addEventListener(&#x27;click&#x27;, () =&gt; {
+      if (timer !== null) stop();
+      else start();
+    });
+
+    renderStage(0, false);
+  })();
+&lt;/script&gt;
+
+&lt;script src=&quot;https://unpkg.com/@floating-ui/core@1.7.3/dist/floating-ui.core.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;https://unpkg.com/@floating-ui/dom@1.7.4/dist/floating-ui.dom.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  if (window.FloatingUIDOM == null) {
+    return;
+  }
+  const { autoUpdate, computePosition, flip, offset, shift, size } =
+    window.FloatingUIDOM;
+  const tooltipPlacements = new Set([&quot;top&quot;, &quot;right&quot;, &quot;bottom&quot;, &quot;left&quot;]);
+  const tooltipId = `codex-visualization-tooltip-${
+    window.crypto?.randomUUID?.() ?? Date.now().toString(36)
+  }`;
+  const tooltipGap = 5;
+  const hoverDelay = 700;
+  const skipDelay = 300;
+  let activeTrigger = null;
+  let pendingTrigger = null;
+  let tooltip = null;
+  let openTimeout = null;
+  let autoUpdateCleanup = null;
+  let positionRequest = 0;
+  let skipDelayUntil = 0;
+
+  const getTrigger = (target) =&gt;
+    target?.nodeType === Node.ELEMENT_NODE
+      ? target.closest(&quot;[data-tooltip]&quot;)
+      : null;
+  const containsTarget = (trigger, target) =&gt;
+    target?.nodeType != null &amp;&amp; trigger.contains(target);
+  const getContent = (trigger) =&gt;
+    trigger.getAttribute(&quot;data-tooltip&quot;)?.trim() ?? &quot;&quot;;
+  const getPlacement = (trigger) =&gt; {
+    const placement = trigger.getAttribute(&quot;data-tooltip-placement&quot;);
+    return tooltipPlacements.has(placement) ? placement : &quot;top&quot;;
+  };
+  const getTooltip = () =&gt; {
+    if (tooltip == null) {
+      tooltip = document.createElement(&quot;div&quot;);
+      tooltip.id = tooltipId;
+      tooltip.className = &quot;tooltip&quot;;
+      tooltip.setAttribute(&quot;role&quot;, &quot;tooltip&quot;);
+    }
+    return tooltip;
+  };
+  const setDescribedBy = (trigger, described) =&gt; {
+    const ids = new Set(
+      (trigger.getAttribute(&quot;aria-describedby&quot;) ?? &quot;&quot;)
+        .split(/\s+/)
+        .filter(Boolean),
+    );
+    if (described) {
+      ids.add(tooltipId);
+    } else {
+      ids.delete(tooltipId);
+    }
+    if (ids.size === 0) {
+      trigger.removeAttribute(&quot;aria-describedby&quot;);
+    } else {
+      trigger.setAttribute(&quot;aria-describedby&quot;, [...ids].join(&quot; &quot;));
+    }
+  };
+  const clearOpenTimeout = () =&gt; {
+    if (openTimeout != null) {
+      window.clearTimeout(openTimeout);
+      openTimeout = null;
+    }
+    pendingTrigger = null;
+  };
+  const closeTooltip = (activateSkipDelay = true) =&gt; {
+    clearOpenTimeout();
+    positionRequest += 1;
+    autoUpdateCleanup?.();
+    autoUpdateCleanup = null;
+    if (activeTrigger == null) {
+      return;
+    }
+    setDescribedBy(activeTrigger, false);
+    activeTrigger = null;
+    tooltip?.remove();
+    if (activateSkipDelay) {
+      skipDelayUntil = Date.now() + skipDelay;
+    }
+  };
+  const updatePosition = (trigger, floating) =&gt; {
+    const request = ++positionRequest;
+    void computePosition(trigger, floating, {
+      middleware: [
+        offset(tooltipGap),
+        flip({ padding: tooltipGap }),
+        shift({ padding: tooltipGap }),
+        size({
+          padding: tooltipGap,
+          apply({ availableHeight, availableWidth, elements }) {
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-width&quot;,
+              `${Math.max(0, availableWidth)}px`,
+            );
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-height&quot;,
+              `${Math.max(0, availableHeight)}px`,
+            );
+          },
+        }),
+      ],
+      placement: getPlacement(trigger),
+      strategy: &quot;fixed&quot;,
+    })
+      .then(({ x, y }) =&gt; {
+        if (activeTrigger !== trigger || request !== positionRequest) {
+          return;
+        }
+        const scale = window.devicePixelRatio || 1;
+        floating.style.transform = `translate(${Math.round(x * scale) / scale}px, ${Math.round(y * scale) / scale}px)`;
+        floating.style.visibility = &quot;visible&quot;;
+      })
+      .catch(() =&gt; {
+        if (activeTrigger === trigger &amp;&amp; request === positionRequest) {
+          closeTooltip(false);
+        }
+      });
+  };
+  const openTooltip = (trigger) =&gt; {
+    const content = getContent(trigger);
+    if (!trigger.isConnected || content.length === 0) {
+      return;
+    }
+    clearOpenTimeout();
+    if (activeTrigger === trigger) {
+      return;
+    }
+    closeTooltip();
+    const floating = getTooltip();
+    floating.textContent = content;
+    floating.style.visibility = &quot;hidden&quot;;
+    floating.style.transform = &quot;translate(0, 0)&quot;;
+    document.body.appendChild(floating);
+    activeTrigger = trigger;
+    setDescribedBy(trigger, true);
+    autoUpdateCleanup = autoUpdate(trigger, floating, () =&gt; {
+      updatePosition(trigger, floating);
+    });
+  };
+  const requestOpen = (trigger, immediate = false) =&gt; {
+    if (
+      getContent(trigger).length === 0 ||
+      activeTrigger === trigger ||
+      pendingTrigger === trigger
+    ) {
+      return;
+    }
+    clearOpenTimeout();
+    pendingTrigger = trigger;
+    const delay =
+      immediate || activeTrigger != null || Date.now() &lt; skipDelayUntil
+        ? 0
+        : hoverDelay;
+    if (delay === 0) {
+      openTooltip(trigger);
+      return;
+    }
+    openTimeout = window.setTimeout(() =&gt; {
+      openTimeout = null;
+      pendingTrigger = null;
+      openTooltip(trigger);
+    }, delay);
+  };
+  const handlePointerOpen = (event) =&gt; {
+    if (event.pointerType === &quot;touch&quot;) {
+      return;
+    }
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    requestOpen(trigger);
+  };
+  const handleLeave = (event) =&gt; {
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const handleFocusIn = (event) =&gt; {
+    const trigger = getTrigger(event.target);
+    if (trigger?.matches(&quot;:focus-visible&quot;)) {
+      requestOpen(trigger, true);
+    }
+  };
+  const handleKeyDown = (event) =&gt; {
+    if (event.key === &quot;Escape&quot;) {
+      closeTooltip();
+    }
+  };
+  const handleContextMenu = (event) =&gt; {
+    const trigger = getTrigger(event.target);
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const destroy = () =&gt; {
+    closeTooltip(false);
+    document.removeEventListener(&quot;pointerover&quot;, handlePointerOpen);
+    document.removeEventListener(&quot;pointerout&quot;, handleLeave);
+    document.removeEventListener(&quot;focusin&quot;, handleFocusIn);
+    document.removeEventListener(&quot;focusout&quot;, handleLeave);
+    document.removeEventListener(&quot;keydown&quot;, handleKeyDown);
+    document.removeEventListener(&quot;contextmenu&quot;, handleContextMenu);
+    tooltip = null;
+  };
+
+  document.addEventListener(&quot;pointerover&quot;, handlePointerOpen);
+  document.addEventListener(&quot;pointerout&quot;, handleLeave);
+  document.addEventListener(&quot;focusin&quot;, handleFocusIn);
+  document.addEventListener(&quot;focusout&quot;, handleLeave);
+  document.addEventListener(&quot;keydown&quot;, handleKeyDown);
+  document.addEventListener(&quot;contextmenu&quot;, handleContextMenu);
+  window.addEventListener(&quot;pagehide&quot;, destroy, { once: true });
+})();
+&lt;/script&gt;
+&lt;script id=&quot;codex-visualization-lucide&quot; async src=&quot;https://unpkg.com/lucide@1.17.0/dist/umd/lucide.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  const initialize = () =&gt; {
+    globalThis.lucide?.createIcons({ attrs: { width: 16, height: 16 } });
+  };
+  if (globalThis.lucide != null) {
+    initialize();
+    return;
+  }
+  document
+    .getElementById(&quot;codex-visualization-lucide&quot;)
+    ?.addEventListener(&quot;load&quot;, initialize, { once: true });
+})();
+&lt;/script&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+</body>
+</html>

@@ -696,14 +696,13 @@
   </head>
   <body>
     <main class="page">
-      <section class="callout" aria-label="Historical document warning">
-        <h2>Historical architecture snapshot</h2>
+      <section class="callout output" aria-label="Current document status">
+        <h2>Current runtime documentation · 17 July 2026</h2>
         <p>
-          This document predates the section editor becoming the default and still
-          describes the retired enrichment arbiter and annotation queue. It is kept as
-          historical context, not as runtime documentation. The current pipeline uses
-          the section editor directly, rejects risky proposals, and reviews the EDL in
-          the Transcript and Compare screens without a separate annotation pass.
+          This page describes the pipeline currently used on <code>main</code>. The section
+          editor is on by default. The older multi-step duplicate detector still exists in
+          code, but it does not run on the default path. The removed enrichment system,
+          arbiter, sentence statuses, heat maps, and restore queue do not run either.
         </p>
       </section>
       <section class="hero" aria-labelledby="title">
@@ -717,19 +716,19 @@
           <div class="map-grid">
             <div class="map-node audio">
               <strong>Audio layer</strong>
-              <span>FFmpeg extraction, non-stationary spectral gating, silence detection, acoustic disruption detection.</span>
+              <span>FFmpeg extracts audio. Spectral gating reduces noise. Volume analysis finds silence and loud disruptions.</span>
             </div>
             <div class="map-node speech">
               <strong>Speech layer</strong>
-              <span>ElevenLabs Scribe v2 word timestamps, Croatian transcript, sentence splitting, Gemini spell correction.</span>
+              <span>ElevenLabs Scribe v2 creates Croatian text and word timestamps. Pause rules split sentences. Gemini corrects spelling.</span>
             </div>
             <div class="map-node decision">
               <strong>Decision layer</strong>
-              <span>RapidFuzz, multilingual sentence embeddings, guardrailed LLM verification, deterministic keep-later take selection, false-start and aside detection, enrichment arbiter.</span>
+              <span>GPT-5.6 Sol finds cuts. Rule-based checks catch clear local corrections and audio false starts. Gemini checks asides. The edit decision list (EDL) keeps each cut's source and moves boundaries to quiet audio.</span>
             </div>
             <div class="map-node human">
               <strong>Review layer</strong>
-              <span>Web review app (FastAPI + React), word-level keep/cut payload, pipeline-vs-human diff view, reviewed edit plan, reviewed render with the raw source preserved.</span>
+              <span>A FastAPI + React app lets the reviewer edit any source-time range. It provides Transcript and Compare views, a review.v4 payload, and separate reviewed EDL and video files.</span>
             </div>
           </div>
         </aside>
@@ -742,8 +741,9 @@
             <h2 id="pipeline-title">Processing stages</h2>
           </div>
           <p>
-            Each stage produces data used by later stages. Failures in enrichment fall
-            back to the base edit plan so a video can still render.
+            Each stage feeds the next one. If a section-editor call fails, the pipeline
+            retries it and can switch from OpenRouter to OpenAI. If both fail, that section
+            is left unedited. The evaluation report records the failure.
           </p>
         </div>
 
@@ -755,15 +755,14 @@
             </div>
             <div class="stage-body">
               <p>
-                The raw video is probed for its first audio stream. Audio is extracted
-                as mono 16-bit PCM WAV while preserving the source sample rate. The
-                video stream remains the source for final rendering; this audio file
-                is the analysis input.
+                The pipeline finds the first audio stream and extracts it as a mono,
+                16-bit PCM WAV. It keeps the original sample rate. This WAV is used for
+                analysis, while the original video remains the picture source for rendering.
               </p>
               <div class="facts">
                 <div class="fact"><b>Tooling</b><span>FFmpeg and ffprobe.</span></div>
                 <div class="fact"><b>Output</b><span>Raw mono WAV in the temporary workspace.</span></div>
-                <div class="fact"><b>Purpose</b><span>Give audio, speech, and disruption passes a stable input.</span></div>
+                <div class="fact"><b>Purpose</b><span>Give every audio analysis step the same stable input.</span></div>
               </div>
             </div>
           </article>
@@ -775,11 +774,9 @@
             </div>
             <div class="stage-body">
               <p>
-                The extracted audio is denoised with non-stationary spectral gating.
-                The default reduction strength is conservative, so speech quality is
-                prioritized over aggressive cleanup. FFmpeg silence detection then
-                finds long low-volume regions. Silence regions are inverted into padded
-                speech keep regions.
+                Non-stationary spectral gating reduces steady background noise. The default
+                setting is mild so it does not damage speech. FFmpeg then finds quiet regions.
+                The pipeline treats the remaining audio as speech and adds padding around it.
               </p>
               <div class="facts">
                 <div class="fact"><b>Algorithm</b><span>Non-stationary spectral gating via noisereduce.</span></div>
@@ -796,12 +793,11 @@
             </div>
             <div class="stage-body">
               <p>
-                The denoised audio is transcribed in Croatian with word-level timestamps.
-                Audio-event tokens, such as cough or laughter markers, are kept separate
-                from spoken words so they can inform editing without polluting transcript
-                text. Sentences are built from timed words and split at long pauses.
-                A Gemini spell-correction loop fixes obvious Croatian spelling errors
-                without changing timestamps, style, grammar, or conversational filler.
+                ElevenLabs turns the cleaned audio into Croatian text with a timestamp for
+                every word. Cough and laughter markers are stored separately from spoken
+                words. Punctuation and long pauses split the words into sentences. Gemini
+                fixes obvious spelling mistakes without changing timestamps, grammar,
+                speaking style, or filler words.
               </p>
               <div class="facts">
                 <div class="fact"><b>STT model</b><span>ElevenLabs Scribe v2, language hr, word timestamps.</span></div>
@@ -815,25 +811,23 @@
           <article class="stage">
             <div class="stage-label">
               <div class="num">4</div>
-              <h3>Candidate cut detection</h3>
+              <h3>Text editing and supporting detectors</h3>
             </div>
             <div class="stage-body">
               <p>
-                The edit decision layer generates cut candidates from multiple signals:
-                silence, duplicate retakes, false starts, stutters, incomplete fragments,
-                off-topic asides, and acoustic disruptions. The system favors precision:
-                cheaper deterministic checks narrow the candidate set, an LLM verifies
-                candidates where context is needed, and the final choices — which take
-                survives, what is safe to auto-cut — are made by deterministic rules,
-                not by the model.
+                GPT-5.6 Sol reads large transcript sections and names the exact text it
+                wants to remove. It labels each span as a retake, false start, stutter,
+                filler, or redundant text. Code checks the text and maps it to timestamps.
+                Separate rule-based detectors handle very clear local corrections and
+                audio false starts. Gemini checks short possible asides.
               </p>
               <div class="facts">
-                <div class="fact"><b>Duplicate window</b><span>Each sentence compares against the next 5 sentences by default.</span></div>
-                <div class="fact"><b>Lexical tier</b><span>RapidFuzz ratio and token-sort ratio.</span></div>
-                <div class="fact"><b>Semantic tier</b><span>SentenceTransformer paraphrase-multilingual-MiniLM-L12-v2 cosine similarity.</span></div>
-                <div class="fact"><b>LLM tier</b><span>Configurable cutting model (default Gemini 2.5 Flash) verifies borderline pairs only.</span></div>
-                <div class="fact"><b>Take selection</b><span>Deterministic keep-later rule; the LLM no longer picks the surviving take.</span></div>
-                <div class="fact"><b>Short-pair guard</b><span>Definite matches under 4 words are demoted to LLM review, never auto-cut.</span></div>
+                <div class="fact"><b>Main editor</b><span>GPT-5.6 Sol through OpenRouter; direct OpenAI fallback.</span></div>
+                <div class="fact"><b>Section size</b><span>Target 1,200 words, maximum 2,000, two-sentence overlap.</span></div>
+                <div class="fact"><b>Model contract</b><span>Sol names text; code maps it to existing word timestamps.</span></div>
+                <div class="fact"><b>Local corrections</b><span>RapidFuzz rules; no extra model call.</span></div>
+                <div class="fact"><b>Aside verifier</b><span>Gemini 2.5 Flash only for short candidates near silence or STT audio events.</span></div>
+                <div class="fact"><b>Inactive path</b><span>The older lexical and embedding duplicate detector is skipped while <code>section_editor.enabled</code> is true.</span></div>
               </div>
             </div>
           </article>
@@ -841,22 +835,22 @@
           <article class="stage">
             <div class="stage-label">
               <div class="num">5</div>
-              <h3>EDL build and enrichment arbitration</h3>
+              <h3>Build the EDL and adjust cut boundaries</h3>
             </div>
             <div class="stage-body">
               <p>
-                Silence keep regions and cut flags are merged into one ordered edit
-                decision list. Full-sentence flags remove sentence spans, while stutter
-                flags can punch out sub-sentence word ranges. A separate enrichment pass
-                scores every sentence as an independent keep/cut judgment. The arbiter
-                can restore high-confidence wrong cuts and add conservative extra cuts
-                for low-confidence asides, filler, incomplete thoughts, or tiny artifacts.
+                The pipeline combines silence regions and accepted cut flags into one EDL
+                (edit decision list). A flag can remove a full sentence or only selected
+                words. If one gap contains both silence and a text cut, it is split so each
+                part keeps the correct reason. An RMS (root-mean-square) volume envelope
+                then moves each cut boundary to nearby quiet audio. It may not consume more
+                than half of a neighboring word.
               </p>
               <div class="facts">
-                <div class="fact"><b>Enrichment model</b><span>Gemini 2.5 Pro, low temperature, 20-sentence batches.</span></div>
-                <div class="fact"><b>Status tiers</b><span>Green, yellow, red, restore.</span></div>
-                <div class="fact"><b>Restore threshold</b><span>Cut sentence with keep confidence at least 60 becomes a restore signal.</span></div>
-                <div class="fact"><b>Arbiter restore</b><span>Existing full-sentence cut can be removed at keep confidence 70 or higher.</span></div>
+                <div class="fact"><b>Decision fields</b><span>start, end, action, reason, confidence, note.</span></div>
+                <div class="fact"><b>Cut source</b><span>Text cuts keep their reason and Croatian note; real silence stays labeled silence.</span></div>
+                <div class="fact"><b>Audio envelope</b><span>25 ms RMS frames, 10 ms hop, persisted as &lt;stem&gt;.audio.json.</span></div>
+                <div class="fact"><b>No arbitration</b><span>The EDL is consumed directly; there is no enrichment pass after it.</span></div>
               </div>
             </div>
           </article>
@@ -868,11 +862,10 @@
             </div>
             <div class="stage-body">
               <p>
-                The automatic EDL is rendered into a first-draft edited MP4. Video comes
-                from the raw source. Audio comes from the denoised WAV. Every keep segment
-                is trimmed, timestamps are reset per segment, and the segments are
-                concatenated. Short audio fades are applied at splice boundaries to reduce
-                pops and harsh cuts.
+                FFmpeg renders the automatic EDL as a draft MP4. It takes video from the
+                raw recording and audio from the denoised WAV. It trims every kept segment,
+                resets that segment's timestamps, and joins the segments. Short audio fades
+                reduce clicks and harsh transitions at each join.
               </p>
               <div class="facts">
                 <div class="fact"><b>Renderer</b><span>FFmpeg filter graph with trim, atrim, concat, and audio fades.</span></div>
@@ -890,20 +883,18 @@
             </div>
             <div class="stage-body">
               <p>
-                Review happens in a local web app (FastAPI backend, React frontend): a
-                waveform timeline synced to the video, the transcript with per-word keep
-                state, and a review queue where every suggested cut carries its reason,
-                confidence, and a plain-language rationale. The payload exposes reasons,
-                enrichment tags, and salience scores; reviewer changes are saved as word
-                indices to cut. A reviewed EDL is built from the remaining word spans and
-                rendered from the same screen as a separate reviewed MP4. The automatic
-                EDL and raw recording remain intact.
+                A local FastAPI + React app shows the video, waveform, transcript, and cut
+                ranges. The waveform and transcript both edit the same list of source-time
+                ranges. The reviewer can restore a cut, add a new cut anywhere, preview the
+                result, save a separate reviewed EDL, and render a reviewed MP4. For QA
+                fixtures, Compare shows pipeline cuts and human cuts together. The raw video
+                and automatic EDL are never overwritten.
               </p>
               <div class="facts">
-                <div class="fact"><b>Review granularity</b><span>Word-level keep/cut state with sentence-level grouping.</span></div>
-                <div class="fact"><b>Explanations</b><span>Each suggestion shows reason, confidence, and rationale; one-click restore.</span></div>
+                <div class="fact"><b>Schema</b><span><code>review.v4</code>; <code>cut_ranges</code> is the source of truth for the current edit.</span></div>
+                <div class="fact"><b>Views</b><span>Transcript and Compare; no annotation queue or sentence-status legend.</span></div>
                 <div class="fact"><b>Reviewed artifact</b><span>Separate reviewed EDL, not an overwrite of the automatic EDL.</span></div>
-                <div class="fact"><b>Reviewed output</b><span>Rendered from the review UI with output suffix reviewed.</span></div>
+                <div class="fact"><b>Reviewed output</b><span>Rendered from the review UI with the <code>_reviewed</code> suffix.</span></div>
               </div>
             </div>
           </article>
@@ -917,17 +908,17 @@
             <h2 id="decision-title">How keep and cut decisions are made</h2>
           </div>
           <p>
-            The pipeline is not a single AI call, and the AI's role has been deliberately
-            narrowed: it verifies and proposes, while deterministic rules — validated
-            against 98 human-edited videos — make the final keep/cut choices such as
-            which take survives a retake.
+            Sol decides which words appear removable. Rule-based code then checks the
+            proposed spans, adds a few cuts supported by strong mechanical evidence, keeps
+            the reason for every cut, and chooses safe audio boundaries. Every accepted
+            proposal becomes an automatic cut in the EDL.
           </p>
         </div>
 
         <div class="flow" aria-label="Decision stack diagram">
           <svg viewBox="0 0 1160 360" role="img" aria-labelledby="decision-svg-title decision-svg-desc">
             <title id="decision-svg-title">Decision stack</title>
-            <desc id="decision-svg-desc">Signals flow from audio and transcript into candidate flags, enrichment arbitration, and the final edit decision list.</desc>
+            <desc id="decision-svg-desc">Audio and transcript signals flow into active decision lanes, rule-based EDL construction, quiet boundary selection, and rendering.</desc>
             <defs>
               <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
                 <path d="M0,0 L10,5 L0,10 Z" fill="#64748b"></path>
@@ -945,9 +936,9 @@
             <line x1="204" y1="228" x2="284" y2="190" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"></line>
 
             <rect x="284" y="112" width="205" height="106" rx="8" fill="#ffffff" stroke="#d8dee8"></rect>
-            <text x="386" y="144" text-anchor="middle" font-size="15" font-weight="800" fill="#18212f">Candidate flags</text>
-            <text x="386" y="169" text-anchor="middle" font-size="13" fill="#5c6675">duplicates, false starts</text>
-            <text x="386" y="190" text-anchor="middle" font-size="13" fill="#5c6675">stutters, fragments, asides</text>
+            <text x="386" y="144" text-anchor="middle" font-size="15" font-weight="800" fill="#18212f">Active decision lanes</text>
+            <text x="386" y="169" text-anchor="middle" font-size="13" fill="#5c6675">Sol + local corrections</text>
+            <text x="386" y="190" text-anchor="middle" font-size="13" fill="#5c6675">audio false starts + asides</text>
 
             <line x1="489" y1="165" x2="569" y2="165" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"></line>
 
@@ -956,11 +947,11 @@
             <text x="675" y="145" text-anchor="middle" font-size="13" fill="#5b4585">merge keep regions</text>
             <text x="675" y="166" text-anchor="middle" font-size="13" fill="#5b4585">remove flagged spans</text>
             <text x="675" y="187" text-anchor="middle" font-size="13" fill="#5b4585">preserve word trims</text>
-            <text x="675" y="208" text-anchor="middle" font-size="13" fill="#5b4585">classify cut gaps</text>
+            <text x="675" y="208" text-anchor="middle" font-size="13" fill="#5b4585">preserve source metadata</text>
 
             <line x1="675" y1="244" x2="675" y2="292" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"></line>
             <rect x="552" y="292" width="246" height="52" rx="8" fill="#fff4e6" stroke="#f3c38d"></rect>
-            <text x="675" y="324" text-anchor="middle" font-size="14" font-weight="800" fill="#b45309">Gemini enrichment arbiter</text>
+            <text x="675" y="324" text-anchor="middle" font-size="14" font-weight="800" fill="#b45309">Acoustic boundary snapping</text>
 
             <line x1="781" y1="165" x2="861" y2="165" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"></line>
 
@@ -978,60 +969,57 @@
 
       <section class="section grid-3" aria-label="Algorithm details">
         <article class="card">
-          <h3>Duplicate retake detection</h3>
+          <h3>Sol section editor</h3>
           <p>
-            Sentence pairs are considered only within a local lookahead window. This avoids
-            treating a later recap as a failed take.
+            Sol reads the surrounding passage, not just one isolated pair of sentences.
           </p>
           <ul>
-            <li>RapidFuzz ratio and token-sort ratio identify exact or near-exact repetition.</li>
-            <li>Multilingual MiniLM embeddings catch paraphrased repetition.</li>
-            <li>The cutting LLM judges only borderline pairs, with neighboring context and time gap.</li>
-            <li>Definite pairs whose shorter sentence has fewer than 4 words are never auto-cut — short interjections ("Dobro.", "Ok.") are recurring discourse markers, not retakes.</li>
-            <li>Confirmed duplicate pairs are clustered so one sentence cannot be both kept and cut in different pair relationships.</li>
-            <li>Take selection is deterministic: the later take always survives (keep-later). The former Gemini "which to keep" pass is removed from the default path — on ground truth, human editors kept the later take in 71% of near-identical and 82% of paraphrase pairs, while sentence length carried no signal.</li>
+            <li>It returns exact copied text labeled retake, false_start, stutter, filler, or redundant.</li>
+            <li>It may edit only sentences owned by the section. Overlap sentences provide context but cannot be changed.</li>
+            <li>Invalid structured output is retried up to three times per section.</li>
+            <li>OpenRouter is primary; direct OpenAI is the default fallback for Sol.</li>
+            <li>If both providers fail, that section stays unedited and is counted as failed. The rest of the video continues.</li>
           </ul>
           <div class="tag-row">
-            <span class="tag decision">window size 5</span>
-            <span class="tag decision">lexical maybe 70</span>
-            <span class="tag decision">lexical definite 90</span>
-            <span class="tag decision">semantic maybe 0.75</span>
-            <span class="tag decision">semantic definite 0.95</span>
-            <span class="tag decision">take selection: last</span>
-            <span class="tag decision">definite min words 4</span>
+            <span class="tag decision">target 1200 words</span>
+            <span class="tag decision">max 2000 words</span>
+            <span class="tag decision">overlap 2 sentences</span>
+            <span class="tag decision">3 attempts</span>
           </div>
         </article>
 
         <article class="card">
-          <h3>False starts, stutters, and fragments</h3>
+          <h3>Span validation and local corrections</h3>
           <p>
-            These passes handle material that is not always a full duplicate sentence.
-            They combine local pattern detection with Gemini verification.
+            Code turns Sol's text into timestamped cuts. A small rule-based detector then
+            adds only clearly provable local correction chains, without another AI call.
           </p>
           <ul>
-            <li>False starts between confirmed duplicate pairs are checked with Gemini against before and after context.</li>
-            <li>Intra-sentence stutters are detected by repeated 2-gram or 3-gram patterns, then Gemini chooses word ranges to cut.</li>
-            <li>Incomplete fragments are rule-prefiltered from punctuation, ellipses, and short filler-like wording, then verified by Gemini.</li>
-            <li>Word-level trims are represented as timed ranges, so the rest of the sentence can stay.</li>
+            <li>The proposed text must match at least 80% of one continuous word span in the named sentence.</li>
+            <li>If it covers at least 90% of the sentence, the whole sentence is cut. Otherwise only the matched words are cut.</li>
+            <li>A full retake under four words is rejected. A retake with a named matching sentence over 60 seconds away is also rejected.</li>
+            <li>Every <code>redundant</code> proposal is rejected because the UI has no review-suggestion queue.</li>
+            <li>A rule-based local correction needs a visibly cut-off middle attempt and very similar endpoints no more than ten seconds apart.</li>
           </ul>
           <div class="tag-row">
-            <span class="tag decision">cutting LLM verification</span>
+            <span class="tag decision">span match ≥ 0.8</span>
+            <span class="tag decision">whole sentence ≥ 0.9</span>
             <span class="tag decision">word-level trim</span>
-            <span class="tag decision">fragment threshold 0.8</span>
+            <span class="tag decision">local flags 0.99</span>
           </div>
         </article>
 
         <article class="card">
           <h3>Asides and acoustic disruptions</h3>
           <p>
-            Production noise and short off-lesson remarks are structurally different from
-            duplicate retakes, so they have their own candidate path.
+            Noise and short comments outside the lesson are different from retakes, so
+            separate detectors handle them.
           </p>
           <ul>
-            <li>Short aside candidates must be near long silence or carry an audio-event marker.</li>
-            <li>Gemini answers whether the candidate is part of the lesson or an off-topic interruption.</li>
-            <li>Energy-based disruption detection looks for loud non-speech bursts inside gaps between transcribed words.</li>
-            <li>Audio false-start detection cuts short stranded phrases after a long pause and disruption when speech resumes promptly.</li>
+            <li>A possible aside must be near a long silence or have an STT audio-event marker.</li>
+            <li>Gemini 2.5 Flash decides whether that short candidate belongs to the lesson.</li>
+            <li>RMS energy analysis looks for loud non-speech bursts in gaps between transcribed words.</li>
+            <li>The audio false-start rule cuts a short stranded phrase when a disruption and long pause are followed by new speech soon afterward.</li>
           </ul>
           <div class="tag-row">
             <span class="tag audio">RMS frame 25 ms</span>
@@ -1046,64 +1034,64 @@
         <div class="section-head">
           <div>
             <p class="kicker">Decision policy</p>
-            <h2 id="policy-title">AI proposes, deterministic rules decide</h2>
+            <h2 id="policy-title">Sol chooses the text; code checks and applies it</h2>
           </div>
           <p>
-            The pipeline has moved away from letting the model make final editorial
-            choices. Wherever a rule measured against human editors beats LLM judgment,
-            the rule wins — and every AI proposal passes deterministic validation before
-            it becomes a cut.
+            Sol decides what the words mean and which text may be removed. Code does not
+            make that language judgment again. It checks the proposal, blocks known unsafe
+            cases, maps the text to time, and records the evidence for review and QA.
           </p>
         </div>
 
         <div class="grid-3">
           <article class="card">
-            <h3>Keep-later take selection</h3>
+            <h3>What Sol controls</h3>
             <p>
-              When a duplicate is confirmed, the later take always survives. The Gemini
-              "which to keep" re-litigation pass was removed from the default path.
+              Sol chooses the cut type, exact copied text, and Croatian explanation. For a
+              retake, it also names the later sentence that should remain.
             </p>
             <ul>
-              <li>Measured on the fixture corpus: humans kept the later take in 71% of near-identical pairs and 82% of paraphrase pairs.</li>
-              <li>Keep-longer (completeness) carried no signal, so <code>prefer_completeness</code> is off by default.</li>
-              <li>A predictable rule professors can record for: flub, pause, redo clean — the earlier take is cut.</li>
-              <li>Removes an LLM call and a nondeterminism source per video.</li>
+              <li>Accepted model flags use confidence 0.9.</li>
+              <li>After the span check, partial false starts, stutters, and filler become automatic cuts.</li>
+              <li>No second model reviews or annotates Sol's choices.</li>
+              <li>Therefore, two model runs can still make different automatic cuts.</li>
             </ul>
             <div class="tag-row">
-              <span class="tag decision">take_selection last</span>
-              <span class="tag decision">llm_keep_review off</span>
+              <span class="tag decision">structured output</span>
+              <span class="tag decision">confidence 0.9</span>
             </div>
           </article>
 
           <article class="card">
             <h3>Guardrails that outrank the model</h3>
             <p>
-              Deterministic checks run after every LLM verdict, and can veto or demote it.
+              Fixed code checks every proposal and can reject it.
             </p>
             <ul>
-              <li>Definite similarity pairs under 4 words are demoted to review instead of auto-cut (protects recurring interjections).</li>
-              <li>Model confidence values are clamped to their valid range instead of trusted blindly.</li>
-              <li>Borderline verdicts below the confidence threshold (0.8) never become cuts.</li>
-              <li>Risky unique-content removals surface as review suggestions, not automatic cuts.</li>
+              <li>Text that cannot be matched and sentence indices outside the editable section are rejected.</li>
+              <li>Whole-sentence retakes shorter than four words are rejected.</li>
+              <li>A named matching sentence is rejected if it is earlier or more than 60 seconds away.</li>
+              <li>Risky <code>redundant</code> removals stay kept. They do not become hidden suggestions.</li>
             </ul>
             <div class="tag-row">
-              <span class="tag decision">definite_min_words 4</span>
-              <span class="tag decision">confidence gate 0.8</span>
+              <span class="tag decision">protect_min_words 4</span>
+              <span class="tag decision">retake_max_gap_s 60</span>
+              <span class="tag decision">reject redundant</span>
             </div>
           </article>
 
           <article class="card">
             <h3>Measured against human editors</h3>
             <p>
-              Every decision-policy change is justified by data, not intuition: the QA
-              harness scores the pipeline against 98 videos edited by human editors.
+              The QA harness compares pipeline cuts with 98 videos edited by humans. We use
+              those scores to decide whether a pipeline change is safe.
             </p>
             <ul>
-              <li>Human verdicts are derived from word-level coverage of the human editor's final video, not sentence matching.</li>
-              <li>Word-level precision/recall/F1 credits partial trims honestly.</li>
-              <li>A model-experiment runner benchmarks alternative LLMs (Gemini, GPT, Claude) via provider-agnostic manifests before any swap; <code>eval-section-editor</code> pilots the new architecture the same way.</li>
-              <li>A dev diff view overlays the pipeline's cuts and the human editor's cuts on the same raw transcript, so disagreements are visible at a glance.</li>
-              <li>LangSmith tracing can be enabled per environment to log every LLM call for debugging.</li>
+              <li>Human cuts are measured by word coverage in the human-edited video, not by matching whole sentences.</li>
+              <li>Word-level precision, recall, and F1 correctly score partial sentence trims.</li>
+              <li><code>eval-section-editor</code> tests models on cached transcripts and saves EDLs, proposal traces, health data, run metadata, and reports.</li>
+              <li>The development diff view marks pipeline and human cuts on the same raw transcript.</li>
+              <li>LangSmith tracing can record every LLM call when enabled.</li>
               <li>Failure patterns are catalogued in <code>MISTAKE_PATTERNS.md</code> and drive the roadmap.</li>
             </ul>
             <div class="tag-row">
@@ -1117,13 +1105,13 @@
       <section class="section" aria-labelledby="section-editor-title">
         <div class="section-head">
           <div>
-            <p class="kicker">Piloted architecture</p>
-            <h2 id="section-editor-title">Section editor: the LLM only names text, code makes the cut</h2>
+            <p class="kicker">Active architecture</p>
+            <h2 id="section-editor-title">Section editor: Sol names text, code turns it into cuts</h2>
           </div>
           <p>
-            An alternative cutting architecture, off by default behind
-            <code>section_editor.enabled</code>, that pushes the same philosophy further:
-            the model works purely on text and every proposal is deterministically verified.
+            This is the default text-editing path when
+            <code>section_editor.enabled = true</code>. Normal <code>process</code> and
+            <code>batch</code> runs skip the older sentence-pair detector.
           </p>
         </div>
 
@@ -1131,20 +1119,18 @@
           <article class="card">
             <h3>Design</h3>
             <p>
-              The tiered detector compares sentence pairs through a small model, one
-              mechanism at a time, so it overcuts paraphrases and can only remove whole
-              sentences. The section editor inverts this: one strong model reads
-              paragraph-sized sections and proposes verbatim spans to delete.
+              Sol reads large transcript sections and copies the exact text it wants to
+              remove. Fixed code converts that text to timestamps.
             </p>
             <ul>
-              <li>Transcript is tiled into ~1200-word sections snapped to pause boundaries, with overlap context but disjoint ownership.</li>
-              <li>The model returns exact text spans tagged retake, false start, stutter, filler, or redundant — whole sentences or partial spans.</li>
-              <li>Verify-the-claim: a span that cannot be located verbatim in the sentence (match ratio ≥ 0.8) is rejected outright.</li>
-              <li>Text-to-timeline mapping is a separate deterministic step over existing word timestamps — the model never touches time.</li>
-              <li>Keep-later, recap time-gap (60 s), and short-interjection guardrails demote or reject risky retake deletions; "redundant" deletions always land as review suggestions.</li>
+              <li>The transcript is divided into sections of about 1,200 words at pause boundaries. Neighboring sentences overlap for context, but each sentence belongs to only one editable section.</li>
+              <li>Sol returns whole sentences or partial spans labeled retake, false start, stutter, filler, or redundant.</li>
+              <li>If the copied text cannot reach an 80% match inside the named sentence, the proposal is rejected.</li>
+              <li>Code maps accepted text to existing word timestamps. Sol never creates or changes timestamps.</li>
+              <li>Time-gap and short-retake guardrails block risky proposals. <code>redundant</code> proposals stay kept because there is no suggestion queue.</li>
             </ul>
             <div class="tag-row">
-              <span class="tag decision">off by default</span>
+              <span class="tag decision">enabled by default</span>
               <span class="tag decision">span match ≥ 0.8</span>
               <span class="tag decision">protect &lt; 4 words</span>
               <span class="tag decision">retake gap ≤ 60 s</span>
@@ -1152,21 +1138,23 @@
           </article>
 
           <article class="card">
-            <h3>Pilot results (10 fixtures, word-level scoring)</h3>
+            <h3>Current evaluated state</h3>
             <p>
-              Compared against the tiered detector on the same fixtures, scored word by
-              word against the human edit.
+              We selected the section editor after comparing models on all 98 human-edited
+              fixtures. Iteration 19 then added a rule-based local-correction detector. It
+              did not change Sol's prompt.
             </p>
             <ul>
-              <li>Cut F1 0.491 → 0.670 (+0.180 aggregate); 8 of 10 fixtures improved.</li>
-              <li>Cut precision 0.397 → 0.670: overcut words dropped 3,145 → 1,067 (−66%) at held recall.</li>
-              <li>Word-level trims the tiered detector could not express: one fixture produced 62 full-sentence cuts plus 39 partial trims.</li>
-              <li>Health telemetry (failed sections, rejected spans) prevents a broken model run from masquerading as a conservative editor.</li>
-              <li>Next: strong-model comparison (Gemini 2.5 Pro vs GPT-5.5 vs Claude) via <code>eval-section-editor</code>, then scale to all 98 fixtures before promotion.</li>
+              <li>Latest result after applying the fixed EDL logic to all fixtures: precision 0.7973, recall 0.6762, F1 0.7318.</li>
+              <li>In that isolated recalculation, Iteration 19 added 33 correct cut words, added no overcut words, and removed 33 missed-cut words.</li>
+              <li>Health data records failed sections and rejected spans, so a broken run cannot look like a safely conservative run.</li>
+              <li>The 98-video artifact combines July 14 Sol EDLs with a July 15 recalculation. It is not a fresh run of current <code>main</code>.</li>
+              <li>Clean Fizika and Hrvatski videos are still overcut too often. Fizika precision in that artifact is 0.304.</li>
             </ul>
             <div class="tag-row">
-              <span class="tag decision">F1 +0.180</span>
-              <span class="tag decision">overcuts −66%</span>
+              <span class="tag decision">98 fixtures</span>
+              <span class="tag decision">F1 0.7318</span>
+              <span class="tag risk">fresh rerun pending</span>
             </div>
           </article>
         </div>
@@ -1179,9 +1167,9 @@
             <h2 id="models-title">Current model stack</h2>
           </div>
           <p>
-            LLM calls go through a provider-agnostic LangChain layer, so every model
-            below is a configurable default, not a hardwired dependency — experiment
-            manifests swap in OpenAI, OpenRouter, or Anthropic models for benchmarking.
+            LangChain provides one interface for all LLM calls. The models below are
+            defaults, not fixed dependencies. Experiment manifests can replace them with
+            OpenAI, OpenRouter, or Anthropic models for comparison runs.
           </p>
         </div>
 
@@ -1200,55 +1188,55 @@
               <tr>
                 <td><strong>Speech-to-text</strong></td>
                 <td>ElevenLabs Scribe v2</td>
-                <td>Croatian transcript with word-level timestamps and optional audio-event tokens.</td>
+                <td>Creates Croatian text, a timestamp for each word, and optional audio-event markers.</td>
                 <td>language hr, timestamps granularity word, audio events enabled.</td>
               </tr>
               <tr>
                 <td><strong>Spell correction</strong></td>
                 <td>Gemini 2.5 Flash through structured output</td>
-                <td>Iterative transcript spelling correction without timestamp changes.</td>
+                <td>Corrects spelling in repeated passes without changing timestamps.</td>
                 <td>temperature 0.1, max 5 passes, strict first passes and lenient later passes.</td>
               </tr>
               <tr>
-                <td><strong>Lexical similarity</strong></td>
+                <td><strong>Local correction matching</strong></td>
                 <td>RapidFuzz</td>
-                <td>Levenshtein-style ratio and token-sort ratio for near-identical sentence pairs.</td>
-                <td>maybe threshold 70, definite threshold 90.</td>
+                <td>Matches the beginning and clean ending of a correction chain when the middle attempt is visibly cut off.</td>
+                <td>Near-identical 98%; splice overall 65% and opening 85%; endpoint gap at most 10 s.</td>
               </tr>
               <tr>
-                <td><strong>Semantic similarity</strong></td>
+                <td><strong>Legacy duplicate path</strong></td>
                 <td>SentenceTransformer paraphrase-multilingual-MiniLM-L12-v2</td>
-                <td>Normalized sentence embeddings and cosine similarity for paraphrased retakes.</td>
-                <td>maybe threshold 0.75, definite threshold 0.95.</td>
+                <td>Measures meaning-based sentence similarity for the older duplicate detector. It is not called while the section editor is enabled.</td>
+                <td>Inactive on the default path.</td>
               </tr>
               <tr>
-                <td><strong>Cut verification</strong></td>
-                <td>Configurable cutting LLM (default Gemini 2.5 Flash)</td>
-                <td>Verifies borderline duplicates, false-start blocks, stutters, fragments, and asides. No longer selects which duplicate take to keep — that is the deterministic keep-later rule.</td>
-                <td>temperature 0.0, structured outputs, confidence clamped, verdicts gated at 0.8; take_selection last.</td>
+                <td><strong>Aside verification</strong></td>
+                <td>Gemini 2.5 Flash</td>
+                <td>Checks short possible asides near long silence or an STT audio-event marker.</td>
+                <td>Structured output; accepted aside confidence threshold 0.7.</td>
               </tr>
               <tr>
-                <td><strong>Section editor (pilot)</strong></td>
-                <td>Configurable strong model (default Gemini 2.5 Pro; GPT-5.5 and Claude under comparison)</td>
-                <td>Reads paragraph-sized sections and proposes verbatim deletion spans; deterministic code verifies each span, maps it to word timestamps, and applies the guardrails.</td>
-                <td>off by default, ~1200-word sections, span match ratio 0.8, redundant cuts demoted to review.</td>
+                <td><strong>Section editor</strong></td>
+                <td>GPT-5.6 Sol</td>
+                <td>Reads large transcript sections and copies the exact text to remove. Code verifies it, maps it to word timestamps, and applies guardrails.</td>
+                <td>OpenRouter primary, direct OpenAI fallback; temperature 1.0, low reasoning, 16k output, enabled by default.</td>
               </tr>
               <tr>
-                <td><strong>Enrichment and arbiter</strong></td>
-                <td>Gemini 2.5 Pro</td>
-                <td>Independent per-sentence keep confidence, tags, rationale, word salience, and arbitration of pipeline mistakes.</td>
-                <td>temperature 0.1, batch size 20, green threshold 80, restore threshold 60.</td>
+                <td><strong>Deterministic correction lane</strong></td>
+                <td>RapidFuzz + exact transcript timestamps</td>
+                <td>Adds only local correction chains that can be proved from text shape and timing. It runs after Sol and makes no model call.</td>
+                <td>Confidence 0.99; two- or three-sentence chains; visibly truncated middle required.</td>
               </tr>
               <tr>
                 <td><strong>Audio cleanup</strong></td>
                 <td>noisereduce</td>
-                <td>Non-stationary spectral gating for denoised processing and render audio.</td>
+                <td>Uses non-stationary spectral gating to reduce background noise in analysis and render audio.</td>
                 <td>prop_decrease 0.3 by default.</td>
               </tr>
               <tr>
                 <td><strong>Media processing</strong></td>
                 <td>FFmpeg</td>
-                <td>Audio extraction, silence detection, filter-graph rendering, and MP4 assembly.</td>
+                <td>Extracts audio, detects silence, trims and joins segments, and creates MP4 files.</td>
                 <td>silencedetect at -40 dB for 3 seconds; render libx264 CRF 28 ultrafast by default.</td>
               </tr>
             </tbody>
@@ -1263,8 +1251,9 @@
             <h2 id="fixture-title">Real transcript examples from fixture runs</h2>
           </div>
           <p>
-            These cards quote generated fixture sidecars directly: raw transcript,
-            automatic EDL, enrichment, and the final edited transcript.
+            These examples come from saved fixture files. They show the shape of real cuts,
+            but they do not prove that a new Sol run will make the same choice. Current QA
+            runs save a separate trace for every proposal.
           </p>
         </div>
 
@@ -1295,10 +1284,10 @@
 
             <div class="trace-signal">
               <div class="signal"><b>EDL</b><span>Cut gap reason: aside, confidence 1.0.</span></div>
-              <div class="signal"><b>Enrichment</b><span>red, keep_confidence 5, tag off_topic_aside.</span></div>
+              <div class="signal"><b>Source</b><span>Short aside candidate near an interruption boundary.</span></div>
               <div class="signal"><b>Outcome</b><span>The lesson sentences become adjacent; the interruption is absent.</span></div>
             </div>
-            <p class="trace-rationale">Enrichment rationale: Rečenica je nevezana za sadržaj lekcije i zvuči kao komentar na događaj u okolini.</p>
+            <p class="trace-rationale">Why it is useful: the interruption disappears while both lesson sentences remain intact.</p>
           </article>
 
           <article class="trace-card">
@@ -1328,10 +1317,10 @@
 
             <div class="trace-signal">
               <div class="signal"><b>EDL</b><span>Cut reason: duplicate, confidence 1.0.</span></div>
-              <div class="signal"><b>Enrichment</b><span>red, keep_confidence 0, tag incomplete_thought.</span></div>
+              <div class="signal"><b>Shape</b><span>Earlier incomplete take followed immediately by a completed take.</span></div>
               <div class="signal"><b>Outcome</b><span>The unfinished prefix is removed; the completed sentence remains.</span></div>
             </div>
-            <p class="trace-rationale">Enrichment rationale: Ovo je lažni početak, nedovršena misao koju govornik odmah prekida i ispravno formulira u sljedećoj rečenici.</p>
+            <p class="trace-rationale">Why it is useful: the completed version remains and the unfinished prefix is absent.</p>
           </article>
 
           <article class="trace-card">
@@ -1361,10 +1350,10 @@
 
             <div class="trace-signal">
               <div class="signal"><b>EDL</b><span>Cut reason: false_start, confidence 1.0.</span></div>
-              <div class="signal"><b>Enrichment</b><span>red, keep_confidence 5, tag incomplete_thought.</span></div>
+              <div class="signal"><b>Shape</b><span>The candidate visibly terminates with a truncated word.</span></div>
               <div class="signal"><b>Outcome</b><span>The sentence ending in “na-” is absent from the final transcript.</span></div>
             </div>
-            <p class="trace-rationale">Enrichment rationale: Rečenica je nedovršena i prekida se na kraju.</p>
+            <p class="trace-rationale">Why it is useful: the interrupted sentence is absent while the clean restart remains.</p>
           </article>
 
           <article class="trace-card">
@@ -1394,44 +1383,12 @@
 
             <div class="trace-signal">
               <div class="signal"><b>EDL</b><span>Cut reason: duplicate, confidence 1.0.</span></div>
-              <div class="signal"><b>Enrichment</b><span>red, keep_confidence 15, tags minor_disfluency and repetition_residue.</span></div>
+              <div class="signal"><b>Shape</b><span>Repeated setup words precede the continuing mathematical explanation.</span></div>
               <div class="signal"><b>Outcome</b><span>The math explanation continues without the repeated setup phrase.</span></div>
             </div>
-            <p class="trace-rationale">Enrichment rationale: Rečenica sadrži lažni početak i ponavljanje, što je čini nejasnom i nepotrebno dugačkom.</p>
+            <p class="trace-rationale">Why it is useful: the example makes a possible disfluency cut visible for human inspection.</p>
           </article>
 
-          <article class="trace-card">
-            <div class="trace-head">
-              <div>
-                <span class="trace-kind">Restore signal</span>
-                <h3>High-confidence content flagged for reviewer attention</h3>
-              </div>
-              <span class="trace-id">engleski25ljeto-reading-2 · raw sentence 184 · 1427.03-1433.25s</span>
-            </div>
-
-            <div class="trace-columns">
-              <div class="trace-panel">
-                <h4>Raw transcript window</h4>
-                <p class="transcript-line keep"><b>Before</b>Dakle, oni su zapravo se nalazili, ti New age travelers na tim zapravo arheološkim, aa, mjestima kao Stonehenge, ali ne i za samim krugovima u žitu.</p>
-                <p class="transcript-line restore"><b>Restore candidate</b>I to su bili dakle putnici, ne inhabiters, da, dakle, to su bili putnici, a ne stanovnici.</p>
-                <p class="transcript-line keep"><b>After</b>Dakle, nigdje se ne spominje da su tu zapravo stanovali nekakvi štovatelji Sunca.</p>
-              </div>
-
-              <div class="trace-panel">
-                <h4>Final edited transcript</h4>
-                <p class="transcript-line keep"><b>Final sentence 136</b>Dakle, oni su zapravo se nalazili, ti New age travelers na tim zapravo arheološkim, aa, mjestima kao Stonehenge, ali ne i za samim krugovima u žitu.</p>
-                <p class="transcript-line keep"><b>Final sentence 137</b>Dakle, nigdje se ne spominje da su tu zapravo stanovali nekakvi štovatelji Sunca.</p>
-                <p class="transcript-line keep"><b>Final sentence 138</b>Onda imamo opciju pod C: significant in the broader sense to the agriculture.</p>
-              </div>
-            </div>
-
-            <div class="trace-signal">
-              <div class="signal"><b>EDL</b><span>Cut reason: silence, confidence 1.0.</span></div>
-              <div class="signal"><b>Enrichment</b><span>restore, keep_confidence 90, tag minor_disfluency.</span></div>
-              <div class="signal"><b>Outcome</b><span>The final transcript omits it, so review should inspect the restore flag.</span></div>
-            </div>
-            <p class="trace-rationale">Enrichment rationale: Rečenica naglašava ključnu razliku u terminologiji (putnici vs. stanovnici) koja je bitna za razumijevanje.</p>
-          </article>
         </div>
       </section>
 
@@ -1449,22 +1406,22 @@
               <div><strong>Denoised WAV</strong><span>Noise-reduced audio used by silence, disruption, and render stages.</span></div>
             </div>
             <div class="artifact speech">
-              <div><strong>Transcript sidecar</strong><span>Timed words, sentences, source metadata, language, and audio events.</span></div>
+              <div><strong>Transcript sidecar</strong><span>A companion file containing timed words, sentences, source metadata, language, and audio events.</span></div>
             </div>
             <div class="artifact speech">
-              <div><strong>Grammar report sidecar</strong><span>Gemini correction passes, suggestions, actual replacements, per-pass stats, and correction pairs.</span></div>
+              <div><strong>Grammar report sidecar</strong><span>A companion file containing Gemini passes, suggestions, replacements, pass statistics, and correction pairs.</span></div>
             </div>
             <div class="artifact">
               <div><strong>Automatic EDL sidecar</strong><span>Ordered keep and cut segments with reason and confidence.</span></div>
             </div>
-            <div class="artifact">
-              <div><strong>Enrichment sidecar</strong><span>Per-sentence status, tags, keep confidence, rationale, and word salience.</span></div>
+            <div class="artifact audio">
+              <div><strong>Audio envelope sidecar</strong><span>A companion file containing compressed RMS volume data for the waveform and quiet split points.</span></div>
             </div>
             <div class="artifact human">
-              <div><strong>Review payload</strong><span>Video metadata, timeline segments, sentence data, word decisions, and enrichment metadata.</span></div>
+              <div><strong>Review payload</strong><span>review.v4 video metadata, automatic timeline segments, transcript words, and current cut ranges.</span></div>
             </div>
             <div class="artifact human">
-              <div><strong>Reviewed EDL sidecar</strong><span>Human-corrected decision list built from cut-word selections.</span></div>
+              <div><strong>Reviewed EDL sidecar</strong><span>Human-corrected decision list built from free-form source-time cut ranges.</span></div>
             </div>
             <div class="artifact final">
               <div><strong>Automatic and reviewed MP4 outputs</strong><span>Separate renders; neither overwrites the raw source.</span></div>
@@ -1475,20 +1432,21 @@
         <article class="card">
           <h3>Review payload semantics</h3>
           <p>
-            Review is not a destructive video-editing session. It is a decision-editing
-            session over timed transcript words and timeline segments.
+            Review changes the saved cut decisions, not the raw video. Those decisions are
+            source-time ranges linked to transcript words and timeline segments.
           </p>
           <ul>
-            <li>Each word has original AI kept state, current kept state, reason, confidence, and keep score.</li>
-            <li>Each sentence has current action, original action, keep coverage, reason, note, status, tags, keep confidence, and rationale.</li>
-            <li>Reviewer changes are represented as the set of word indices to cut.</li>
-            <li>The reviewed EDL is rebuilt from contiguous kept word spans.</li>
+            <li>Each word stores its source time, original AI keep/cut state, current state, reason, confidence, and nearby quiet split points.</li>
+            <li>Each sentence stores its current and original action, kept-word coverage, reason, confidence, note, and words.</li>
+            <li><code>cut_ranges</code> is the source of truth. It comes from the reviewed EDL when one exists; otherwise it comes from the automatic EDL.</li>
+            <li>Reviewer changes are saved as any source-time range, not only whole words. Saving by word index still exists only for older API clients.</li>
+            <li>The reviewed EDL is rebuilt by merging all cut ranges and keeping everything else in the source duration.</li>
             <li>The reviewed render uses the same raw video and denoised audio path, but with reviewed decisions.</li>
-            <li>A separate diff endpoint renders the raw transcript with each editor's cuts struck through — pipeline decisions from the EDL, human decisions from word-level alignment to the edited video's re-transcription.</li>
+            <li>A separate diff endpoint strikes out both editors' cuts on the raw transcript. Pipeline cuts come from the EDL. Human cuts come from word-level alignment with a new transcript of the human-edited video.</li>
           </ul>
           <div class="tag-row">
-            <span class="tag human">word-level review</span>
-            <span class="tag human">review.v2 payload</span>
+            <span class="tag human">free-form time ranges</span>
+            <span class="tag human">review.v4 payload</span>
             <span class="tag human">separate reviewed EDL</span>
             <span class="tag human">diff view</span>
           </div>
@@ -1502,8 +1460,9 @@
             <h2 id="prompts-title">Exact LLM prompt templates</h2>
           </div>
           <p>
-            Curly-brace values are runtime insertions. The text below is the prompt
-            template before those values are filled.
+            Values in curly braces are inserted at runtime. The page shows only prompts
+            used by the default path: spelling correction, Sol section editing, and aside
+            verification. The text below matches the code exactly.
           </p>
         </div>
 
@@ -1544,130 +1503,11 @@ VAŽNO - Ovo je već nekoliko puta provjereni tekst:
 {transcript}</pre>
           </details>
 
-          <details class="prompt-card">
-            <summary>DUPLICATE_PROMPT <span>borderline duplicate verification — preferred_index is ignored under the default take_selection="last"</span></summary>
-            <pre class="prompt-body">Jesi li ekspert za analizu govornog jezika na hrvatskom. Tvoj zadatak je odlučiti jesu li parovi rečenica iz video lekcije **ponavljanja** (govornik je rekao istu stvar dva puta, jednom pogrešno pa zatim ispravno).
 
-ODGOVOR: Vrati isključivo validan json koji odgovara zadanoj structured-output shemi. Ne koristi Markdown, code blockove ni dodatni tekst.
 
-PRAVILA:
-- "Duplikat" znači da je govornik ponovio istu misao — NE da su rečenice slične po temi
-- Ako govornik objašnjava istu temu ali dodaje nove informacije, to NISU duplikati
-- Ako je jedna rečenica nastavak prethodne misli, to NIJE duplikat
-- Kratki frazni obrasci poput pozdrava ili uvodnih fraza ("Dobro, idemo dalje") JESU duplikati samo ako se ponavljaju uzastopno
 
-KORISTI KONTEKST I VRIJEME:
-- Uz svaki par dani su SUSJEDNE rečenice (prije/poslije) i VREMENSKI RAZMAK između dvije verzije.
-- Mali razmak (par sekundi) + lažni početak između = ponovljeni pokušaj (snimanje) → vjerojatno DUPLIKAT.
-- Velik razmak (mnogo rečenica / dugo vrijeme) = govornik se vraća na temu radi PODSJETNIKA → NIJE duplikat, ZADRŽI obje.
 
-Za svaki par navedi:
-- is_duplicate: true/false
-- confidence: 0.0-1.0 (koliko si siguran)
-- reasoning: kratko objašnjenje na hrvatskom
-- preferred_index: AKO je duplikat, navedi indeks rečenice koju treba ZADRŽATI. Pravilo odabira:
-  1. Zadano zadrži KASNIJU verziju (veći indeks) — govornik ponavlja upravo zato da ispravi ili poboljša raniju izvedbu
-  2. Odaberi RANIJU verziju SAMO ako je kasnija OČITO lošija: prekinuta, nedovršena, s više poštapalica ili s manje sadržaja
 
-Parovi rečenica za analizu:
-{pairs_text}</pre>
-          </details>
-
-          <details class="prompt-card">
-            <summary>WHICH_TO_KEEP_PROMPT <span>legacy — off by default; only under take_selection="gemini" with llm_keep_review=true</span></summary>
-            <pre class="prompt-body">Ti si ekspert za analizu govornog jezika na hrvatskom. Ove rečenice su potvrđeni duplikati — govornik je rekao istu stvar dva puta. Odaberi BOLJU verziju za zadržati.
-
-ODGOVOR: Vrati isključivo validan json koji odgovara zadanoj structured-output shemi. Ne koristi Markdown, code blockove ni dodatni tekst.
-
-Kriteriji (ovim redoslijedom):
-1. Potpunija misao (više informativnog sadržaja, cjelovitije objašnjenje) — u edukacijskim lekcijama dulja, potpunija verzija je obično vrjednija
-2. Čišća izvedba (manje poštapalica, oklijevanja, nedovršenih riječi)
-3. Ako su jednake kvalitete, preferiraj KASNIJU verziju (govornik obično ispravlja/poboljšava)
-
-Parovi:
-{pairs_text}</pre>
-          </details>
-
-          <details class="prompt-card">
-            <summary>WHICH_TO_KEEP_PROMPT_CLEAN <span>legacy — cleanliness-first variant of the same off-by-default pass</span></summary>
-            <pre class="prompt-body">Ti si ekspert za analizu govornog jezika na hrvatskom. Ove rečenice su potvrđeni duplikati — govornik je rekao istu stvar dva puta. Odaberi BOLJU verziju za zadržati.
-
-ODGOVOR: Vrati isključivo validan json koji odgovara zadanoj structured-output shemi. Ne koristi Markdown, code blockove ni dodatni tekst.
-
-Kriteriji (ovim redoslijedom):
-1. Čišća izvedba (manje poštapalica, oklijevanja, nedovršenih riječi)
-2. Potpunija misao (više informativnog sadržaja)
-3. Ako su jednake kvalitete, preferiraj KASNIJU verziju (govornik obično ispravlja/poboljšava)
-
-Parovi:
-{pairs_text}</pre>
-          </details>
-
-          <details class="prompt-card">
-            <summary>FALSE_START_PROMPT <span>sentences between confirmed duplicate takes</span></summary>
-            <pre class="prompt-body">Analiziraj sljedeći blok rečenica iz video lekcije na hrvatskom. Ove rečenice se nalaze IZMEĐU dva ponavljanja — govornik je rekao istu stvar prije i poslije ovog bloka.
-
-ODGOVOR: Vrati isključivo validan json koji odgovara zadanoj structured-output shemi. Ne koristi Markdown, code blockove ni dodatni tekst.
-
-Tvoj zadatak: odluči koje od ovih rečenica su **lažni počeci, nedovršene misli ili filler** koji se mogu izbaciti, a koje su **stvarni sadržaj** koji treba zadržati.
-
-PRAVILA:
-- "Lažni početak" = govornik je počeo rečenicu pa odustao i krenuo ispočetka
-- "Filler" = poštapalice bez sadržaja ("znači", "evo", "dakle" same za sebe)
-- Ako rečenica nosi novu informaciju ili objašnjenje, to NIJE filler — ZADRŽI je
-- Budi konzervativan: ako nisi siguran, označi kao "zadrži"
-
-Rečenice (s indeksima):
-{block_text}
-
-Kontekst — rečenica PRIJE bloka:
-{before}
-
-Kontekst — rečenica NAKON bloka:
-{after}</pre>
-          </details>
-
-          <details class="prompt-card">
-            <summary>STUTTER_PROMPT <span>word-level stutter verification</span></summary>
-            <pre class="prompt-body">Analiziraj sljedeću rečenicu iz video lekcije na hrvatskom. Rečenica sadrži ponovljene riječi/fraze koje ukazuju na mucanje ili lažni početak.
-
-ODGOVOR: Vrati isključivo validan json koji odgovara zadanoj structured-output shemi. Ne koristi Markdown, code blockove ni dodatni tekst.
-
-Tvoj zadatak: prepoznaj koje RIJEČI su dio mucanja (ponovljeni/nedovršeni dio) i koje treba IZBACITI, a koje su dio čistog izlaganja i treba ih ZADRŽATI.
-
-PRAVILA:
-- Govornik obično počne frazu, zastane ili pogriješi, pa kaže istu stvar čišće — IZBACI prvi (pogrešni) pokušaj
-- Ako govornik koristi ponavljanje namjerno za naglašavanje — ZADRŽI sve
-- Budi konzervativan: ako nisi siguran, ZADRŽI sve (is_stutter=false)
-- word_indices_to_cut su indeksi (0-based) riječi koje treba izbaciti
-
-Riječi s indeksima:
-{words_indexed}
-
-Kontekst — rečenica PRIJE:
-{before}
-
-Kontekst — rečenica NAKON:
-{after}</pre>
-          </details>
-
-          <details class="prompt-card">
-            <summary>FRAGMENT_PROMPT <span>incomplete fragment verification</span></summary>
-            <pre class="prompt-body">Ti si profesionalni video editor. Pregledaj sljedeće kandidate za nepotpune fragmente u kontekstu okolnih rečenica.
-
-ODGOVOR: Vrati isključivo validan json koji odgovara zadanoj structured-output shemi. Ne koristi Markdown, code blockove ni dodatni tekst.
-
-Za SVAKI kandidat odgovori:
-- should_cut: true AKO je fragment nepotpun/nedovršen i potpunija verzija postoji u okolnim rečenicama
-- should_cut: false AKO fragment zapravo služi svrsi (naglasak, prijelaz, uvod)
-- confidence: 0.0-1.0
-- reasoning: kratko obrazloženje
-
-VAŽNO: Rečenice koje završavaju s "..." ili "…" su JAKI signal da je govornik prekinuo misao i započeo ispočetka. Takve rečenice gotovo uvijek treba izbaciti jer slijedi potpunija verzija iste misli.
-
-Kandidati:
-{candidates_text}</pre>
-          </details>
 
           <details class="prompt-card">
             <summary>ASIDE_PROMPT <span>off-lesson aside and production noise verification</span></summary>
@@ -1693,7 +1533,7 @@ Kandidati (svaki s kontekstom; kandidat označen s &lt;&lt;&lt;):
           </details>
 
           <details class="prompt-card">
-            <summary>SECTION_PROMPT <span>piloted section editor — verbatim deletion spans, deterministically validated</span></summary>
+            <summary>SECTION_PROMPT <span>active Sol editor — exact deletion text checked by fixed code</span></summary>
             <pre class="prompt-body">Ti si iskusan video editor za edukacijske lekcije na hrvatskom. Dobivaš ODLOMAK transkripta snimke. Govornik snima u jednom dahu i često pogriješi pa ponovi — tvoj zadatak je označiti dijelove koje treba IZBACITI da montaža bude čista, a da se ne izgubi sadržaj.
 
 ODGOVOR: Vrati isključivo validan JSON prema shemi. Bez Markdowna, bez dodatnog teksta.
@@ -1716,53 +1556,7 @@ Odlomak (indeksi su globalni):
 {section_text}</pre>
           </details>
 
-          <details class="prompt-card">
-            <summary>ENRICH_PROMPT <span>independent per-sentence enrichment and arbiter input</span></summary>
-            <pre class="prompt-body">Ti si iskusni video editor koji montira edukacijske lekcije na hrvatskom jeziku, snimljene neformalnim govornim stilom. Za SVAKU rečenicu NEOVISNO procijeni pripada li u finalnu montažu. Rečenice su dane redoslijedom kako su izgovorene, pa koristi susjedne rečenice da prepoznaš ponavljanja.
 
-ODGOVOR: Vrati isključivo validan json koji odgovara zadanoj structured-output shemi. Ne koristi Markdown, code blockove ni dodatni tekst.
-
-KAKO LJUDSKI EDITOR ODLUČUJE:
-- ZADRŽAVA: svaki jedinstven sadržaj (korak, definiciju, formulu, međurezultat, odgovor) I prirodan govorni tok — kratke potvrde i prijelaze ("Okej", "Dobro", "Evo", "Pa evo", "Znači", "Dakle", "Jel tako?"). Prirodne poštapalice koje zvuče normalno OSTAJU u videu.
-- IZBACUJE: rečenicu koja DOSLOVNO PONAVLJA sadržaj susjedne rečenice, lažni početak (govornik krene pa se odmah ispravi) i nedovršenu misao koju odmah preformulira.
-
-Za SVAKU rečenicu vrati:
-- sentence_idx: indeks rečenice (točno kako je dan)
-- keep_confidence: broj 0-100 = koliko si SIGURAN da rečenica TREBA biti u finalnom videu
-    85-100 = jedinstven sadržaj ILI prirodan govorni prijelaz → ZADRŽI
-    0-30 = doslovno ponavljanje, lažni početak ili nedovršena misao → IZBACI
-    sredina = stvarno granično
-- tags: lista oznaka SAMO iz ovog skupa: {tags}
-- rationale: kratko objašnjenje na HRVATSKOM (jedna rečenica)
-- word_salience: lista 0-100, JEDAN broj po svakoj riječi istim redoslijedom (100 = ključna riječ, 0 = nebitan filler). Točno onoliko brojeva koliko rečenica ima riječi.
-
-VAŽNO:
-- Procjenjuj SADRŽAJ, ne stil. Kratke poštapalice i prijelazi NISU greška — daj im visok keep_confidence.
-- Nizak keep_confidence daj SAMO kada rečenica doslovno ponavlja susjednu, kada je lažni početak ili nedovršena misao.
-- Budi ODLUČAN: ne ograđuj se ocjenom ~50 osim za stvarno granične slučajeve.
-
-Rečenice (redoslijedom; svaka s riječima):
-{sentences_block}</pre>
-          </details>
-
-          <details class="prompt-card">
-            <summary>HOLISTIC_PROMPT <span>defined in code; not on the default single-video path</span></summary>
-            <pre class="prompt-body">Ti si profesionalni video editor za edukacijske video lekcije na hrvatskom jeziku. Pregledaj sljedeći transkript i označi rečenice koje su **nepotrebne** i mogu se izbaciti bez gubitka sadržaja.
-
-ODGOVOR: Vrati isključivo validan json koji odgovara zadanoj structured-output shemi. Ne koristi Markdown, code blockove ni dodatni tekst.
-
-PRAVILA:
-- "Nepotrebna" znači da rečenica NE dodaje nikakvu novu informaciju koju kontekst već ne pokriva
-- Kratke nedovršene rečenice poput "Evo, ja." ili "A ovaj..." su kandidati AKO ih slijedi potpunija verzija
-- Trailing filler poput "Evo, znači, to znači da..." JEST nepotreban AKO sljedeća rečenica kaže istu stvar jasnije
-- Ponovljena pitanja su nepotrebna AKO se isto pitanje pojavljuje negdje drugdje u tekstu
-- NE brisi rečenice koje objašnjavaju, naglašavaju ili donose bilo kakvu novu informaciju
-- Budi VRLO konzervativan — bolje je ostaviti nepotrebnu rečenicu nego izbaciti korisnu
-- Za svaku označenu rečenicu navedi confidence (0.0-1.0) i kratko obrazloženje
-
-Transkript (s indeksima originalnih rečenica):
-{transcript_indexed}</pre>
-          </details>
         </div>
       </section>
 
@@ -1770,22 +1564,24 @@ Transkript (s indeksima originalnih rečenica):
         <div class="callout output">
           <h3>Production boundary</h3>
           <ul>
-            <li>The AI editor transcript exists to drive editing and review, not to become the final Gradivo student-facing transcript.</li>
-            <li>Gradivo should still transcribe the final reviewed Mux asset so chapters, explanations, and transcript timestamps match the published video.</li>
-            <li>The AI editor currently operates on local filesystem paths and sidecars, not durable Gradivo job IDs.</li>
-            <li>Gradivo remains the owner of raw-recording association, problem mapping, publishing state, final Mux video, chapters, explanations, and Notion synchronization.</li>
+            <li>This transcript drives editing and review. It is not the final transcript shown to Gradivo students.</li>
+            <li>Gradivo should transcribe the final reviewed Mux video again. This keeps chapters, explanations, and timestamps aligned with the published video.</li>
+            <li>The AI editor currently uses local file paths and companion files. It does not yet use permanent Gradivo job IDs.</li>
+            <li>Gradivo still owns the raw-recording link, problem mapping, publishing status, final Mux video, chapters, explanations, and Notion sync.</li>
           </ul>
         </div>
 
         <div class="callout risk">
           <h3>Known technical gaps before production service use</h3>
           <ul>
-            <li>The section-editor architecture is piloted on 10 fixtures; the strong-model comparison and the full 98-fixture run are pending before it is promoted to the default path.</li>
-            <li>Production render settings are not finalized; current defaults are development-oriented.</li>
+            <li>The section editor is on by default, but the latest 98-video review artifact was recalculated from older Sol output. It is not a fresh current-<code>main</code> run.</li>
+            <li>Clean Fizika and Hrvatski videos still score poorly. The saved Fizika cohort has 0.304 precision, 0.176 recall, 0.223 F1, and 80 overcut words.</li>
+            <li>We need stronger proof that partial false-start, stutter, and filler cuts are safe on lessons that need few edits.</li>
+            <li>Render defaults are for development and still need production validation.</li>
             <li>Intro and outro insertion is not implemented.</li>
-            <li>Professional NLE export is planned but not part of the current active single-video flow.</li>
-            <li>Professor-specific profiles and trained custom models remain future phases.</li>
-            <li>Service integration still needs durable job identity, authenticated artifact access, queueing, retries, cancellation, progress, failure states, and storage adapters.</li>
+            <li>Export to a professional non-linear editor (NLE) is planned but not implemented.</li>
+            <li>Professor-specific settings and trained custom models are future work.</li>
+            <li>A production service still needs permanent job IDs, authenticated file access, queues, retries, cancellation, progress and failure states, and storage adapters.</li>
           </ul>
         </div>
       </section>

@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { ExternalLink, Film } from 'lucide-react'
+import { ExternalLink, Film, LayoutGrid } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { useVideos } from '@/api'
@@ -30,11 +30,17 @@ export function VideoList() {
               Open videos in separate tabs and review them side by side.
             </p>
           </div>
-          {!videosQuery.isPending && !videosQuery.error && (
-            <Badge variant="secondary">
-              {videos.length} video{videos.length === 1 ? '' : 's'}
-            </Badge>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <Link to="/board" className={buttonVariants({ variant: 'default', size: 'sm' })}>
+              <LayoutGrid />
+              Diff board
+            </Link>
+            {!videosQuery.isPending && !videosQuery.error && (
+              <Badge variant="secondary">
+                {videos.length} video{videos.length === 1 ? '' : 's'}
+              </Badge>
+            )}
+          </div>
         </header>
 
         {videosQuery.isPending ? (

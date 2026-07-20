@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Video, VideoSkin } from '@videojs/react/video'
 import { useEventCallback, useEventListener } from 'usehooks-ts'
+import { Link } from 'react-router-dom'
 
 import { ResizableSplit } from '@/components/resizable-split'
 import { PaneVisibilityControls } from '@/components/pane-visibility-controls'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
@@ -18,13 +19,18 @@ import { Separator } from '@/components/ui/separator'
 import { ViewSwitch } from '@/components/view-switch'
 import { useDiff } from '@/api'
 import type { DiffSentence, DiffWord } from '@/api/diff'
+import {
+  DiffLegend,
+  sentenceStripe,
+  wordClassName,
+  type DiffMode,
+} from '@/components/diff-transcript'
 import type { VideoSummary } from '@/api/videos'
 import { formatDuration, formatTimestamp } from '@/lib/format'
 import { DEFAULT_PLAYBACK_RATE, Player } from '@/lib/player'
 import { cn } from '@/lib/utils'
 
-// Which edit's cuts to strike through. "diff" overlays both at once.
-type Mode = 'diff' | 'human' | 'pipeline'
+type Mode = DiffMode
 
 type DiffViewProps = {
   videoId: string
@@ -157,6 +163,13 @@ export function DiffView({
         <span className="text-sm font-extrabold tracking-tight">AI Video Editor</span>
         <ViewSwitch videoId={videoId} view="compare" search={search} />
 
+        <Link
+          to="/board"
+          className={cn(buttonVariants({ size: 'xs', variant: 'outline' }), 'gap-1')}
+        >
+          Diff board
+        </Link>
+
         <Select value={videoId} onValueChange={onSelect}>
           <SelectTrigger size="sm" className="w-[260px]">
             <SelectValue placeholder="Select a video" />
@@ -257,7 +270,7 @@ export function DiffView({
 
               <Separator />
 
-              <Legend mode={mode} />
+              <DiffLegend mode={mode} />
             </div>
           }
           main={
@@ -319,19 +332,6 @@ function Row({
 
 // ---- sentence + word rendering -------------------------------------------
 
-// Left-border stripe communicating the sentence-level call for the active mode.
-function sentenceStripe(sentence: DiffSentence, mode: Mode): string {
-  if (mode === 'diff') {
-    const { pipeline_kept: p, human_kept: h } = sentence
-    if (p && h) return 'border-l-keep/30'
-    if (!p && !h) return 'border-l-border'
-    if (!p && h) return 'border-l-cut' // we over-cut (removed human-kept content)
-    return 'border-l-changed' // human cut, we kept (missed cut)
-  }
-  const kept = mode === 'human' ? sentence.human_kept : sentence.pipeline_kept
-  return kept ? 'border-l-keep/30' : 'border-l-cut/60'
-}
-
 function SentenceRow({
   sentence,
   mode,
@@ -392,23 +392,6 @@ function SentenceRow({
   )
 }
 
-function wordClassName(word: DiffWord, mode: Mode): { struck: boolean; tone: string } {
-  const p = word.pipeline_kept
-  const h = word.human_kept
-  if (mode === 'pipeline') {
-    return { struck: !p, tone: !p ? 'text-cut/70 decoration-cut' : 'text-foreground' }
-  }
-  if (mode === 'human') {
-    return { struck: !h, tone: !h ? 'text-cut/70 decoration-cut' : 'text-foreground' }
-  }
-  // diff
-  if (p && h) return { struck: false, tone: 'text-foreground' }
-  if (!p && !h)
-    return { struck: true, tone: 'text-muted-foreground/50 decoration-muted-foreground' }
-  if (!p && h) return { struck: true, tone: 'text-cut decoration-cut' } // over-cut
-  return { struck: true, tone: 'text-changed decoration-changed' } // missed cut
-}
-
 function DiffWordSpan({
   word,
   mode,
@@ -441,48 +424,6 @@ function DiffWordSpan({
     >
       {word.text}{' '}
     </span>
-  )
-}
-
-function Legend({ mode }: { mode: Mode }) {
-  if (mode === 'diff') {
-    return (
-      <div className="flex flex-col gap-2 text-xs text-muted-foreground">
-        <span className="flex items-center gap-2">
-          <i className="inline-block h-3 w-4.5 rounded-sm bg-foreground" /> both keep
-        </span>
-        <span className="flex items-center gap-2">
-          <i className="inline-block h-3 w-4.5 rounded-sm bg-cut" /> over-cut · we removed, human
-          kept
-        </span>
-        <span className="flex items-center gap-2">
-          <i className="inline-block h-3 w-4.5 rounded-sm bg-changed" /> missed cut · human removed,
-          we kept
-        </span>
-        <span className="flex items-center gap-2">
-          <i className="inline-block h-3 w-4.5 rounded-sm bg-muted-foreground/50" /> both cut
-        </span>
-        <span className="pt-1 leading-relaxed">
-          Words struck through were removed by that editor. Stripe colour on the left marks the
-          sentence-level call.
-        </span>
-      </div>
-    )
-  }
-  const who = mode === 'human' ? 'the human editor' : 'our pipeline'
-  return (
-    <div className="flex flex-col gap-2 text-xs text-muted-foreground">
-      <span className="flex items-center gap-2">
-        <i className="inline-block h-3 w-4.5 rounded-sm bg-foreground" /> kept by {who}
-      </span>
-      <span className="flex items-center gap-2">
-        <i className="inline-block h-3 w-4.5 rounded-sm bg-cut/70" /> removed by {who}
-      </span>
-      <span className="pt-1 leading-relaxed">
-        Showing the {mode === 'human' ? 'manual baseline' : 'pipeline'} edit over the raw
-        transcript. Switch to “Diff” to see both at once.
-      </span>
-    </div>
   )
 }
 

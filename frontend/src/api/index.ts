@@ -18,5 +18,5 @@ export type {
   ReviewSaveResponse,
   VideoSummary,
 } from '@/api/videos'
-export { useDiff } from '@/api/diff'
+export { useDiff, useDiffs, fetchDiff } from '@/api/diff'
 export type { DiffPayload, DiffSentence, DiffSummary, DiffWord } from '@/api/diff'

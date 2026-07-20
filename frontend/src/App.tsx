@@ -15,6 +15,7 @@ import {
 } from 'react-router-dom'
 import { useBoolean, useEventCallback } from 'usehooks-ts'
 
+import { DiffBoardView } from '@/DiffBoardView'
 import { DiffView } from '@/DiffView'
 import { HelpDrawer } from '@/components/help-drawer'
 import { MediaColumn } from '@/components/media-column'
@@ -47,6 +48,7 @@ export default function App() {
     <>
       <Routes>
         <Route path="/" element={<VideoList />} />
+        <Route path="/board" element={<DiffBoardView />} />
         <Route path="/videos/:videoId" element={<VideoViewRedirect />} />
         <Route path="/videos/:videoId/transcript" element={<VideoEditor view="transcript" />} />
         <Route path="/videos/:videoId/compare" element={<VideoEditor view="compare" />} />
