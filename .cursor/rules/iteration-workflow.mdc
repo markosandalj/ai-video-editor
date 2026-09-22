@@ -1,0 +1,17 @@
+---
+description: Quality iteration workflow for improving pipeline edit accuracy. Governs the hypothesis-driven loop inside Phase 7 (QA, Quality Iteration & Production Render).
+alwaysApply: true
+---
+
+# Quality Iteration Workflow
+
+The authoritative process is `iterations/WORKFLOW.md`. The only comparable
+baseline is `iterations/current-baseline.json`, explained in
+`iterations/CURRENT_BASELINE.md`.
+
+At session start, read those files and the active iteration directory only. Do
+not bulk-read `DECISION_HISTORY.md` or Git history unless the proposed idea or a
+user question requires historical context.
+
+The next iteration is `iter-021`. A score may be compared with the baseline only
+when its evaluation protocol ID matches exactly; otherwise rebaseline first.

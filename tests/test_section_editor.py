@@ -270,6 +270,68 @@ class TestMergeFlags:
         ]
 
 
+class TestWordLevelScoring:
+    def _edl(self, keeps):
+        from ai_video_editor.duplicate.edl import EditAction, EditDecision, EditDecisionList, EditReason
+        decisions = [
+            EditDecision(start=s, end=e, action=EditAction.KEEP, reason=EditReason.SPEECH)
+            for s, e in keeps
+        ]
+        return EditDecisionList(decisions=decisions)
+
+    def test_word_keep_flags_partial_sentence(self):
+        from ai_video_editor.qa.ground_truth import derive_word_keep_flags
+
+        raw = [_sentence("Firstly youngsters s Firstly youngsters spend more time", 0, 5)]
+        gt = [_sentence("Firstly youngsters spend more time", 0, 3)]
+        flags = derive_word_keep_flags(raw, gt)
+        # The stutter words at the start are not in the human edit; the tail is.
+        assert flags[0][-1] is True
+        assert flags[0].count(False) >= 1
+
+    def test_word_level_credits_partial_trim(self):
+        from ai_video_editor.qa.decision_eval import evaluate_decisions_word_level
+
+        # Sentence 0-5s, 6 words. Human keeps only the last 3 words (after 2.5s).
+        raw = [_sentence("aa bb cc dd ee ff", 0, 6)]
+        gt = [_sentence("dd ee ff", 0, 3)]
+        # Pipeline trims the first half (keeps 3.0-6.0s) — matching the human.
+        edl = self._edl([(3.0, 6.0)])
+        score = evaluate_decisions_word_level(raw, edl, gt)
+        assert score.tp == 3  # aa bb cc correctly cut
+        assert score.fp == 0
+        assert score.fn == 0
+        assert score.cut_f1 == pytest.approx(1.0)
+
+    def test_word_level_penalises_full_cut_of_kept_words(self):
+        from ai_video_editor.qa.decision_eval import evaluate_decisions_word_level
+
+        raw = [_sentence("aa bb cc dd ee ff", 0, 6)]
+        gt = [_sentence("dd ee ff", 0, 3)]
+        # Pipeline cut the WHOLE sentence — 3 correct, 3 overcut.
+        edl = self._edl([(100.0, 101.0)])  # keep nothing in range
+        score = evaluate_decisions_word_level(raw, edl, gt)
+        assert score.tp == 3
+        assert score.fp == 3
+        assert score.cut_precision == pytest.approx(0.5)
+
+    def test_report_formatter(self):
+        from ai_video_editor.experiments.section_pilot import FixturePilotResult, format_pilot_report
+        from ai_video_editor.qa.decision_eval import WordDecisionScore
+
+        results = [
+            FixturePilotResult(
+                "vid-1",
+                WordDecisionScore(name="vid-1", tp=5, fp=5, fn=0, tn=90),
+                WordDecisionScore(name="vid-1", tp=8, fp=1, fn=1, tn=90),
+            )
+        ]
+        report = format_pilot_report(results, model_id="test-model")
+        assert "vid-1" in report
+        assert "AGGREGATE" in report
+        assert "test-model" in report
+
+
 class TestDetectSectionEditsEndToEnd:
     def test_trace_records_every_proposal_and_outcome(self, monkeypatch):
         import ai_video_editor.duplicate.section_editor as se

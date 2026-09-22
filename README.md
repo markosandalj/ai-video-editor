@@ -17,7 +17,8 @@ upload from Drive into Gradivo/Mux is manual.
 
 Python 3.13+, [uv](https://docs.astral.sh/uv/), FFmpeg/ffprobe and libsndfile are
 required. There is no Node build, frontend, local review server or combined
-analysis/render CLI.
+analysis/render CLI. Quality-evaluation commands remain available with the `dev`
+extra: `uv run --extra dev python -m ai_video_editor --help`.
 
 ```bash
 uv sync --locked --extra dev
@@ -31,7 +32,7 @@ no live credentials, Drive/R2 access or local video corpus is required.
 
 ## Runtime
 
-The only installed application command is `ai-video-worker`. Configure it using
+The deployed application command is `ai-video-worker`. Configure it using
 [worker env examples](deployment/mac/env/worker.env.example) and the
 [Mac deployment runbook](deployment/mac/README.md). Compose loads `.env.worker`
 and `.env.cloudflared` separately; `.env.stack.local` supplies image references
@@ -48,6 +49,8 @@ running image is `ai-video-worker:f779947` and the tunnel is pinned to
 
 ## Contracts and maintenance
 
+- [Implementation phases](TASK_MANAGEMENT.md) and [phase records](tasks/)
+- [Quality iteration workflow](iterations/WORKFLOW.md) and [baseline](iterations/CURRENT_BASELINE.md)
 - [Domain language](CONTEXT.md)
 - [HTTP contract](docs/http-api.md)
 - [Headless architecture decision](docs/adr/0001-keep-ai-video-editor-headless.md)
@@ -56,5 +59,8 @@ running image is `ai-video-worker:f779947` and the tunnel is pinned to
 
 The active analysis implementation remains in `analysis.py`, `audio/`,
 `transcription/`, `decisions.py` and `duplicate/`. Rendering remains in `render/`;
-HTTP execution, providers and persistence remain in `worker/`. Historical UI,
-CLI and evaluation tools can be recovered from Git at `f779947`.
+HTTP execution, providers and persistence remain in `worker/`. `qa/`,
+`experiments/` and the development CLI retain scoring, model comparison, corpus
+reports and iteration support. Implementation phases and historical workflow
+visualizations remain as development references; the removed editor can be
+recovered from Git at `f779947`.

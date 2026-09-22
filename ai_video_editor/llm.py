@@ -14,7 +14,7 @@ class LangChainModelConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
-    id: str = Field(default="", description="Stable model identity for diagnostics.")
+    id: str = Field(default="", description="Stable experiment/reporting id.")
     class_path: str = Field(
         default="langchain_google_genai.ChatGoogleGenerativeAI",
         description="Import path for the LangChain chat model class.",
@@ -32,12 +32,33 @@ class LangChainModelConfig(BaseModel):
         description="Extra constructor kwargs passed to the chat model class.",
     )
 
+    def with_id(self, model_id: str) -> LangChainModelConfig:
+        return self.model_copy(update={"id": self.id or model_id})
+
+    def public_dict(self) -> dict[str, Any]:
+        return self.model_dump(mode="json", by_alias=True)
+
+
 def default_cutting_model_config() -> LangChainModelConfig:
     return LangChainModelConfig(
         id="gemini-2.5-flash",
         model="gemini-2.5-flash",
         temperature=0.0,
         provider_kwargs={"timeout": 120, "max_retries": 4},
+    )
+
+
+def direct_gemini_model_config(
+    *,
+    model: str,
+    temperature: float = 0.1,
+) -> LangChainModelConfig:
+    """Build a direct Gemini config for an explicitly named model."""
+    return LangChainModelConfig(
+        id=model,
+        model=model,
+        temperature=temperature,
+        provider_kwargs={"timeout": 180, "max_retries": 4},
     )
 
 

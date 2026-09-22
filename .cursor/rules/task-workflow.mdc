@@ -1,0 +1,46 @@
+---
+description: Task management workflow for the AI video editor project. Governs how phases are planned, grilled, executed, and completed.
+alwaysApply: true
+---
+
+# Task Management Workflow
+
+This project uses a file-based task management system. Read `TASK_MANAGEMENT.md` for the full process.
+
+## Session Start
+
+1. Read `TASK_MANAGEMENT.md` to understand the process.
+2. Check `tasks/` folders to find the current phase (look for `in-progress` or the first phase with `pending` tasks).
+3. Tell the user: which phase we're in, which tasks are done/in-progress/pending.
+
+## Before Starting a New Phase: Grilling Session
+
+You MUST grill the user before beginning any phase. Never skip this. The grilling has two parts:
+
+### Part 1: Requirements Drift Check
+
+If a previous phase was completed, ask:
+- Did anything change during the last phase that affects upcoming work?
+- Any requirements from the PRD that now seem unnecessary or need rethinking?
+- Did implementation reveal new tasks we need to add?
+
+### Part 2: Implementation Questions
+
+For each task in the upcoming phase, ask specific, technical questions that affect how the code gets written. These are NOT generic -- they should be concrete decisions. Examples:
+- "What sample rate for audio extraction -- 16kHz or 44.1kHz?"
+- "Should config be YAML or TOML?"
+- "Do you want the CLI to support batch mode from day one or add it later?"
+
+Present the questions using the AskQuestion tool when possible for structured answers. After the user answers, update each task file's `Requirements`, `Implementation Notes`, and `Acceptance Criteria` sections.
+
+## During a Phase
+
+- Work through tasks in dependency order.
+- Update task status to `in-progress` when starting, `done` when complete.
+- If blocked, set status to `blocked` and note what's blocking.
+
+## After Completing a Phase
+
+1. Verify all tasks are `done` or `cancelled`.
+2. Summarize: what was built, any deviations, any discoveries affecting future phases.
+3. Begin the next phase's grilling session.

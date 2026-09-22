@@ -56,9 +56,10 @@ image was rebuilt or deployed, and no render-quality settings were changed.
 
 ## Worker-only repository (2026-09-22)
 
-The local review UI/API, combined CLI, corpus evaluation runners and iteration
-promotion workflow are removed. Analysis algorithms and immutable-snapshot
-rendering remain behind the worker API. See [cleanup inventory](headless-cleanup.md)
+The local review UI/API and combined processing CLI are removed. Corpus
+evaluation runners, iteration records and implementation phases remain as
+development tools. Analysis algorithms and immutable-snapshot rendering remain
+behind the worker API. See [cleanup inventory](headless-cleanup.md)
 for scope and verification. Editor behavior described above belongs to Gradivo.
 
 The active worker is the separate ARM64 MacBook Air with OrbStack, image

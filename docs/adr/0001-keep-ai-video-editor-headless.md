@@ -6,7 +6,9 @@ accepts authenticated machine jobs, keeps operational processing state and
 temporary artifacts, and returns analysis or render results to Gradivo. The
 production editor, human review, permissions, and canonical editorial state
 live in Gradivo's Problem Builder. The former local review UI, review API and
-CLI workflow are removed; Git retains their migration history. Media moves directly between Google
+combined processing CLI are removed; Git retains their migration history.
+Development QA, model experiments, implementation phases and iteration records
+remain for improving the worker flow. Media moves directly between Google
 Drive, the worker, and a private Cloudflare R2 Standard bucket rather than
 through the Gradivo application server. The worker uses its own configured Drive
 credentials; Gradivo sends file identity and an integrity fingerprint, never a

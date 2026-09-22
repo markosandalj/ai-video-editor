@@ -1,0 +1,1041 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>One Video Workflow</title>
+    <style>
+      :root {
+        --bg: #f6f7f9;
+        --paper: #ffffff;
+        --ink: #1c2430;
+        --muted: #5e6978;
+        --line: #d9dee7;
+        --line-strong: #b8c1cf;
+        --system: #0f766e;
+        --human: #9a3412;
+        --output: #2563eb;
+        --risk: #b45309;
+        --good: #15803d;
+        --soft-system: #e6f5f2;
+        --soft-human: #fff1e8;
+        --soft-output: #eef4ff;
+        --soft-risk: #fff7df;
+        --shadow: 0 18px 45px rgba(28, 36, 48, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        line-height: 1.55;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .page {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 40px 24px 64px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+        gap: 28px;
+        align-items: stretch;
+        margin-bottom: 28px;
+      }
+
+      .hero-copy,
+      .panel,
+      .stage-card,
+      .artifact-card,
+      .check-card,
+      .note {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+      }
+
+      .hero-copy {
+        padding: 34px;
+      }
+
+      .eyebrow {
+        margin: 0 0 12px;
+        color: var(--system);
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        line-height: 1.1;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        max-width: 740px;
+        font-size: clamp(34px, 6vw, 66px);
+      }
+
+      h2 {
+        font-size: clamp(26px, 4vw, 38px);
+      }
+
+      h3 {
+        font-size: 19px;
+      }
+
+      p {
+        margin: 0;
+      }
+
+      .lead {
+        max-width: 720px;
+        margin-top: 20px;
+        color: var(--muted);
+        font-size: 19px;
+      }
+
+      .hero-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 28px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 34px;
+        padding: 7px 11px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: #fbfcfd;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: currentColor;
+      }
+
+      .hero-visual {
+        position: relative;
+        min-height: 420px;
+        overflow: hidden;
+        padding: 26px;
+        background:
+          linear-gradient(135deg, rgba(15, 118, 110, 0.08), transparent 38%),
+          linear-gradient(315deg, rgba(37, 99, 235, 0.09), transparent 42%),
+          var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+      }
+
+      .mini-label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .process-rail {
+        display: grid;
+        gap: 12px;
+        margin-top: 18px;
+      }
+
+      .rail-step {
+        display: grid;
+        grid-template-columns: 42px 1fr auto;
+        gap: 12px;
+        align-items: center;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.82);
+      }
+
+      .rail-number {
+        display: grid;
+        place-items: center;
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: var(--soft-output);
+        color: var(--output);
+        font-weight: 900;
+      }
+
+      .rail-step strong {
+        display: block;
+        font-size: 15px;
+      }
+
+      .rail-step span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .rail-owner {
+        min-width: 78px;
+        padding: 5px 8px;
+        border-radius: 999px;
+        text-align: center;
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .owner-system {
+        background: var(--soft-system);
+        color: var(--system);
+      }
+
+      .owner-human {
+        background: var(--soft-human);
+        color: var(--human);
+      }
+
+      .section {
+        margin-top: 48px;
+      }
+
+      .section-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 18px;
+        align-items: end;
+        margin-bottom: 18px;
+      }
+
+      .section-head p {
+        max-width: 560px;
+        color: var(--muted);
+      }
+
+      .overview {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .panel {
+        padding: 22px;
+      }
+
+      .panel h3 {
+        margin-bottom: 10px;
+      }
+
+      .panel p,
+      .stage-card p,
+      .artifact-card p,
+      .check-card p,
+      .note p {
+        color: var(--muted);
+      }
+
+      .panel-icon {
+        display: grid;
+        place-items: center;
+        width: 42px;
+        height: 42px;
+        margin-bottom: 16px;
+        border-radius: 8px;
+        color: var(--paper);
+        font-weight: 900;
+      }
+
+      .icon-system {
+        background: var(--system);
+      }
+
+      .icon-human {
+        background: var(--human);
+      }
+
+      .icon-output {
+        background: var(--output);
+      }
+
+      .flow-band {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+        padding: 22px;
+      }
+
+      .flow-svg {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .stages {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .stage-card {
+        position: relative;
+        padding: 24px 24px 24px 82px;
+        overflow: hidden;
+      }
+
+      .stage-card::before {
+        position: absolute;
+        left: 24px;
+        top: 24px;
+        display: grid;
+        place-items: center;
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: var(--soft-output);
+        color: var(--output);
+        content: attr(data-step);
+        font-weight: 900;
+      }
+
+      .stage-card h3 {
+        margin-bottom: 8px;
+      }
+
+      .stage-card ul,
+      .check-card ul,
+      .artifact-card ul {
+        margin: 14px 0 0;
+        padding-left: 18px;
+        color: var(--muted);
+      }
+
+      .stage-card li,
+      .check-card li,
+      .artifact-card li {
+        margin: 6px 0;
+      }
+
+      .artifact-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 16px;
+      }
+
+      .artifact-card {
+        padding: 22px;
+      }
+
+      .artifact-strip {
+        display: grid;
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      .artifact-item {
+        display: grid;
+        grid-template-columns: 9px 1fr;
+        gap: 12px;
+        align-items: start;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfcfd;
+      }
+
+      .artifact-item::before {
+        width: 9px;
+        height: 100%;
+        min-height: 34px;
+        border-radius: 999px;
+        background: var(--output);
+        content: "";
+      }
+
+      .artifact-item.raw::before {
+        background: var(--ink);
+      }
+
+      .artifact-item.auto::before {
+        background: var(--system);
+      }
+
+      .artifact-item.review::before {
+        background: var(--human);
+      }
+
+      .artifact-item.final::before {
+        background: var(--good);
+      }
+
+      .artifact-item strong {
+        display: block;
+        margin-bottom: 2px;
+      }
+
+      .artifact-item span {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .review-grid {
+        display: grid;
+        grid-template-columns: 1.05fr 0.95fr;
+        gap: 16px;
+      }
+
+      .check-card {
+        padding: 22px;
+      }
+
+      .check-card strong {
+        color: var(--ink);
+      }
+
+      .note {
+        padding: 24px;
+        border-left: 6px solid var(--risk);
+        background: var(--soft-risk);
+        box-shadow: none;
+      }
+
+      .boundary {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .boundary .panel {
+        box-shadow: none;
+      }
+
+      .footer-note {
+        margin-top: 48px;
+        color: var(--muted);
+        text-align: center;
+        font-size: 14px;
+      }
+
+      @media (max-width: 900px) {
+        .hero,
+        .overview,
+        .stages,
+        .artifact-grid,
+        .review-grid,
+        .boundary {
+          grid-template-columns: 1fr;
+        }
+
+        .hero-visual {
+          min-height: 0;
+        }
+
+        .section-head {
+          display: block;
+        }
+
+        .section-head p {
+          margin-top: 10px;
+        }
+      }
+
+      @media (max-width: 620px) {
+        .page {
+          padding: 22px 14px 40px;
+        }
+
+        .hero-copy,
+        .hero-visual,
+        .flow-band,
+        .panel,
+        .stage-card,
+        .artifact-card,
+        .check-card,
+        .note {
+          padding: 18px;
+        }
+
+        h1 {
+          font-size: 36px;
+        }
+
+        .lead {
+          font-size: 17px;
+        }
+
+        .rail-step {
+          grid-template-columns: 38px 1fr;
+        }
+
+        .rail-owner {
+          grid-column: 2;
+          width: fit-content;
+        }
+
+        .stage-card {
+          padding-left: 18px;
+          padding-top: 70px;
+        }
+
+        .stage-card::before {
+          left: 18px;
+          top: 18px;
+        }
+      }
+
+      @media print {
+        body {
+          background: #ffffff;
+        }
+
+        .page {
+          max-width: none;
+          padding: 0;
+        }
+
+        .hero-copy,
+        .hero-visual,
+        .panel,
+        .stage-card,
+        .artifact-card,
+        .check-card,
+        .note,
+        .flow-band {
+          box-shadow: none;
+          break-inside: avoid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero" aria-labelledby="page-title">
+        <div class="hero-copy">
+          <p class="eyebrow">Current AI video editor workflow · 17 July 2026</p>
+          <h1 id="page-title">One video from raw recording to reviewed output</h1>
+          <p class="lead">
+            A plain-language explanation of the pipeline active on the current main branch:
+            prepare the recording, create a timed transcript, let the section editor make
+            an automatic first cut, review that cut on a timeline, and render a separate
+            reviewed video.
+          </p>
+          <div class="hero-meta" aria-label="Document summary">
+            <span class="pill"><span class="dot"></span> Section editor is the main text path</span>
+            <span class="pill"><span class="dot"></span> Raw source is never overwritten</span>
+            <span class="pill"><span class="dot"></span> Human review changes time ranges</span>
+            <span class="pill"><span class="dot"></span> No enrichment or annotation pass</span>
+          </div>
+        </div>
+
+        <aside class="hero-visual" aria-label="Workflow summary">
+          <div class="mini-label">At a glance</div>
+          <div class="process-rail">
+            <div class="rail-step">
+              <div class="rail-number">1</div>
+              <div>
+                <strong>Prepare audio</strong>
+                <span>Clean sound, detect long pauses, and measure audio disruptions.</span>
+              </div>
+              <div class="rail-owner owner-system">System</div>
+            </div>
+            <div class="rail-step">
+              <div class="rail-number">2</div>
+              <div>
+                <strong>Create timed text</strong>
+                <span>Transcribe every word and correct obvious spelling mistakes.</span>
+              </div>
+              <div class="rail-owner owner-system">System</div>
+            </div>
+            <div class="rail-step">
+              <div class="rail-number">3</div>
+              <div>
+                <strong>Build the automatic edit</strong>
+                <span>Sol names exact text to remove; code verifies and maps it to time.</span>
+              </div>
+              <div class="rail-owner owner-system">System</div>
+            </div>
+            <div class="rail-step">
+              <div class="rail-number">4</div>
+              <div>
+                <strong>Review on the timeline</strong>
+                <span>A person restores useful speech or adds missed cuts anywhere.</span>
+              </div>
+              <div class="rail-owner owner-human">Human</div>
+            </div>
+            <div class="rail-step">
+              <div class="rail-number">5</div>
+              <div>
+                <strong>Render the reviewed video</strong>
+                <span>The saved review timeline becomes a separate output file.</span>
+              </div>
+              <div class="rail-owner owner-system">System</div>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="section overview" aria-label="Main principles">
+        <article class="panel">
+          <div class="panel-icon icon-system">AI</div>
+          <h3>AI makes a real first cut</h3>
+          <p>
+            GPT-5.6 Sol reads the transcript in large sections and proposes exact spans to
+            delete. Proposals that pass code-level checks become automatic cuts. They are
+            not merely colored suggestions waiting in a separate queue.
+          </p>
+        </article>
+        <article class="panel">
+          <div class="panel-icon icon-human">OK</div>
+          <h3>A person remains the final editor</h3>
+          <p>
+            The review tool shows the video, transcript, waveform, and cut ranges. The
+            reviewer can change any cut directly and save a separate reviewed edit plan.
+          </p>
+        </article>
+        <article class="panel">
+          <div class="panel-icon icon-output">1</div>
+          <h3>Every important layer stays separate</h3>
+          <p>
+            The raw recording, transcript, automatic EDL, reviewed EDL, and rendered videos
+            are separate files. A bad decision never destroys the source.
+          </p>
+        </article>
+      </section>
+
+      <section class="section" aria-labelledby="flow-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">The actual path</p>
+            <h2 id="flow-title">What happens to one recording</h2>
+          </div>
+          <p>
+            There is one active AI text-editing path. The old duplicate cascade,
+            enrichment judge, sentence badges, heat map, and restore queue are not part
+            of this flow.
+          </p>
+        </div>
+
+        <div class="flow-band">
+          <svg class="flow-svg" viewBox="0 0 1100 420" role="img" aria-labelledby="flow-svg-title flow-svg-desc">
+            <title id="flow-svg-title">One video workflow diagram</title>
+            <desc id="flow-svg-desc">
+              Raw recording goes through audio preparation, timed transcription, an
+              automatic EDL, human timeline review, and a separate reviewed output.
+            </desc>
+            <defs>
+              <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                <path d="M0,0 L10,5 L0,10 Z" fill="#64748b"></path>
+              </marker>
+              <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#1c2430" flood-opacity="0.12"></feDropShadow>
+              </filter>
+            </defs>
+
+            <rect x="20" y="54" width="174" height="92" rx="8" fill="#ffffff" stroke="#d9dee7" filter="url(#softShadow)"></rect>
+            <text x="107" y="86" text-anchor="middle" font-size="15" font-weight="800" fill="#1c2430">Raw recording</text>
+            <text x="107" y="113" text-anchor="middle" font-size="13" fill="#5e6978">One unedited</text>
+            <text x="107" y="132" text-anchor="middle" font-size="13" fill="#5e6978">problem explanation</text>
+
+            <line x1="194" y1="100" x2="264" y2="100" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"></line>
+
+            <rect x="264" y="34" width="188" height="132" rx="8" fill="#e6f5f2" stroke="#8ac9bf"></rect>
+            <text x="358" y="68" text-anchor="middle" font-size="15" font-weight="800" fill="#0f766e">Prepare</text>
+            <text x="358" y="96" text-anchor="middle" font-size="13" fill="#315b57">Clean sound</text>
+            <text x="358" y="116" text-anchor="middle" font-size="13" fill="#315b57">Find speech</text>
+            <text x="358" y="136" text-anchor="middle" font-size="13" fill="#315b57">Measure pauses</text>
+
+            <line x1="452" y1="100" x2="522" y2="100" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"></line>
+
+            <rect x="522" y="34" width="188" height="132" rx="8" fill="#eef4ff" stroke="#aac4ff"></rect>
+            <text x="616" y="68" text-anchor="middle" font-size="15" font-weight="800" fill="#2563eb">Timed transcript</text>
+            <text x="616" y="96" text-anchor="middle" font-size="13" fill="#43546f">Word timestamps</text>
+            <text x="616" y="116" text-anchor="middle" font-size="13" fill="#43546f">Sentence sections</text>
+            <text x="616" y="136" text-anchor="middle" font-size="13" fill="#43546f">Spelling corrections</text>
+
+            <line x1="710" y1="100" x2="780" y2="100" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"></line>
+
+            <rect x="780" y="34" width="188" height="132" rx="8" fill="#e6f5f2" stroke="#8ac9bf"></rect>
+            <text x="874" y="68" text-anchor="middle" font-size="15" font-weight="800" fill="#0f766e">Automatic EDL</text>
+            <text x="874" y="96" text-anchor="middle" font-size="13" fill="#315b57">Sol text decisions</text>
+            <text x="874" y="116" text-anchor="middle" font-size="13" fill="#315b57">Verified exact spans</text>
+            <text x="874" y="136" text-anchor="middle" font-size="13" fill="#315b57">Quiet cut boundaries</text>
+
+            <line x1="874" y1="166" x2="874" y2="218" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"></line>
+
+            <rect x="780" y="218" width="188" height="116" rx="8" fill="#fff1e8" stroke="#fdba74"></rect>
+            <text x="874" y="252" text-anchor="middle" font-size="15" font-weight="800" fill="#9a3412">Human review</text>
+            <text x="874" y="281" text-anchor="middle" font-size="13" fill="#6d412c">Watch, read, adjust</text>
+            <text x="874" y="301" text-anchor="middle" font-size="13" fill="#6d412c">Edit source-time ranges</text>
+
+            <line x1="780" y1="276" x2="710" y2="276" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"></line>
+
+            <rect x="522" y="218" width="188" height="116" rx="8" fill="#ecfdf3" stroke="#86efac"></rect>
+            <text x="616" y="252" text-anchor="middle" font-size="15" font-weight="800" fill="#15803d">Final reviewed</text>
+            <text x="616" y="281" text-anchor="middle" font-size="13" fill="#365c43">Reviewed video</text>
+            <text x="616" y="301" text-anchor="middle" font-size="13" fill="#365c43">Ready for next step</text>
+
+            <path d="M107 146 C107 370 484 370 616 334" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="7 7"></path>
+            <text x="286" y="386" font-size="13" fill="#5e6978">Raw source remains available for recovery and comparison</text>
+          </svg>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="stage-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Step by step</p>
+            <h2 id="stage-title">The six stages</h2>
+          </div>
+          <p>
+            These stages describe the active path for a single raw recording. Batch
+            processing repeats the same path for each video.
+          </p>
+        </div>
+
+        <div class="stages">
+          <article class="stage-card" data-step="1">
+            <h3>Prepare the audio</h3>
+            <p>
+              The system extracts audio, reduces steady background noise, finds silences
+              of at least three seconds, and measures loud non-speech disruptions such as
+              coughs or microphone bumps.
+            </p>
+            <ul>
+              <li>The original video picture is left untouched.</li>
+              <li>Long silence becomes an initial keep/cut outline.</li>
+              <li>Audio evidence can help identify a stranded false start.</li>
+            </ul>
+          </article>
+
+          <article class="stage-card" data-step="2">
+            <h3>Create a timed transcript</h3>
+            <p>
+              ElevenLabs Scribe turns Croatian speech into words with timestamps. Long
+              pauses can split a sentence into smaller editing units. Gemini then corrects
+              only obvious spelling mistakes; it does not rewrite the professor's style.
+            </p>
+            <ul>
+              <li>Every word remains tied to its original place in the video.</li>
+              <li>Spoken fillers and imperfect grammar are preserved.</li>
+              <li>The transcript is cached so experiments do not need new transcription.</li>
+            </ul>
+          </article>
+
+          <article class="stage-card" data-step="3">
+            <h3>Decide what to cut</h3>
+            <p>
+              GPT-5.6 Sol reads roughly 1,200 words at a time and returns exact transcript
+              spans for retakes, false starts, stutters, or filler. Code verifies each span
+              and converts it to timestamps. A narrow deterministic detector also catches
+              exceptionally clear local correction chains.
+            </p>
+            <ul>
+              <li>Sol is the main and only active text-judgment editor.</li>
+              <li>Risky "redundant" removals are rejected and remain kept.</li>
+              <li>Audio false starts and short off-lesson asides run as supporting lanes.</li>
+            </ul>
+          </article>
+
+          <article class="stage-card" data-step="4">
+            <h3>Build and render the automatic draft</h3>
+            <p>
+              Accepted decisions are merged into one edit decision list, or EDL. Each cut
+              keeps its source reason, confidence, and note. Cut edges are moved to nearby
+              quiet audio points before the automatic MP4 is rendered.
+            </p>
+            <ul>
+              <li>Whole sentences and partial word spans can both be cut.</li>
+              <li>Real silence remains distinct from AI text cuts.</li>
+              <li>Short audio fades soften the joins.</li>
+            </ul>
+          </article>
+
+          <article class="stage-card" data-step="5">
+            <h3>Review and correct the timeline</h3>
+            <p>
+              The review app shows the video, waveform, transcript, and cut ranges. The
+              reviewer can select any source-time range to cut, restore existing cuts,
+              preview edited playback, save, and move between videos.
+            </p>
+            <ul>
+              <li>Transcript and timeline are two views of the same ranges.</li>
+              <li>The Compare screen shows pipeline versus human cuts for QA fixtures.</li>
+              <li>There are no badges, heat maps, salience scores, or restore queue.</li>
+              <li>The reviewed video can be rendered from the same app.</li>
+            </ul>
+          </article>
+
+          <article class="stage-card" data-step="6">
+            <h3>Save and render the reviewed result</h3>
+            <p>
+              Review changes are saved as a separate reviewed EDL. Rendering uses the raw
+              video, cleaned audio, and reviewed keep ranges to create a separate reviewed MP4.
+            </p>
+            <ul>
+              <li>The automatic EDL remains available for comparison.</li>
+              <li>An empty review cut list restores the entire source.</li>
+              <li>The reviewed render never overwrites the raw recording.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="artifact-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Saved evidence</p>
+            <h2 id="artifact-title">What remains beside the video</h2>
+          </div>
+          <p>
+            Separate files make a bad result inspectable and reversible.
+          </p>
+        </div>
+
+        <div class="artifact-grid">
+          <article class="artifact-card">
+            <h3>The preserved layers</h3>
+            <div class="artifact-strip">
+              <div class="artifact-item raw">
+                <div>
+                  <strong>Raw recording</strong>
+                  <span>The untouched recovery source.</span>
+                </div>
+              </div>
+              <div class="artifact-item auto">
+                <div>
+                  <strong>Transcript and grammar report</strong>
+                  <span>Timed words plus spelling-correction history.</span>
+                </div>
+              </div>
+              <div class="artifact-item auto">
+                <div>
+                  <strong>Audio envelope and automatic EDL</strong>
+                  <span>Waveform data and the system's keep/cut timeline.</span>
+                </div>
+              </div>
+              <div class="artifact-item review">
+                <div>
+                  <strong>Reviewed EDL</strong>
+                  <span>The reviewer-corrected source-time cut ranges.</span>
+                </div>
+              </div>
+              <div class="artifact-item final">
+                <div>
+                  <strong>Automatic and reviewed MP4s</strong>
+                  <span>Separate renders made from their matching EDLs.</span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="artifact-card">
+            <h3>Evaluation adds more evidence</h3>
+            <p>
+              QA runs use cached raw transcripts and human-edited transcripts. They save
+              per-video EDLs, every section-editor proposal and its accepted or rejected
+              outcome, model and prompt metadata, aggregate scores, and reference comparisons.
+            </p>
+            <ul>
+              <li>Runs checkpoint after each video and can resume.</li>
+              <li>Precision measures how often proposed cuts were right.</li>
+              <li>Recall measures how many human cuts the pipeline found.</li>
+              <li>The Compare screen exposes individual disagreements.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="review-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Human review</p>
+            <h2 id="review-title">What the reviewer is checking</h2>
+          </div>
+          <p>
+            The reviewer does not need annotation scores. The transcript and timeline show
+            what will actually be removed, and the reviewer checks that the lesson still
+            makes sense and sounds natural.
+          </p>
+        </div>
+
+        <div class="review-grid">
+          <article class="check-card">
+            <h3>Keep the lesson intact</h3>
+            <ul>
+              <li><strong>Was a useful explanation cut?</strong> Restore it.</li>
+              <li><strong>Was an incorrect take kept?</strong> Cut it.</li>
+              <li><strong>Did a correction get handled properly?</strong> Keep the correct version.</li>
+              <li><strong>Does the math or explanation still flow?</strong> Check before approving.</li>
+            </ul>
+          </article>
+
+          <article class="check-card">
+            <h3>Keep the video natural</h3>
+            <ul>
+              <li><strong>Is a pause too short?</strong> Adjust the decision if it feels rushed.</li>
+              <li><strong>Does a transition sound awkward?</strong> Review the nearby cut.</li>
+              <li><strong>Is a short filler phrase actually natural?</strong> It can stay.</li>
+              <li><strong>Does the waveform hide an awkward edge?</strong> Move the cut range.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="rules-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Predictable boundaries</p>
+            <h2 id="rules-title">What the AI decides and what code decides</h2>
+          </div>
+          <p>
+            Sol makes the semantic judgment about which spoken text looks removable. Code
+            then constrains that judgment before it can change the timeline.
+          </p>
+        </div>
+
+        <div class="review-grid">
+          <article class="check-card">
+            <h3>Automatic protections</h3>
+            <ul>
+              <li><strong>The text must exist:</strong> invented or badly matched spans are rejected.</li>
+              <li><strong>The section must own it:</strong> overlap context cannot double-cut it.</li>
+              <li><strong>Short whole-sentence retakes are protected:</strong> recurring lines such as "Dobro" are normally kept.</li>
+              <li><strong>Far-away retakes are recap risks:</strong> supplied evidence more than 60 seconds away is rejected.</li>
+              <li><strong>"Redundant" content stays:</strong> this risky deletion type is rejected, not queued for annotation review.</li>
+            </ul>
+          </article>
+
+          <article class="check-card">
+            <h3>What the protections do not guarantee</h3>
+            <ul>
+              <li>A verbatim span can still be the wrong editorial choice.</li>
+              <li>Partial false starts, stutters, and filler currently have fewer semantic safeguards than whole retakes.</li>
+              <li>On an already-clean lesson, a few plausible AI guesses can dominate the small number of real cuts.</li>
+              <li>Human review is still required before the automatic result is final.</li>
+              <li>QA compares every change against the same 98 human-edited fixtures.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="status-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Current quality status</p>
+            <h2 id="status-title">What we know today</h2>
+          </div>
+          <p>
+            The latest complete corpus artifact is useful evidence, but it is not a fresh
+            run of every change now on the main branch.
+          </p>
+        </div>
+
+        <div class="review-grid">
+          <article class="check-card">
+            <h3>What passed</h3>
+            <ul>
+              <li>The section editor replaced the old tiered duplicate path as the default.</li>
+              <li>The latest evaluated 98-video artifact scored about 0.797 cut precision, 0.676 recall, and 0.732 F1.</li>
+              <li>The deterministic correction lane added 33 correct cut words and zero overcuts in its fixed-EDL projection.</li>
+              <li>Enrichment and its arbiter were removed because they did not reliably improve the new cutter.</li>
+            </ul>
+          </article>
+
+          <article class="check-card">
+            <h3>What still needs work</h3>
+            <ul>
+              <li>The 98-video review workspace uses older Sol EDLs plus the Iteration 19 projection, not a fresh current-main run.</li>
+              <li>Fizika is a weak spot: the reference cuts only about 1.8% of its words, so unnecessary partial cuts hurt badly.</li>
+              <li>On the saved Fizika cohort, only 35 of 115 pipeline-cut words match the reference; 80 are scored as overcuts.</li>
+              <li>The next honest measurement should rerun the clean-video cohort with current provenance and traces before another full corpus run.</li>
+            </ul>
+          </article>
+        </div>
+
+        <div class="note" style="margin-top: 16px">
+          <h3>Latest full result is not the same as fresh latest-code output</h3>
+          <p>
+            The review UI can point at the newest complete artifact while still showing
+            decisions generated before later provenance and tracing improvements.
+          </p>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="boundary-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Production boundary</p>
+            <h2 id="boundary-title">Where this process ends</h2>
+          </div>
+          <p>
+            The AI video editor prepares and reviews the edited video. Gradivo still owns
+            the final publishing workflow.
+          </p>
+        </div>
+
+        <div class="boundary">
+          <article class="panel">
+            <h3>AI video editor owns</h3>
+            <ul>
+              <li>Temporary media needed for processing.</li>
+              <li>Speech analysis and editing transcript.</li>
+              <li>Automatic EDL and acoustic boundary snapping.</li>
+              <li>Browser-based transcript and timeline review.</li>
+              <li>Separate automatic and reviewed renders.</li>
+              <li>Fixture QA, traces, and model comparisons.</li>
+            </ul>
+          </article>
+
+          <article class="panel">
+            <h3>Gradivo still owns</h3>
+            <ul>
+              <li>Which raw recording belongs to which problem.</li>
+              <li>Production status and responsibility tracking.</li>
+              <li>Upload to the final video platform.</li>
+              <li>Student-facing transcript, chapters, and explanations.</li>
+              <li>Final review, publishability, and publishing.</li>
+            </ul>
+          </article>
+        </div>
+
+        <div class="note" style="margin-top: 16px">
+          <h3>The editing transcript is not the final student transcript</h3>
+          <p>
+            The transcript created during AI editing helps the system make and review cut
+            decisions. Gradivo should still create the student-facing transcript from the
+            final reviewed video, so the transcript matches exactly what students watch.
+          </p>
+        </div>
+      </section>
+
+      <p class="footer-note">
+        Core principle: AI proposes exact cuts, code constrains them, and a human owns the final timeline.
+      </p>
+    </main>
+  </body>
+</html>

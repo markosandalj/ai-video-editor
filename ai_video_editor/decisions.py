@@ -16,6 +16,7 @@ from ai_video_editor.duplicate.edl import EditDecisionList, build_edl
 from ai_video_editor.duplicate.false_start_audio import detect_audio_false_starts
 from ai_video_editor.duplicate.models import DuplicateFlag, FlagReason
 from ai_video_editor.duplicate.section_editor import detect_section_edits
+from ai_video_editor.llm import LangChainModelConfig
 from ai_video_editor.transcription.models import Transcript
 
 
@@ -24,6 +25,8 @@ def detect_all_flags(
     silences: list[SilenceRegion],
     disruptions: list[DisruptionRegion],
     settings: Settings,
+    *,
+    cutting_llm_config: LangChainModelConfig | None = None,
 ) -> list[DuplicateFlag]:
     """Duplicate/false-start/stutter/fragment flags, aside flags, and audio-driven
     (cough/noise) false starts."""
@@ -64,7 +67,7 @@ def detect_all_flags(
         silences,
         flagged,
         settings.aside_detection,
-        llm_config=settings.cutting_llm,
+        llm_config=cutting_llm_config or settings.cutting_llm,
     )
     flagged |= {f.idx for f in aside_flags if not f.word_trims}
     return flags + aside_flags

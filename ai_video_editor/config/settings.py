@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
@@ -14,16 +15,22 @@ from ai_video_editor.llm import (
 
 
 class GeneralConfig(BaseModel):
-    """Job-scoped analysis scratch configuration."""
+    """Analysis scratch and local development logging configuration."""
 
     model_config = ConfigDict(extra="allow")
+
+    output_dir: Path = Field(
+        default_factory=lambda: Path.cwd() / "output",
+        description="Local development reports and logs (not worker artifacts).",
+    )
+    log_level: Literal["TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR"] = "INFO"
 
     temp_dir: Path = Field(
         default_factory=lambda: Path.cwd() / ".ai_video_editor_tmp",
         description="Scratch space for intermediate files.",
     )
 
-    @field_validator("temp_dir", mode="before")
+    @field_validator("output_dir", "temp_dir", mode="before")
     @classmethod
     def expand_path(cls, v: Path | str) -> Path:
         return Path(v).expanduser().resolve()

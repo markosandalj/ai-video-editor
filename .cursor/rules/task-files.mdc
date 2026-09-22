@@ -1,0 +1,45 @@
+---
+description: How to read and update task files in the tasks/ directory
+globs: tasks/**/*.md
+alwaysApply: false
+---
+
+# Task File Format
+
+Each task file in `tasks/phase-N/` follows this structure:
+
+```
+# Task Title
+
+Status: `pending`
+Phase: N
+Depends on: [dependencies]
+
+## Objective
+What and why.
+
+## Requirements
+Filled during grilling session with user's answers.
+
+## Implementation Notes
+Technical decisions and approach.
+
+## Acceptance Criteria
+- [ ] Checkboxes for completion verification
+```
+
+## Status Values
+
+- `pending` -- not started
+- `in-progress` -- actively being worked on
+- `done` -- all acceptance criteria met
+- `blocked` -- cannot proceed, note the reason
+- `cancelled` -- no longer needed
+
+## Rules for Updating
+
+- Only change status to `in-progress` for one task at a time.
+- Mark `done` only when ALL acceptance criteria checkboxes are checked.
+- When grilling reveals new info, update Requirements and Implementation Notes.
+- Never delete a task file. Set status to `cancelled` instead.
+- If grilling reveals a new task, create a new numbered file in the phase folder.
