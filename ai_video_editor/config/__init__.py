@@ -4,7 +4,6 @@ from ai_video_editor.config.settings import (
     RenderConfig,
     Settings,
     TranscriptionConfig,
-    get_settings,
 )
 from ai_video_editor.llm import LangChainModelConfig
 
@@ -15,5 +14,4 @@ __all__ = [
     "RenderConfig",
     "Settings",
     "TranscriptionConfig",
-    "get_settings",
 ]

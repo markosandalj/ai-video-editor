@@ -10,7 +10,7 @@ from ai_video_editor.duplicate.local_corrections import detect_local_corrections
 from ai_video_editor.duplicate.models import FlagReason
 from ai_video_editor.transcription.models import Sentence, Transcript, Word
 
-FIXTURES = Path(__file__).parent / "fixtures"
+FIXTURES = Path(__file__).parent / "data" / "local_corrections"
 
 
 def _transcript(name: str) -> Transcript:

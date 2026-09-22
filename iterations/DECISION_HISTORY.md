@@ -67,4 +67,3 @@ git ls-tree -r --name-only eb3e892 iterations/
 
 Tags `iter-014` through `iter-020` and their candidate tags provide additional
 revert points. Earlier iteration material is available from ordinary Git history.
-

@@ -1,25 +1,20 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import glob
 import os
 from pathlib import Path
 
 import typer
 from loguru import logger
 
-from ai_video_editor.config.settings import Settings, get_settings
-from ai_video_editor.logging.setup import attach_video_log, remove_video_log, setup_logging
+from ai_video_editor.config.settings import Settings
+from ai_video_editor.logging.setup import setup_logging
 
 app = typer.Typer(
     name="ai-video-editor",
-    help="AI-assisted transcript-based video editing pipeline",
+    help="Development QA and quality iteration for the headless media worker",
     no_args_is_help=True,
 )
-
-
-def _resolve_video_extensions() -> tuple[str, ...]:
-    return (".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v")
 
 
 def _default_worker_count() -> int:
@@ -31,73 +26,6 @@ def _default_worker_count() -> int:
 
 
 DEFAULT_WORKERS = _default_worker_count()
-
-
-def _process_video_file(
-    p: Path,
-    *,
-    settings: Settings,
-    force: bool,
-    position: int,
-    total: int,
-) -> bool:
-    from ai_video_editor.audio import (
-        build_audio_envelope,
-        build_disruptions,
-        compute_keep_regions,
-        detect_silences,
-        extract_audio,
-        reduce_noise,
-        snap_edl_boundaries,
-        write_audio_envelope,
-    )
-    from ai_video_editor.decisions import decide_edits
-    from ai_video_editor.duplicate.debug import save_debug_files
-    from ai_video_editor.render import render_video
-    from ai_video_editor.transcription import load_cached_transcript, save_transcript
-    from ai_video_editor.transcription.pipeline import transcribe_with_elevenlabs_and_grammar
-
-    stem = p.stem
-    attach_video_log(settings, stem)
-    log = logger.bind(video=stem)
-    log.info("[{}/{}] Processing: {}", position, total, p)
-    try:
-        meta = extract_audio(p, settings)
-        denoised = reduce_noise(meta, settings)
-        silences = detect_silences(denoised, settings)
-        keeps = compute_keep_regions(silences, denoised.duration_s, settings)
-
-        cached = None if force else load_cached_transcript(p)
-        if cached is not None:
-            log.info("Using cached transcript ({} sentences)", len(cached.sentences))
-        else:
-            cached = transcribe_with_elevenlabs_and_grammar(denoised, p, settings)
-            save_transcript(p, cached)
-
-        disruptions = build_disruptions(Path(meta.path), cached, settings.disruption)
-        edl = decide_edits(cached, keeps, silences, settings, disruptions=disruptions)
-
-        envelope = build_audio_envelope(Path(denoised.path))
-        write_audio_envelope(p, envelope)
-        edl = snap_edl_boundaries(edl, cached, envelope)
-
-        edl_path = p.with_suffix(".edl.json")
-        edl_path.write_text(edl.model_dump_json(indent=2), encoding="utf-8")
-
-        save_debug_files(p, cached, edl)
-
-        output = render_video(p, edl, Path(denoised.path), settings.render)
-
-        log.info(
-            "Done: {} sentences, keep={:.1f}s cut={:.1f}s → {}",
-            len(cached.sentences), edl.keep_duration, edl.cut_duration, output.name,
-        )
-        return True
-    except Exception:
-        log.exception("Failed to process {}", p)
-        return False
-    finally:
-        remove_video_log(stem)
 
 
 def _eval_cut_decisions(raw_path: Path, edl, gt_sentences, *, name: str, issues: list):
@@ -231,177 +159,6 @@ def _run_qa_pair(pair: tuple[str, Path, Path], *, root: Path):
     report.issues = issues
     report.overall_passed = not any(i.severity == Severity.ERROR for i in issues)
     return report
-
-
-@app.command()
-def process(
-    input_path: Path = typer.Argument(..., exists=True, readable=True, help="Path to a single video file."),
-    output_dir: Path | None = typer.Option(
-        None,
-        "--output-dir",
-        "-o",
-        help="Output directory (default: from Settings.general.output_dir).",
-    ),
-    config: Path | None = typer.Option(
-        None,
-        "--config",
-        "-c",
-        exists=True,
-        readable=True,
-        help="Optional Python file defining `settings` (a Settings instance).",
-    ),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Shortcut for DEBUG log level."),
-    force: bool = typer.Option(False, "--force", "-f", help="Ignore cached transcripts, re-process from scratch."),
-) -> None:
-    """Process a single video through the editing pipeline."""
-    settings = get_settings(config_path=config)
-    g_updates: dict = {}
-    if output_dir is not None:
-        g_updates["output_dir"] = output_dir.expanduser().resolve()
-    if verbose:
-        g_updates["log_level"] = "DEBUG"
-    if g_updates:
-        settings = settings.model_copy(
-            update={"general": settings.general.model_copy(update=g_updates)}
-        )
-    setup_logging(settings)
-    stem = input_path.stem
-    attach_video_log(settings, stem)
-    log = logger.bind(video=stem)
-    log.info("Processing: {}", input_path)
-
-    from ai_video_editor.audio import (
-        build_audio_envelope,
-        build_disruptions,
-        compute_keep_regions,
-        detect_silences,
-        extract_audio,
-        reduce_noise,
-        snap_edl_boundaries,
-        write_audio_envelope,
-    )
-    from ai_video_editor.decisions import decide_edits
-    from ai_video_editor.duplicate.debug import save_debug_files
-    from ai_video_editor.render import render_video
-    from ai_video_editor.transcription import load_cached_transcript, save_transcript
-    from ai_video_editor.transcription.pipeline import transcribe_with_elevenlabs_and_grammar
-
-    meta = extract_audio(input_path, settings)
-    denoised = reduce_noise(meta, settings)
-    silences = detect_silences(denoised, settings)
-    keeps = compute_keep_regions(silences, denoised.duration_s, settings)
-
-    cached = None if force else load_cached_transcript(input_path)
-    if cached is not None:
-        log.info("Using cached transcript ({} sentences)", len(cached.sentences))
-    else:
-        cached = transcribe_with_elevenlabs_and_grammar(denoised, input_path, settings)
-        save_transcript(input_path, cached)
-
-    disruptions = build_disruptions(Path(meta.path), cached, settings.disruption)
-    edl = decide_edits(cached, keeps, silences, settings, disruptions=disruptions)
-
-    envelope = build_audio_envelope(Path(denoised.path))
-    write_audio_envelope(input_path, envelope)
-    edl = snap_edl_boundaries(edl, cached, envelope)
-
-    edl_path = input_path.with_suffix(".edl.json")
-    edl_path.write_text(edl.model_dump_json(indent=2), encoding="utf-8")
-
-    save_debug_files(input_path, cached, edl)
-
-    output = render_video(
-        input_path,
-        edl,
-        Path(denoised.path),
-        settings.render,
-    )
-
-    log.info(
-        "Pipeline complete: {} sentences, keep={:.1f}s cut={:.1f}s → {}",
-        len(cached.sentences), edl.keep_duration, edl.cut_duration, output.name,
-    )
-    remove_video_log(stem)
-
-
-@app.command()
-def batch(
-    pattern: str = typer.Argument(..., help='Glob pattern, e.g. "videos/**/*.mp4"'),
-    output_dir: Path | None = typer.Option(
-        None,
-        "--output-dir",
-        "-o",
-        help="Output directory (default: from Settings.general.output_dir).",
-    ),
-    config: Path | None = typer.Option(
-        None,
-        "--config",
-        "-c",
-        exists=True,
-        readable=True,
-        help="Optional Python file defining `settings` (a Settings instance).",
-    ),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Shortcut for DEBUG log level."),
-    force: bool = typer.Option(False, "--force", "-f", help="Ignore cached transcripts, re-process from scratch."),
-    workers: int = typer.Option(
-        DEFAULT_WORKERS,
-        "--workers",
-        "-w",
-        min=1,
-        help="Maximum videos to process concurrently. Use 1 for sequential execution.",
-    ),
-) -> None:
-    """Process all videos matching a glob pattern."""
-    settings = get_settings(config_path=config)
-    g_updates: dict = {}
-    if output_dir is not None:
-        g_updates["output_dir"] = output_dir.expanduser().resolve()
-    if verbose:
-        g_updates["log_level"] = "DEBUG"
-    if g_updates:
-        settings = settings.model_copy(
-            update={"general": settings.general.model_copy(update=g_updates)}
-        )
-    setup_logging(settings)
-    paths = sorted(Path(p) for p in glob.glob(pattern, recursive=True))
-    exts = _resolve_video_extensions()
-    videos = [p for p in paths if p.is_file() and p.suffix.lower() in exts]
-
-    if not videos:
-        logger.warning("No video files matched pattern: {}", pattern)
-        raise typer.Exit(code=1)
-
-    worker_count = min(workers, len(videos))
-    logger.info("Batch processing {} videos with {} worker(s)", len(videos), worker_count)
-
-    success = 0
-    failed = 0
-    if worker_count == 1:
-        for i, p in enumerate(videos, 1):
-            if _process_video_file(p, settings=settings, force=force, position=i, total=len(videos)):
-                success += 1
-            else:
-                failed += 1
-    else:
-        with ThreadPoolExecutor(max_workers=worker_count) as executor:
-            futures = {
-                executor.submit(
-                    _process_video_file,
-                    p,
-                    settings=settings,
-                    force=force,
-                    position=i,
-                    total=len(videos),
-                ): p
-                for i, p in enumerate(videos, 1)
-            }
-            for future in as_completed(futures):
-                if future.result():
-                    success += 1
-                else:
-                    failed += 1
-
-    logger.info("Batch complete: {}/{} succeeded, {} failed", success, len(videos), failed)
 
 
 @app.command()
@@ -693,84 +450,6 @@ def eval_section_editor(
         raise typer.Exit(code=1)
     print((output_dir / "report.md").read_text("utf-8"))
     print(f"\nreport:  {output_dir / 'report.md'}")
-
-
-@app.command("review-export")
-def review_export(
-    input_path: Path = typer.Argument(..., exists=True, readable=True, help="Raw source video to export for review."),
-) -> None:
-    """Create a review JSON payload from an existing transcript + EDL."""
-    from ai_video_editor.review import write_review_payload
-
-    output = write_review_payload(input_path)
-    logger.info("Review payload written: {}", output)
-
-
-@app.command("review-serve")
-def review_serve(
-    media_root: Path = typer.Argument(
-        Path("tests/fixtures"),
-        exists=True,
-        file_okay=False,
-        dir_okay=True,
-        readable=True,
-        help="Directory containing processed videos, transcripts, and EDL files.",
-    ),
-    host: str = typer.Option("127.0.0.1", "--host", help="Host to bind."),
-    port: int = typer.Option(8000, "--port", help="Port to bind."),
-    frontend_dist: Path | None = typer.Option(
-        None,
-        "--frontend-dist",
-        exists=True,
-        file_okay=False,
-        dir_okay=True,
-        readable=True,
-        help="Optional built frontend dist directory.",
-    ),
-) -> None:
-    """Serve the review API and built frontend."""
-    import uvicorn
-
-    from ai_video_editor.web import create_app
-
-    web_app = create_app(media_root=media_root, frontend_dist=frontend_dist)
-    uvicorn.run(web_app, host=host, port=port)
-
-
-@app.command("review-render")
-def review_render(
-    input_path: Path = typer.Argument(..., exists=True, readable=True, help="Raw source video to render from review EDL."),
-    denoised_audio: Path | None = typer.Option(
-        None,
-        "--denoised-audio",
-        exists=True,
-        readable=True,
-        help="Denoised WAV to use for rendering. Defaults to .ai_video_editor_tmp/<stem>_denoised.wav.",
-    ),
-) -> None:
-    """Render a reviewed sidecar EDL to <stem>_reviewed.mp4."""
-    from ai_video_editor.config.settings import RenderConfig
-    from ai_video_editor.duplicate.edl import EditDecisionList
-    from ai_video_editor.render import render_video
-    from ai_video_editor.review import review_edl_path_for
-
-    review_path = review_edl_path_for(input_path)
-    if not review_path.exists():
-        logger.error("Reviewed EDL not found: {}", review_path)
-        raise typer.Exit(code=1)
-
-    audio_path = denoised_audio or _default_denoised_audio_path(input_path)
-    if not audio_path.exists():
-        logger.error("Denoised audio not found: {}", audio_path)
-        raise typer.Exit(code=1)
-
-    edl = EditDecisionList.model_validate_json(review_path.read_text(encoding="utf-8"))
-    output = render_video(input_path, edl, audio_path, RenderConfig(output_suffix="_reviewed"))
-    logger.info("Reviewed render complete: {}", output)
-
-
-def _default_denoised_audio_path(input_path: Path) -> Path:
-    return Path.cwd() / ".ai_video_editor_tmp" / f"{input_path.stem}_denoised.wav"
 
 
 def main() -> None:

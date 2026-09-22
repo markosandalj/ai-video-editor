@@ -6,10 +6,8 @@ from ai_video_editor.audio.silence import detect_silences
 from ai_video_editor.audio.snap import (
     AudioEnvelope,
     build_audio_envelope,
-    ensure_audio_envelope,
     snap_cut_boundary,
     snap_edl_boundaries,
-    write_audio_envelope,
 )
 
 __all__ = [
@@ -19,10 +17,8 @@ __all__ = [
     "detect_silences",
     "AudioEnvelope",
     "build_audio_envelope",
-    "ensure_audio_envelope",
     "extract_audio",
     "reduce_noise",
     "snap_cut_boundary",
     "snap_edl_boundaries",
-    "write_audio_envelope",
 ]

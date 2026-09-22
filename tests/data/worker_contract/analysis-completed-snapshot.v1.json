@@ -1,0 +1,55 @@
+{
+  "job_id": "018f1000-0000-7000-8000-000000000001",
+  "operation": "analysis",
+  "revision": 4,
+  "status": "completed",
+  "progress": {
+    "percent": 100,
+    "stage": "completed"
+  },
+  "result": {
+    "schema": "analysis_result.v1",
+    "duration_ms": 10000,
+    "transcript": [
+      {
+        "idx": 0,
+        "sentence_idx": 0,
+        "text": "Primjer",
+        "start_ms": 100,
+        "end_ms": 700,
+        "cut_in_ms": 80,
+        "cut_out_ms": 720
+      }
+    ],
+    "automatic_cut_ranges": [
+      {
+        "start_ms": 8000,
+        "end_ms": 9000,
+        "reason": "silence",
+        "confidence": 0.95
+      }
+    ],
+    "waveform": {
+      "sample_interval_ms": 100,
+      "peaks": [0.1, 0.7, 0.2]
+    },
+    "review_proxy": {
+      "type": "s3_object",
+      "key": "jobs/018f1000-0000-7000-8000-000000000001/review-proxy.mp4",
+      "size_bytes": 48221031,
+      "mime_type": "video/mp4",
+      "etag": "review-proxy-etag"
+    },
+    "processed_audio": {
+      "type": "s3_object",
+      "key": "jobs/018f1000-0000-7000-8000-000000000001/processed-audio.flac",
+      "size_bytes": 48123122,
+      "mime_type": "audio/flac",
+      "etag": "processed-audio-etag"
+    },
+    "diagnostics": {
+      "pipeline_version": "analysis.v1",
+      "warnings": []
+    }
+  }
+}

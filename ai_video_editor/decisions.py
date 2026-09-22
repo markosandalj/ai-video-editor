@@ -1,11 +1,11 @@
 """Orchestration of the edit-decision layer.
 
 Single source of truth for how raw transcript + silence/keep regions become an
-EDL, shared by ``process`` and ``batch`` so the two never drift:
+EDL for the analysis use case:
 
     section editor → audio false starts → asides → final EDL
 
-The review UI consumes the EDL directly; there is no separate annotation pass.
+The worker projects this EDL into portable automatic cut ranges for Gradivo.
 """
 from __future__ import annotations
 
@@ -30,7 +30,6 @@ def detect_all_flags(
 ) -> list[DuplicateFlag]:
     """Duplicate/false-start/stutter/fragment flags, aside flags, and audio-driven
     (cough/noise) false starts."""
-    llm_config = cutting_llm_config or settings.cutting_llm
     flags = detect_section_edits(
         transcript.sentences,
         settings.section_editor,
@@ -68,7 +67,7 @@ def detect_all_flags(
         silences,
         flagged,
         settings.aside_detection,
-        llm_config=llm_config,
+        llm_config=cutting_llm_config or settings.cutting_llm,
     )
     flagged |= {f.idx for f in aside_flags if not f.word_trims}
     return flags + aside_flags

@@ -1,5 +1,13 @@
 # **Architecting a Python-Driven, Transcript-Based Automated Video Editing Pipeline for Educational Content**
 
+> **Current scope (2026-09-22):** Implementation phases, iteration history and
+> quality-evaluation tools remain part of this repository. The executable
+> product is a headless analysis/render worker; the frontend and editorial
+> workflow have moved to Gradivo. Historical CLI/UI descriptions below record
+> earlier decisions and do not require restoring the old editor. Use
+> `iterations/WORKFLOW.md` for development and `docs/http-api.md` for the worker
+> contract. This cleanup does not start a new phase or change quality settings.
+
 > Historical research brief. The active implementation no longer uses Whisper or
 > WhisperX; transcription now uses ElevenLabs Scribe with word timestamps followed by
 > Gemini grammar correction. Refer to the code and current task files for runtime truth.

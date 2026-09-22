@@ -11,14 +11,13 @@ from ai_video_editor.transcription.grammar import (
 )
 from ai_video_editor.transcription.grammar_report import (
     grammar_report_path_for,
-    load_cached_grammar_report,
     save_grammar_report,
 )
 from ai_video_editor.transcription.models import Sentence, Transcript, Word
 from ai_video_editor.transcription.pipeline import transcribe_with_elevenlabs_and_grammar
 
 
-def test_grammar_report_cache_round_trip(tmp_path: Path) -> None:
+def test_grammar_report_writer_preserves_diagnostics(tmp_path: Path) -> None:
     video = tmp_path / "lesson-raw.mp4"
     report = GrammarReport(
         source_video=str(video),
@@ -39,12 +38,11 @@ def test_grammar_report_cache_round_trip(tmp_path: Path) -> None:
     path = save_grammar_report(video, report)
 
     assert path == video.with_suffix(".grammar-report.json")
-    loaded = load_cached_grammar_report(video)
+    loaded = GrammarReport.model_validate_json(grammar_report_path_for(video).read_text())
     assert loaded is not None
     assert loaded.total_suggestions == 3
     assert loaded.total_corrections == 2
     assert loaded.corrections_log[0]["wrong"] == "zomirali"
-    assert load_cached_grammar_report(tmp_path / "missing.mp4") is None
 
 
 def test_elevenlabs_pipeline_saves_grammar_report(
@@ -98,7 +96,7 @@ def test_elevenlabs_pipeline_saves_grammar_report(
     transcript = transcribe_with_elevenlabs_and_grammar(denoised, video, Settings())
 
     assert transcript.sentences[0].text == "zumirali"
-    report = load_cached_grammar_report(video)
+    report = GrammarReport.model_validate_json(grammar_report_path_for(video).read_text())
     assert report is not None
     assert grammar_report_path_for(video).exists()
     assert report.passes == 1

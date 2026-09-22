@@ -96,10 +96,8 @@ def render_video(
     )
 
     if result.returncode != 0:
-        logger.error("FFmpeg stderr:\n{}", result.stderr[-2000:] if result.stderr else "(empty)")
-        raise RuntimeError(
-            f"FFmpeg render failed (exit {result.returncode}). "
-            f"Check logs for details."
+        raise subprocess.CalledProcessError(
+            result.returncode, cmd, stderr=result.stderr
         )
 
     size_mb = output_path.stat().st_size / (1024 * 1024)

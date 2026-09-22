@@ -1,5 +1,13 @@
 # Editing-Mistake Patterns vs Human Ground Truth
 
+> **Current scope (2026-09-22):** Implementation phases, iteration history and
+> quality-evaluation tools remain part of this repository. The executable
+> product is a headless analysis/render worker; the frontend and editorial
+> workflow have moved to Gradivo. Historical CLI/UI descriptions below record
+> earlier decisions and do not require restoring the old editor. Use
+> `iterations/WORKFLOW.md` for development and `docs/http-api.md` for the worker
+> contract. This cleanup does not start a new phase or change quality settings.
+
 Analysis date: 2026-07-07. Corpus: 98 fixture videos in `tests/fixtures/`, each with a raw
 transcript, the pipeline's EDL, and a re-transcription of the human editor's final video.
 

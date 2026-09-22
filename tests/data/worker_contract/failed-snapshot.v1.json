@@ -1,0 +1,15 @@
+{
+  "job_id": "018f1000-0000-7000-8000-000000000001",
+  "operation": "analysis",
+  "revision": 3,
+  "status": "failed",
+  "progress": {
+    "percent": 35,
+    "stage": "downloading_source"
+  },
+  "error": {
+    "code": "source_download_failed",
+    "stage": "downloading_source",
+    "message": "Could not download source media"
+  }
+}

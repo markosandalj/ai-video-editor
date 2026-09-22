@@ -1,5 +1,21 @@
 # Quality Iteration Workflow
 
+This workflow remains active for improving the worker's analysis and render
+flow. Gradivo owns the editor and human review. Local corpus EDLs are evaluation
+inputs, not editorial state or a production deployment.
+
+Development commands (install with `uv sync --locked --extra dev`):
+
+- `uv run --extra dev python -m ai_video_editor eval-decisions --help`
+- `uv run --extra dev python -m ai_video_editor dump-alignments --help`
+- `uv run --extra dev python -m ai_video_editor eval-models --help`
+- `uv run --extra dev python -m ai_video_editor eval-section-editor --help`
+- `uv run --extra dev python -m ai_video_editor qa --help`
+
+These use the existing local evaluation corpus. It is intentionally ignored and
+is not replaced by the small committed unit/regression fixtures. Live model
+experiments and video QA can call external providers; the test suite uses fakes.
+
 This workflow optimizes for clear, reproducible decisions. Iteration directories
 are temporary working records, not a permanent knowledge base.
 
@@ -57,7 +73,7 @@ answers the hypothesis because it isolates the code change.
 
 For a promoted result:
 
-1. promote all intended EDLs into `tests/fixtures` and verify the exact file count;
+1. promote intended evaluation EDLs into `tests/fixtures` and verify the exact file count;
 2. update `current-baseline.json` and `CURRENT_BASELINE.md`, including new hashes;
 3. add one compact decision entry to `DECISION_HISTORY.md`;
 4. run focused tests plus the full relevant evaluation gates; and
@@ -73,10 +89,11 @@ Commit and push only when the user requests it.
 
 ## Authority boundaries
 
-- `tests/fixtures/*-raw.edl.json` is the UI/production EDL population.
+- `tests/fixtures/*-raw.edl.json` is the local evaluation baseline EDL population.
+- Gradivo owns current editorial cuts; changing a local baseline does not deploy
+  a worker or change any Gradivo edit.
 - `current-baseline.json` is the machine-readable comparison authority.
 - `CURRENT_BASELINE.md` is its human-readable explanation.
 - `DECISION_HISTORY.md` records why ideas were accepted or rejected.
 - `output/` and temporary directories are generated evidence, never production
   or baseline authority.
-

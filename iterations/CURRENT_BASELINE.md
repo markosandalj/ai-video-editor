@@ -1,5 +1,10 @@
 # Current Quality Baseline
 
+> The recorded iteration-20 corpus and measurements are preserved. References
+> below to UI/production describe the historical July promotion, not the current
+> deployment. Today this is a local quality-evaluation baseline; the editor lives
+> in Gradivo. Verify corpus/protocol hashes before any new comparison.
+
 This is the only baseline against which iteration 21 may be compared. Historical
 scores are intentionally absent: earlier iterations changed scorers, fixture
 sets, alignment rules, and pipeline architecture, so their absolute numbers do
@@ -73,4 +78,3 @@ reconciliation audit.
 
 The same data is available to tooling in `iterations/current-baseline.json`.
 `output/` is not an authoritative source and is not required by the UI.
-

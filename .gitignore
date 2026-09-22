@@ -1,5 +1,4 @@
 # Dependencies
-node_modules/
 .venv/
 venv/
 __pycache__/
@@ -24,6 +23,8 @@ output/
 
 # Env
 .env
+.env.worker
+.env.cloudflared
 .env.local
 .env.*.local
 

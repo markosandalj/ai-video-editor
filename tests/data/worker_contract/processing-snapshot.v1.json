@@ -1,0 +1,10 @@
+{
+  "job_id": "018f1000-0000-7000-8000-000000000001",
+  "operation": "analysis",
+  "revision": 1,
+  "status": "processing",
+  "progress": {
+    "percent": 0,
+    "stage": "accepted"
+  }
+}
