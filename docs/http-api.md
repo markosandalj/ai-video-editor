@@ -159,6 +159,23 @@ source text), and the FFmpeg stderr tail. Configured environment credentials,
 Bearer tokens and URLs are redacted; SDK exception messages and response bodies
 are omitted. These diagnostics never enter persisted snapshots or callbacks.
 
+Graceful shutdown rejects new execution starts and signals every active job's
+monitor. Each monitor stops and joins its process group, removes that job's
+scratch directory, and persists one terminal event before shutdown returns.
+Jobs interrupted during execution fail with `worker_interrupted`; an already
+received terminal result is preserved. The callback dispatcher stops after these
+transactions, leaving unacknowledged outbox entries available after restart.
+The Docker service allows 60 seconds for this shutdown sequence.
+
+Scratch storage is dedicated to one worker instance. After success, failure,
+crash, timeout or graceful shutdown, the control process removes the completed
+job's UUID directory only after stopping its process group. On startup, after
+the previous instance has stopped, it removes UUID-named remnants before
+accepting jobs. Other directory names and symlink targets are preserved. Cleanup
+failure retains capacity and blocks further execution until recovery, preventing
+continued accumulation of media when removal is unavailable. Operational logs,
+SQLite state and remote artifacts are retained separately.
+
 ## Domain isolation
 
 The job UUID is the only Gradivo identity visible to the worker. A request
@@ -459,6 +476,16 @@ human review. Rendering uses the original Drive video for the image stream and
 this S3 object for the processed audio stream, rather than repeating audio
 preprocessing or depending on worker-local analysis scratch files.
 
+The worker stores a `source-fingerprint` SHA-256 value in the FLAC object's R2
+metadata and verifies it after upload and before render download. It hashes the
+canonical source manifest (sorted, compact JSON), excluding the optional
+checksum: Drive file ID, immutable head revision, byte size, MIME type and source
+type identify the recording. Download integrity checks still verify any supplied
+checksum. This binds audio to the confirmed source without adding fields to the
+HTTP request. Missing or mismatched provenance fails with `invalid_media` at
+`downloading_processed_audio`; legacy FLAC objects without this metadata require
+a new analysis. There is no unverified legacy fallback.
+
 ## Analysis result boundary
 
 Analysis completion uses a dedicated transport DTO with
@@ -605,6 +632,12 @@ with that immutable job. Restarting or replaying the same UUID therefore cannot
 silently change its output, while later job UUIDs may use updated settings
 without changing this request schema. The request contains no transcript,
 separate analysis-job field, or Gradivo domain ID.
+
+Before encoding, the worker probes the video and processed-audio durations and
+compares each against `edit.duration_ms` and against each other. Durations must
+be positive and finite, with at most 100 ms difference for sample/container
+padding and millisecond rounding. Missing duration or a larger mismatch fails
+with `invalid_media` before rendering or uploading an output.
 
 ## Render output
 

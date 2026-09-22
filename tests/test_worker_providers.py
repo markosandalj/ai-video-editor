@@ -20,6 +20,8 @@ from ai_video_editor.worker.providers import (
     GoogleDriveSourceProvider,
     ProcessedAudioDownloadFailed,
     ProcessedAudioMissing,
+    ProcessedAudioSourceMismatch,
+    _source_fingerprint,
     R2AnalysisArtifactStore,
     R2ProcessedAudioProvider,
     SourceAccessDenied,
@@ -225,6 +227,7 @@ def test_r2_processed_audio_download_verifies_manifest(tmp_path: Path) -> None:
                 "ContentLength": 4,
                 "ContentType": "audio/flac",
                 "ETag": '"etag-1"',
+                "Metadata": {"source-fingerprint": _source_fingerprint(_source_identity())},
             }
 
         def download_file(self, bucket, key, filename):
@@ -233,7 +236,7 @@ def test_r2_processed_audio_download_verifies_manifest(tmp_path: Path) -> None:
 
     destination = tmp_path / "processed.flac"
     provider = R2ProcessedAudioProvider(FakeS3(), bucket="dev-bucket")
-    assert provider.download(reference, destination) == destination
+    assert provider.download(reference, destination, source_identity=_source_identity()) == destination
     assert destination.read_bytes() == b"flac"
 
 
@@ -257,7 +260,8 @@ def test_r2_processed_audio_maps_provider_failures(
 
     with pytest.raises(expected):
         R2ProcessedAudioProvider(FakeS3(), bucket="dev-bucket").download(
-            _processed_audio_reference(), tmp_path / "processed.flac"
+            _processed_audio_reference(), tmp_path / "processed.flac",
+            source_identity=_source_identity()
         )
 
 
@@ -440,3 +444,59 @@ def test_r2_factories_share_endpoint_and_credentials(provider_type):
     )
     with pytest.raises(ValueError, match="incomplete"):
         provider_type.from_credentials(endpoint_url="", bucket="test-bucket", access_key_id="", secret_access_key="")
+
+
+def _source_identity():
+    return GoogleDriveSource(
+        type="google_drive", file_id="recording-1", head_revision_id="revision-1",
+        size_bytes=1234, mime_type="video/mp4",
+    )
+
+
+@pytest.mark.parametrize("change", [{}, {"file_id": "another-recording"}, {"head_revision_id": "new-revision"}])
+def test_processed_audio_provenance_roundtrip_and_mismatched_source(tmp_path, change):
+    content = tmp_path / "artifact.flac"
+    content.write_bytes(b"flac")
+
+    class MemoryS3:
+        def upload_file(self, filename, bucket, key, ExtraArgs):
+            self.metadata = dict(ExtraArgs["Metadata"])
+            self.content = Path(filename).read_bytes()
+
+        def head_object(self, **kwargs):
+            return {"ContentLength": 4, "ETag": '"etag-1"', "ContentType": "audio/flac", "Metadata": self.metadata}
+
+        def download_file(self, bucket, key, filename):
+            Path(filename).write_bytes(self.content)
+
+    client = MemoryS3()
+    identity = _source_identity()
+    reference = R2AnalysisArtifactStore(client, bucket="bucket").upload(
+        content, key="jobs/analysis/processed.flac", mime_type="audio/flac", source_identity=identity,
+    )
+    destination = tmp_path / "download.flac"
+    provider = R2ProcessedAudioProvider(client, bucket="bucket")
+    if change:
+        with pytest.raises(ProcessedAudioSourceMismatch):
+            provider.download(reference, destination, source_identity=identity.model_copy(update=change))
+        assert not destination.exists()
+    else:
+        provider.download(reference, destination, source_identity=identity)
+        assert destination.read_bytes() == b"flac"
+        # Optional checksum omission does not change the immutable revision identity.
+        with_checksum = GoogleDriveSource.model_validate({**identity.model_dump(), "checksum": {"algorithm": "md5", "value": "abc"}})
+        provider.download(reference, destination, source_identity=with_checksum)
+
+
+def test_processed_audio_without_provenance_requires_new_analysis(tmp_path):
+    class LegacyS3:
+        def head_object(self, **kwargs):
+            return {"ContentLength": 4, "ETag": '"etag-1"', "ContentType": "audio/flac"}
+
+        def download_file(self, *args):
+            pytest.fail("unbound audio must be rejected before download")
+
+    with pytest.raises(ProcessedAudioSourceMismatch):
+        R2ProcessedAudioProvider(LegacyS3(), bucket="bucket").download(
+            _processed_audio_reference(), tmp_path / "audio.flac", source_identity=_source_identity(),
+        )

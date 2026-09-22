@@ -79,6 +79,7 @@ def test_container_health_endpoint_uses_application_authentication(tmp_path: Pat
         GRADIVO_VIDEO_CALLBACK_TOKEN="callback-token-0000000000000",
         GRADIVO_VIDEO_CALLBACK_BASE_URL="https://gradivo.example",
         VIDEO_PROCESSING_STATE_DB_PATH=tmp_path / "jobs.sqlite3",
+        VIDEO_PROCESSING_SCRATCH_DIR=tmp_path / "scratch",
     )
     app = create_worker_app(settings, start_callback_dispatcher=False)
 

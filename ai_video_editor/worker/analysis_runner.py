@@ -36,6 +36,7 @@ from ai_video_editor.worker.providers import (
     OutputUploadFailed,
     ProcessedAudioDownloadFailed,
     ProcessedAudioMissing,
+    ProcessedAudioSourceMismatch,
     ProcessedAudioProvider,
     R2AnalysisArtifactStore,
     R2ProcessedAudioProvider,
@@ -158,6 +159,7 @@ def execute_analysis_job(
             output.processed_audio_path,
             key=f"jobs/{job_id}/processed-audio.flac",
             mime_type="audio/flac",
+            source_identity=request.source,
         )
     except ArtifactUploadFailed as exc:
         raise MediaExecutionFailure(
@@ -222,7 +224,15 @@ def execute_render_job(
 
     progress(18, "downloading_processed_audio")
     try:
-        processed_audio.download(request.processed_audio, processed_audio_path)
+        processed_audio.download(
+            request.processed_audio, processed_audio_path, source_identity=request.source
+        )
+    except ProcessedAudioSourceMismatch as exc:
+        raise MediaExecutionFailure(
+            code="invalid_media",
+            stage="downloading_processed_audio",
+            message="Processed audio does not match the source; run analysis again",
+        ) from exc
     except ProcessedAudioMissing as exc:
         raise MediaExecutionFailure(
             code="processed_audio_missing",

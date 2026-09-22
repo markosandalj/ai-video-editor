@@ -63,3 +63,20 @@ def test_render_failure_preserves_ffmpeg_stderr_as_internal_cause(tmp_path):
     assert cause.returncode != 0
     assert "missing_test_encoder" in cause.stderr
     assert "missing_test_encoder" not in str(raised.value)
+
+
+@pytest.mark.parametrize("declared_ms,audio_seconds", [(400, 1.2), (2000, 1.2), (1200, 0.4), (1200, 2.0)])
+def test_render_rejects_mismatched_duration_before_creating_output(tmp_path, declared_ms, audio_seconds):
+    from ai_video_editor.render import InvalidRenderMediaError
+
+    source = tmp_path / "source.mp4"
+    audio = tmp_path / "audio.flac"
+    create_tiny_video(source, duration=1.2)
+    subprocess.run(
+        ["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=48000",
+         "-t", str(audio_seconds), "-c:a", "flac", str(audio)],
+        check=True, capture_output=True,
+    )
+    with pytest.raises(InvalidRenderMediaError, match="durations do not match"):
+        RenderUseCase().execute_cut_ranges(source, audio, duration_ms=declared_ms, cut_ranges=[])
+    assert not (tmp_path / "source_edited.mp4").exists()

@@ -35,6 +35,7 @@ from ai_video_editor.worker.providers import (
     OutputUploadFailed,
     ProcessedAudioDownloadFailed,
     ProcessedAudioMissing,
+    ProcessedAudioSourceMismatch,
     SourceAccessDenied,
     SourceChanged,
     SourceDownloadFailed,
@@ -71,10 +72,12 @@ class FakeDrive:
 class FakeArtifacts:
     def __init__(self):
         self.uploads: dict[str, bytes] = {}
+        self.source_identities = {}
 
-    def upload(self, source: Path, *, key: str, mime_type: str) -> S3ObjectReference:
+    def upload(self, source: Path, *, key: str, mime_type: str, source_identity=None) -> S3ObjectReference:
         content = source.read_bytes()
         self.uploads[key] = content
+        self.source_identities[key] = source_identity
         return S3ObjectReference(
             type="s3_object",
             key=key,
@@ -118,6 +121,8 @@ def test_real_analysis_media_with_fake_external_adapters(tmp_path: Path) -> None
     assert result.review_proxy.key == f"jobs/{job_id}/review-proxy.mp4"
     assert result.processed_audio.key == f"jobs/{job_id}/processed-audio.flac"
     assert set(artifacts.uploads) == {result.review_proxy.key, result.processed_audio.key}
+    assert artifacts.source_identities[result.processed_audio.key] == request.source
+    assert artifacts.source_identities[result.review_proxy.key] is None
     assert probe(tmp_path / "scratch" / str(job_id) / "source-review-proxy.mp4")["format"]
     payload = result.model_dump(mode="json", by_alias=True)
     assert str(tmp_path) not in str(payload)
@@ -253,7 +258,7 @@ def test_real_render_job_uses_closed_inputs_without_analysis(tmp_path: Path, mon
     stages: list[str] = []
 
     class FakeProcessedAudio:
-        def download(self, reference, destination):
+        def download(self, reference, destination, *, source_identity):
             del reference
             shutil.copyfile(audio, destination)
             return destination
@@ -337,6 +342,7 @@ def _resolved_render_config() -> ResolvedRenderConfigV1:
     ("failure", "code"),
     [
         (ProcessedAudioMissing, "processed_audio_missing"),
+        (ProcessedAudioSourceMismatch, "invalid_media"),
         (ProcessedAudioDownloadFailed, "processed_audio_download_failed"),
     ],
 )
@@ -352,7 +358,7 @@ def test_render_processed_audio_failures_have_stable_codes(
     )
 
     class FailingProcessedAudio:
-        def download(self, reference, destination):
+        def download(self, reference, destination, *, source_identity):
             del reference, destination
             raise failure
 

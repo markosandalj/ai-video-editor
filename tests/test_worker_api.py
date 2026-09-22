@@ -31,6 +31,12 @@ CALLBACK_TOKEN = "callback-token-0000000000000"
 
 
 class DeterministicFakeExecutor:
+    def startup(self):
+        pass
+
+    def shutdown(self):
+        pass
+
     def __init__(self):
         self._sinks: dict[UUID, EventSink] = {}
 
@@ -82,6 +88,7 @@ def settings(db_path: Path) -> WorkerSettings:
         GRADIVO_VIDEO_CALLBACK_TOKEN=CALLBACK_TOKEN,
         GRADIVO_VIDEO_CALLBACK_BASE_URL="https://gradivo.example",
         VIDEO_PROCESSING_STATE_DB_PATH=db_path,
+        VIDEO_PROCESSING_SCRATCH_DIR=db_path.parent / "scratch",
         callback_retry_base_seconds=0.001,
         callback_retry_max_seconds=0.001,
     )

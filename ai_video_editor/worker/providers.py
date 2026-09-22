@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import json
 from pathlib import Path
 from typing import Protocol
 
@@ -39,6 +40,10 @@ class ProcessedAudioMissing(Exception):
     pass
 
 
+class ProcessedAudioSourceMismatch(Exception):
+    pass
+
+
 class ProcessedAudioDownloadFailed(Exception):
     pass
 
@@ -62,11 +67,18 @@ class AnalysisArtifactStore(Protocol):
         *,
         key: str,
         mime_type: str,
+        source_identity: GoogleDriveSource | None = None,
     ) -> S3ObjectReference: ...
 
 
 class ProcessedAudioProvider(Protocol):
-    def download(self, reference: S3ObjectReference, destination: Path) -> Path: ...
+    def download(
+        self,
+        reference: S3ObjectReference,
+        destination: Path,
+        *,
+        source_identity: GoogleDriveSource,
+    ) -> Path: ...
 
 
 class DriveOutputProvider(Protocol):
@@ -204,14 +216,22 @@ class R2AnalysisArtifactStore:
         *,
         key: str,
         mime_type: str,
+        source_identity: GoogleDriveSource | None = None,
     ) -> S3ObjectReference:
+        provenance = (
+            {"source-fingerprint": _source_fingerprint(source_identity)}
+            if source_identity is not None else {}
+        )
+        extra_args: dict[str, object] = {"ContentType": mime_type}
+        if provenance:
+            extra_args["Metadata"] = provenance
         try:
             source_size = source.stat().st_size
             self._client.upload_file(
                 str(source),
                 self._bucket,
                 key,
-                ExtraArgs={"ContentType": mime_type},
+                ExtraArgs=extra_args,
             )
             metadata = self._client.head_object(Bucket=self._bucket, Key=key)
         except Exception as exc:
@@ -226,6 +246,7 @@ class R2AnalysisArtifactStore:
             or stored_mime_type != mime_type
             or not isinstance(etag, str)
             or not etag
+            or (provenance and metadata.get("Metadata") != provenance)
         ):
             raise ArtifactUploadFailed(self._UPLOAD_FAILURE_MESSAGE)
         return S3ObjectReference(
@@ -265,7 +286,13 @@ class R2ProcessedAudioProvider:
             bucket=bucket,
         )
 
-    def download(self, reference: S3ObjectReference, destination: Path) -> Path:
+    def download(
+        self,
+        reference: S3ObjectReference,
+        destination: Path,
+        *,
+        source_identity: GoogleDriveSource,
+    ) -> Path:
         try:
             metadata = self._client.head_object(
                 Bucket=self._bucket,
@@ -286,6 +313,13 @@ class R2ProcessedAudioProvider:
             or (mime_type is not None and mime_type != reference.mime_type)
         ):
             raise ProcessedAudioDownloadFailed
+
+        provenance = metadata.get("Metadata")
+        if (
+            not isinstance(provenance, dict)
+            or provenance.get("source-fingerprint") != _source_fingerprint(source_identity)
+        ):
+            raise ProcessedAudioSourceMismatch
 
         destination.parent.mkdir(parents=True, exist_ok=True)
         try:
@@ -490,6 +524,14 @@ def _r2_client(
         aws_access_key_id=access_key_id,
         aws_secret_access_key=secret_access_key,
     )
+
+
+def _source_fingerprint(source: GoogleDriveSource) -> str:
+    # Drive revision identity is immutable; optional checksum presence must not
+    # change provenance (downloads still verify any supplied checksum).
+    identity = source.model_dump(mode="json", by_alias=True, exclude={"checksum"})
+    canonical = json.dumps(identity, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode()).hexdigest()
 
 
 def _metadata_int(value: object) -> int | None:

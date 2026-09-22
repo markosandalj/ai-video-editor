@@ -10,6 +10,7 @@ import signal
 import threading
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Callable, Literal, Protocol
 from uuid import UUID
 
@@ -24,6 +25,7 @@ from ai_video_editor.worker.contracts import (
     job_result_adapter,
 )
 from ai_video_editor.worker.diagnostics import exception_diagnostics
+from ai_video_editor.worker.scratch import remove_abandoned_scratch, remove_job_scratch
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +50,10 @@ EventSink = Callable[[ExecutionEvent], None]
 
 
 class MediaExecutor(Protocol):
+    def startup(self) -> None: ...
+
+    def shutdown(self) -> None: ...
+
     def start(
         self,
         job_id: UUID,
@@ -126,6 +132,7 @@ class SubprocessMediaExecutor:
         runner: MediaRunner,
         *,
         max_number_of_jobs: int = 1,
+        scratch_dir: Path | None = None,
         analysis_timeout_seconds: float = 4 * 60 * 60,
         render_timeout_seconds: float = 4 * 60 * 60,
         termination_grace_seconds: float = 5.0,
@@ -148,7 +155,53 @@ class SubprocessMediaExecutor:
         self._termination_grace_seconds = termination_grace_seconds
         self._lock = threading.Lock()
         self._active: set[UUID] = set()
+        self._monitors: set[threading.Thread] = set()
+        self._stopping = threading.Event()
+        self._monitor_errors: list[BaseException] = []
+        self._scratch_dir = scratch_dir
         self._context = multiprocessing.get_context("spawn")
+
+    def startup(self) -> None:
+        with self._lock:
+            if self._active or self._stopping.is_set():
+                raise RuntimeError("executor cannot start in its current state")
+            if self._scratch_dir is not None:
+                remove_abandoned_scratch(self._scratch_dir)
+
+    def shutdown(self) -> None:
+        with self._lock:
+            self._stopping.set()
+            monitors = list(self._monitors)
+        # All monitors terminate their process groups concurrently. Include time
+        # for the final SQLite transaction (its busy timeout is 30 seconds).
+        deadline = time.monotonic() + 2 * self._termination_grace_seconds + 35
+        for monitor in monitors:
+            monitor.join(timeout=max(0, deadline - time.monotonic()))
+        with self._lock:
+            if self._monitors or self._active or self._monitor_errors:
+                raise RuntimeError("media jobs did not shut down cleanly")
+
+    def _run_monitor(
+        self,
+        process: multiprocessing.Process,
+        events: multiprocessing.queues.Queue,
+        operation: Literal["analysis", "render"],
+        emit: EventSink,
+        job_id: UUID,
+        started_at: float,
+    ) -> None:
+        try:
+            self._monitor(process, events, operation, emit, job_id, started_at)
+        except BaseException as exc:
+            with self._lock:
+                self._monitor_errors.append(exc)
+            logger.error(
+                "job_monitor_stopped job_id=%s diagnostics=%s",
+                job_id, json.dumps(exception_diagnostics(exc)),
+            )
+        finally:
+            with self._lock:
+                self._monitors.discard(threading.current_thread())
 
     def start(
         self,
@@ -158,6 +211,8 @@ class SubprocessMediaExecutor:
         emit: EventSink,
     ) -> None:
         with self._lock:
+            if self._stopping.is_set() or self._monitor_errors:
+                raise RuntimeError("media executor is stopping or requires recovery")
             if job_id in self._active or len(self._active) >= self._capacity:
                 raise RuntimeError("media subprocess capacity is already occupied")
             events = self._context.Queue()
@@ -187,20 +242,23 @@ class SubprocessMediaExecutor:
                 events.close()
                 raise
 
-        monitor = threading.Thread(
-            target=self._monitor,
-            args=(process, events, request.operation, emit, job_id, started_at),
-            name=f"video-job-monitor-{job_id}",
-            daemon=True,
-        )
-        try:
-            monitor.start()
-        except BaseException:
-            self._stop_process_tree(process)
-            events.close()
-            with self._lock:
+            monitor = threading.Thread(
+                target=self._run_monitor,
+                args=(process, events, request.operation, emit, job_id, started_at),
+                name=f"video-job-monitor-{job_id}",
+                daemon=True,
+            )
+            self._monitors.add(monitor)
+            try:
+                monitor.start()
+            except BaseException:
+                self._monitors.discard(monitor)
+                self._stop_process_tree(process)
+                if self._scratch_dir is not None:
+                    remove_job_scratch(self._scratch_dir, job_id)
+                events.close()
                 self._active.discard(job_id)
-            raise
+                raise
 
     def _monitor(
         self,
@@ -213,6 +271,7 @@ class SubprocessMediaExecutor:
     ) -> None:
         terminal_event: CompletedEvent | FailedEvent | None = None
         last_stage = "accepted"
+        cancelled = False
         deadline = started_at + self._timeouts[operation]
         logger.info("job_started job_id=%s operation=%s", job_id, operation)
 
@@ -236,7 +295,18 @@ class SubprocessMediaExecutor:
         try:
             try:
                 while process.is_alive():
+                    if self._stopping.is_set():
+                        cancelled = True
+                        terminal_event = terminal_event or FailedEvent(
+                            WorkerError(
+                                code="worker_interrupted",
+                                stage=last_stage,
+                                message="Worker stopped while the job was processing",
+                            )
+                        )
+                        break
                     if time.monotonic() >= deadline:
+                        cancelled = True
                         terminal_event = FailedEvent(
                             WorkerError(
                                 code="processing_timeout",
@@ -253,7 +323,7 @@ class SubprocessMediaExecutor:
                         continue
                     handle(raw)
                 # Never join a live, timed-out process before terminating it.
-                while not process.is_alive():
+                while not cancelled and not process.is_alive():
                     try:
                         raw = events.get(timeout=0.05)
                     except queue.Empty:
@@ -280,6 +350,8 @@ class SubprocessMediaExecutor:
         finally:
             try:
                 self._stop_process_tree(process)
+                if self._scratch_dir is not None:
+                    remove_job_scratch(self._scratch_dir, job_id)
             except Exception as exc:
                 logger.error(
                     "job_cleanup_failed job_id=%s operation=%s capacity_retained=true diagnostics=%s",

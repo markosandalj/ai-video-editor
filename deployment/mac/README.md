@@ -240,3 +240,19 @@ manually before creating a new Gradivo retry attempt.
 Stopping or recreating containers does not remove the external state, scratch,
 or log directories. Never use a cleanup command that deletes those host paths
 during routine rollout or recovery.
+
+### Scratch and shutdown lifecycle
+
+The scratch mount must be dedicated to a single worker instance. Before starting
+another instance against the same state/scratch paths, stop the previous one and
+its media processes. The worker cleans UUID job directories after process-group
+termination and removes leftovers at startup; iteration assets do not belong in
+this runtime mount. Cleanup errors stop further media execution until recovery.
+
+Compose allows 60 seconds for graceful shutdown, including media-process
+termination and durable terminal snapshots. Pending callbacks remain in SQLite
+for the next startup. Avoid shortening this grace period.
+
+Processed-audio FLAC objects now carry source provenance in R2 metadata. Render
+rejects artifacts from another source/revision and older artifacts without this
+metadata. Run a new analysis for those older artifacts before rendering.

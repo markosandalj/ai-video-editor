@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import subprocess
 from pathlib import Path
 from typing import Iterable, Protocol
@@ -38,7 +39,7 @@ class RenderUseCase:
         processed_audio_path: Path,
         config: RenderConfig | None = None,
     ) -> Path:
-        _validate_media(video_path, processed_audio_path)
+        _validate_media(video_path, processed_audio_path, edl.total_duration)
         try:
             return render_video(video_path, edl, processed_audio_path, config)
         except ValueError as exc:
@@ -100,7 +101,11 @@ def _decision(start_ms: int, end_ms: int, action: EditAction) -> EditDecision:
     )
 
 
-def _validate_media(video_path: Path, audio_path: Path) -> None:
+# Accommodate container/sample padding and millisecond rounding, not stale edits.
+_DURATION_TOLERANCE_SECONDS = 0.1
+
+
+def _validate_media(video_path: Path, audio_path: Path, duration_s: float) -> None:
     if not video_path.is_file() or not audio_path.is_file():
         raise InvalidRenderMediaError("Render media is missing")
     try:
@@ -108,10 +113,38 @@ def _validate_media(video_path: Path, audio_path: Path) -> None:
         audio = _probe(audio_path)
     except (OSError, subprocess.SubprocessError, ValueError, json.JSONDecodeError) as exc:
         raise InvalidRenderMediaError("Render media could not be inspected") from exc
-    if not any(stream.get("codec_type") == "video" for stream in video["streams"]):
-        raise InvalidRenderMediaError("Source has no video stream")
-    if not any(stream.get("codec_type") == "audio" for stream in audio["streams"]):
-        raise InvalidRenderMediaError("Processed audio has no audio stream")
+    video_duration = _stream_duration(video, "video")
+    audio_duration = _stream_duration(audio, "audio")
+    if not math.isfinite(duration_s) or duration_s <= 0:
+        raise InvalidRenderMediaError("Render timeline has no valid duration")
+    if any(
+        abs(left - right) > _DURATION_TOLERANCE_SECONDS
+        for left, right in (
+            (video_duration, duration_s),
+            (audio_duration, duration_s),
+            (video_duration, audio_duration),
+        )
+    ):
+        raise InvalidRenderMediaError("Render timeline and media durations do not match")
+
+
+def _stream_duration(media: dict, codec_type: str) -> float:
+    stream = next(
+        (stream for stream in media["streams"] if stream.get("codec_type") == codec_type),
+        None,
+    )
+    if stream is None:
+        raise InvalidRenderMediaError(f"Render input has no {codec_type} stream")
+    value = stream.get("duration")
+    if value in (None, "N/A"):
+        value = media.get("format", {}).get("duration")
+    try:
+        duration = float(value)
+    except (TypeError, ValueError) as exc:
+        raise InvalidRenderMediaError("Render input has no valid duration") from exc
+    if not math.isfinite(duration) or duration <= 0:
+        raise InvalidRenderMediaError("Render input has no valid duration")
+    return duration
 
 
 def _probe(path: Path) -> dict[str, object]:
@@ -121,7 +154,7 @@ def _probe(path: Path) -> dict[str, object]:
             "-v",
             "error",
             "-show_entries",
-            "stream=codec_type",
+            "stream=codec_type,duration:format=duration",
             "-of",
             "json",
             str(path),

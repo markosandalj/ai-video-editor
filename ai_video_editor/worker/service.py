@@ -32,12 +32,16 @@ class WorkerService:
     def startup(self, *, start_callback_dispatcher: bool = True) -> None:
         self.store.initialize()
         self.store.recover_interrupted()
+        self._executor.startup()
         if start_callback_dispatcher:
             self._callbacks.start()
             self._callbacks.notify()
 
     def shutdown(self) -> None:
-        self._callbacks.stop()
+        try:
+            self._executor.shutdown()
+        finally:
+            self._callbacks.stop()
 
     def dispatch_callbacks_once(self) -> bool:
         """Run one delivery attempt for deterministic control-plane integration tests."""
