@@ -83,6 +83,8 @@ def test_container_health_endpoint_uses_application_authentication(tmp_path: Pat
     app = create_worker_app(settings, start_callback_dispatcher=False)
 
     with TestClient(app) as client:
+        for retired_route in ("/", "/api/videos", "/docs", "/openapi.json"):
+            assert client.get(retired_route).status_code == 404
         missing = client.get("/healthz")
         authenticated = client.get(
             "/healthz",

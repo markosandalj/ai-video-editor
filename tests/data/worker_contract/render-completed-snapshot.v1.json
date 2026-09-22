@@ -1,0 +1,28 @@
+{
+  "job_id": "018f1000-0000-7000-8000-000000000002",
+  "operation": "render",
+  "revision": 3,
+  "status": "completed",
+  "progress": {
+    "percent": 100,
+    "stage": "completed"
+  },
+  "result": {
+    "schema": "render_result.v1",
+    "final_video": {
+      "type": "google_drive",
+      "file_id": "drive-rendered-file-1",
+      "head_revision_id": "rendered-revision-1",
+      "size_bytes": 954221031,
+      "mime_type": "video/mp4",
+      "checksum": {
+        "algorithm": "md5",
+        "value": "rendered-md5"
+      }
+    },
+    "diagnostics": {
+      "pipeline_version": "student_video.v1",
+      "warnings": []
+    }
+  }
+}

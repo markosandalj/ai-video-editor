@@ -44,7 +44,7 @@ from ai_video_editor.worker.settings import WorkerSettings
 from tests.test_analysis import create_tiny_video, fake_decisions, fake_transcriber, probe
 
 
-FIXTURES = Path(__file__).parent / "fixtures" / "worker_contract"
+FIXTURES = Path(__file__).parent / "data" / "worker_contract"
 
 
 def worker_settings(tmp_path: Path) -> WorkerSettings:

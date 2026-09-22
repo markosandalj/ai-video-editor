@@ -243,8 +243,8 @@ appends `/wt/internal/api/video-processing/jobs/{job_id}/status`. Gradivo likewi
 reads the worker origin from `VIDEO_PROCESSING_HTTP_BASE_URL`. Neither
 application hard-codes the peer hostname or puts it in a job payload; local,
 development, staging, and production routing differs only by environment
-configuration. The initial real topology points the office Mac worker at
-`https://gradmin.com.hr`, while gradmin points at that worker's HTTPS origin.
+configuration. The worker currently runs on a separate ARM64 MacBook Air;
+Gradivo/callback remains local on the first computer pending a separate DEV rollout.
 This worker never sends job callbacks to caller-supplied URLs.
 
 The initial Mac worker HTTPS origin is published with Cloudflare Tunnel, which
@@ -262,10 +262,9 @@ fallback must reuse. Persistent SQLite, scratch, and log locations are explicit
 deployment-configured mounts outside the source checkout, and each container
 receives only its own secrets and mounts. Compose restarts the containers after
 the Docker engine is available. One dedicated non-admin macOS service account
-owns Docker Desktop and is not used for normal office work. After a cold Mac
-restart, an operator signs in to that account once; Docker Desktop starts at
-login and Compose restores both containers. Automatic macOS login and a
-separately managed headless Linux VM are not part of the first E2E deployment.
+owns the Docker engine supplied by OrbStack on the MacBook Air. After a cold Mac
+restart, an operator signs in and starts OrbStack; Compose restores both
+containers through `unless-stopped`.
 This host-login policy is not part of the HTTP contract.
 
 Image distribution and rollout automation are outside the first E2E milestone.
@@ -455,9 +454,9 @@ preprocessing or depending on worker-local analysis scratch files.
 ## Analysis result boundary
 
 Analysis completion uses a dedicated transport DTO with
-`schema: "analysis_result.v1"`. It does not expose the current local
-`ReviewPayload` / `review.v4` schema, whose filesystem paths and local human
-review state belong only to the development and migration UI.
+`schema: "analysis_result.v1"`. Filesystem paths remain worker-internal and
+human review state belongs exclusively to Gradivo. The former local review
+schema and migration UI are removed.
 
 `analysis_result.v1` contains only portable processing output:
 

@@ -12,7 +12,7 @@ from ai_video_editor.worker.contracts import (
 )
 
 
-FIXTURES = Path(__file__).parent / "fixtures" / "worker_contract"
+FIXTURES = Path(__file__).parent / "data" / "worker_contract"
 
 
 @pytest.mark.parametrize(

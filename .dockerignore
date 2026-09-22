@@ -9,8 +9,6 @@ output
 dist
 build
 *.egg-info
-frontend/node_modules
-frontend/dist
 tests/fixtures
 .env
 .env.worker

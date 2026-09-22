@@ -53,3 +53,16 @@ independently configurable through the documented environment variables.
 A new cross-app browser acceptance run and Gradivo backend tests remain pending:
 the local Gradivo Django service was not running during verification. No worker
 image was rebuilt or deployed, and no render-quality settings were changed.
+
+## Worker-only repository (2026-09-22)
+
+The local review UI/API, combined CLI, corpus evaluation runners and iteration
+promotion workflow are removed. Analysis algorithms and immutable-snapshot
+rendering remain behind the worker API. See [cleanup inventory](headless-cleanup.md)
+for scope and verification. Editor behavior described above belongs to Gradivo.
+
+The active worker is the separate ARM64 MacBook Air with OrbStack, image
+`ai-video-worker:f779947`, pinned `cloudflared:2026.7.3` and `unless-stopped`.
+Gradivo/callback is still local on the first computer. This cleanup performs no
+deployment, real-provider acceptance or hosted DEV rollout. Final upload from
+Drive to Gradivo/Mux remains manual without additional render/Mux bookkeeping.

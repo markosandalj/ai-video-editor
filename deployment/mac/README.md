@@ -1,6 +1,6 @@
 # Mac worker deployment
 
-This directory packages the first manually operated Mac mini worker as two
+This directory packages the manually operated ARM64 MacBook Air worker as two
 Docker Compose services. `worker` exposes port 8000 only to the Compose network;
 `cloudflared` reaches it as `http://worker:8000` and creates the only public
 route through an outbound tunnel. Neither service mounts the Docker socket and
@@ -10,20 +10,32 @@ The first rollout is deliberately manual. It does not create Cloudflare,
 Google, R2, or media-provider credentials, choose a registry, or automate image
 delivery.
 
+## Current setup and rollout boundary
+
+The user-confirmed running image is `ai-video-worker:f779947`, with
+`cloudflare/cloudflared:2026.7.3`, on the separate MacBook Air under OrbStack.
+Both services use `restart: unless-stopped`. Gradivo and its callback endpoint
+remain local on the first computer. A hosted DEV rollout is future work.
+
+The cleanup does not rebuild or replace that running image, change its three
+root env files, or touch its external durable data. The commands below are an
+operator runbook for a separately approved rollout, not steps executed by this
+cleanup. Verify host login/start-at-login settings on the Air when doing that
+rollout; this task does not inspect or change them.
+
 ## Security boundary and host account
 
 Create one dedicated **Standard** (non-admin) macOS account, for example
-`ai-video-worker`. It is the only everyday account that opens Docker Desktop or
-operates this stack. A Mac administrator may perform Docker Desktop's one-time
-installation/privileged-helper approval, but should not run this deployment
-from a normal office account. Treat the dedicated Docker owner as trusted:
+`ai-video-worker`. It is the only everyday account that opens OrbStack or
+operates this stack. A Mac administrator may perform OrbStack's initial installation, but the
+worker stack should run under its dedicated account. Treat the dedicated Docker owner as trusted:
 Docker control can inspect container environment values.
 
-Disable automatic macOS login. Add Docker Desktop to this account's Login Items
+Disable automatic macOS login. Add OrbStack to this account's Login Items
 and enable its start-at-login setting. After a cold Mac restart an operator must
-sign in to this account once. Docker Desktop then starts and Compose's
+sign in to this account once. OrbStack then starts and Compose's
 `unless-stopped` policies restore both containers. Containers cannot start
-before that login because Docker Desktop is a user session application.
+before that login because OrbStack is a user session application.
 
 ## Durable host layout
 
@@ -87,13 +99,13 @@ token or its separate R2 read-only key.
 
 ## Build and first rollout
 
-Choose and record an intentional cloudflared version or digest in `stack.env`;
+Choose and record an intentional cloudflared version or digest in `.env.stack.local`;
 do not deploy the example placeholder or a floating `latest` tag. Build the
 worker image manually from the repository root using the same tag recorded in
 `AI_VIDEO_WORKER_IMAGE`:
 
 ```bash
-docker build --file deployment/mac/Dockerfile --tag ai-video-worker:dev-785 .
+docker build --file deployment/mac/Dockerfile --tag ai-video-worker:headless-cleanup .
 ```
 
 Set these operator-only paths for the commands below:
@@ -218,11 +230,11 @@ manually before creating a new Gradivo retry attempt.
 ## Cold restart runbook
 
 1. Power on the Mac and sign in once as the dedicated non-admin Docker owner.
-2. Wait for Docker Desktop to report that its engine is running.
+2. Wait for OrbStack to report that its engine is running.
 3. Run the `docker compose ... ps` command above. Both services should have
    returned through `unless-stopped`; do not run `up` unless they are absent.
 4. Run the authenticated HTTPS smoke against an existing terminal job.
-5. If Docker Desktop did not start, start it in this account, then inspect
+5. If OrbStack did not start, start it in this account, then inspect
    container status and logs. Do not enable automatic macOS login as a fix.
 
 Stopping or recreating containers does not remove the external state, scratch,

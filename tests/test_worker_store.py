@@ -17,7 +17,7 @@ from ai_video_editor.worker.contracts import (
 from ai_video_editor.worker.store import JobStore
 
 
-FIXTURES = Path(__file__).parent / "fixtures" / "worker_contract"
+FIXTURES = Path(__file__).parent / "data" / "worker_contract"
 
 
 def test_acceptance_rolls_back_job_and_slot_when_outbox_insert_fails(

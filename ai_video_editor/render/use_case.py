@@ -29,7 +29,7 @@ class RenderProcessingError(Exception):
 
 
 class RenderUseCase:
-    """Reusable headless final-render operation shared by the CLI and worker."""
+    """Render a worker job from verified media and confirmed cuts."""
 
     def execute(
         self,

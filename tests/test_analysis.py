@@ -102,10 +102,16 @@ def probe(path: Path) -> dict:
 def test_analysis_use_case_builds_full_proxy_and_lossless_audio(tmp_path: Path) -> None:
     source = tmp_path / "tiny.mp4"
     create_tiny_video(source)
+    # Old local-editor sidecars must never become worker inputs or outputs.
+    sidecars = [source.with_suffix(suffix) for suffix in (
+        ".transcript.json", ".edl.json", ".audio.json",
+    )]
+    for sidecar in sidecars:
+        sidecar.write_text("stale local editor data")
     settings = Settings().model_copy(
         update={
             "general": Settings().general.model_copy(
-                update={"temp_dir": tmp_path / "scratch", "output_dir": tmp_path}
+                update={"temp_dir": tmp_path / "scratch"}
             )
         }
     )
@@ -127,5 +133,6 @@ def test_analysis_use_case_builds_full_proxy_and_lossless_audio(tmp_path: Path) 
         output.duration_ms / 1000,
         abs=0.08,
     )
+    assert all(path.read_text() == "stale local editor data" for path in sidecars)
     assert "transcribing" in stages
     assert "rendering_review_proxy" in stages

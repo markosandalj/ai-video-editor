@@ -11,14 +11,6 @@ def grammar_report_path_for(video_path: Path) -> Path:
     return video_path.with_suffix(".grammar-report.json")
 
 
-def load_cached_grammar_report(video_path: Path) -> GrammarReport | None:
-    path = grammar_report_path_for(video_path)
-    if not path.exists():
-        return None
-    logger.info("Loading cached grammar report: {}", path.name)
-    return GrammarReport.model_validate_json(path.read_text(encoding="utf-8"))
-
-
 def save_grammar_report(video_path: Path, report: GrammarReport) -> Path:
     path = grammar_report_path_for(video_path)
     path.write_text(report.model_dump_json(indent=2), encoding="utf-8")

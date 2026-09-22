@@ -20,7 +20,7 @@ from ai_video_editor.worker.executor import (
 )
 
 
-FIXTURES = Path(__file__).parent / "fixtures" / "worker_contract"
+FIXTURES = Path(__file__).parent / "data" / "worker_contract"
 
 
 def exit_abnormally(job_id, request, resolved_render_config, progress):

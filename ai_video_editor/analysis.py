@@ -16,18 +16,12 @@ from ai_video_editor.audio import (
     extract_audio,
     reduce_noise,
     snap_edl_boundaries,
-    write_audio_envelope,
 )
 from ai_video_editor.audio.models import AudioMeta
 from ai_video_editor.audio.snap import AudioEnvelope
 from ai_video_editor.config.settings import Settings
 from ai_video_editor.decisions import decide_edits
-from ai_video_editor.duplicate.debug import save_debug_files
 from ai_video_editor.duplicate.edl import EditDecisionList
-from ai_video_editor.transcription import (
-    load_cached_transcript,
-    save_transcript,
-)
 from ai_video_editor.transcription.models import Transcript
 from ai_video_editor.transcription.pipeline import transcribe_with_elevenlabs_and_grammar
 
@@ -56,62 +50,6 @@ class DecisionMaker(Protocol):
     ) -> EditDecisionList: ...
 
 
-class AnalysisPersistence(Protocol):
-    def load_transcript(self, video_path: Path, *, force: bool) -> Transcript | None: ...
-
-    def save_transcript(self, video_path: Path, transcript: Transcript) -> None: ...
-
-    def save_analysis(
-        self,
-        video_path: Path,
-        transcript: Transcript,
-        edl: EditDecisionList,
-        envelope: AudioEnvelope,
-    ) -> None: ...
-
-
-class NoopAnalysisPersistence:
-    def load_transcript(self, video_path: Path, *, force: bool) -> Transcript | None:
-        del video_path, force
-        return None
-
-    def save_transcript(self, video_path: Path, transcript: Transcript) -> None:
-        del video_path, transcript
-
-    def save_analysis(
-        self,
-        video_path: Path,
-        transcript: Transcript,
-        edl: EditDecisionList,
-        envelope: AudioEnvelope,
-    ) -> None:
-        del video_path, transcript, edl, envelope
-
-
-class LocalAnalysisPersistence:
-    """Keeps the existing CLI sidecars behind the headless use-case seam."""
-
-    def load_transcript(self, video_path: Path, *, force: bool) -> Transcript | None:
-        return None if force else load_cached_transcript(video_path)
-
-    def save_transcript(self, video_path: Path, transcript: Transcript) -> None:
-        save_transcript(video_path, transcript)
-
-    def save_analysis(
-        self,
-        video_path: Path,
-        transcript: Transcript,
-        edl: EditDecisionList,
-        envelope: AudioEnvelope,
-    ) -> None:
-        write_audio_envelope(video_path, envelope)
-        video_path.with_suffix(".edl.json").write_text(
-            edl.model_dump_json(indent=2),
-            encoding="utf-8",
-        )
-        save_debug_files(video_path, transcript, edl)
-
-
 @dataclass(frozen=True)
 class AnalysisOutput:
     source_path: Path
@@ -133,7 +71,7 @@ class InvalidMediaError(Exception):
 
 
 class AnalysisUseCase:
-    """Reusable headless analysis shared by the CLI and remote worker."""
+    """Analyze one verified local recording for a worker job."""
 
     def __init__(
         self,
@@ -141,18 +79,15 @@ class AnalysisUseCase:
         *,
         transcriber: Transcriber = transcribe_with_elevenlabs_and_grammar,
         decision_maker: DecisionMaker = decide_edits,
-        persistence: AnalysisPersistence | None = None,
     ):
         self.settings = settings
         self._transcriber = transcriber
         self._decision_maker = decision_maker
-        self._persistence = persistence or NoopAnalysisPersistence()
 
     def execute(
         self,
         video_path: Path,
         *,
-        force: bool = False,
         progress: ProgressReporter | None = None,
     ) -> AnalysisOutput:
         source = video_path.expanduser().resolve()
@@ -179,10 +114,7 @@ class AnalysisUseCase:
         )
 
         report(45, "transcribing")
-        transcript = self._persistence.load_transcript(source, force=force)
-        if transcript is None:
-            transcript = self._transcriber(denoised, source, self.settings)
-            self._persistence.save_transcript(source, transcript)
+        transcript = self._transcriber(denoised, source, self.settings)
 
         report(65, "deciding_edits")
         disruptions = build_disruptions(
@@ -201,7 +133,6 @@ class AnalysisUseCase:
         report(78, "building_review_artifacts")
         envelope = build_audio_envelope(Path(denoised.path))
         edl = snap_edl_boundaries(edl, transcript, envelope)
-        self._persistence.save_analysis(source, transcript, edl, envelope)
 
         artifacts_dir = self.settings.general.temp_dir
         artifacts_dir.mkdir(parents=True, exist_ok=True)

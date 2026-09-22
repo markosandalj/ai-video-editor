@@ -5,10 +5,9 @@ build-backend = "hatchling.build"
 [project]
 name = "ai-video-editor"
 version = "0.1.0"
-description = "AI-assisted transcript-based video editing pipeline"
+description = "Headless analysis and render worker for Gradivo"
 requires-python = ">=3.13"
 dependencies = [
-    "typer>=0.12",
     "pydantic>=2.0",
     "pydantic-settings>=2.0",
     "loguru>=0.7",
@@ -36,7 +35,6 @@ dev = [
 ]
 
 [project.scripts]
-ai-video-editor = "ai_video_editor.cli.app:main"
 ai-video-worker = "ai_video_editor.worker.app:main"
 
 [tool.hatch.build.targets.wheel]

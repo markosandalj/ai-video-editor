@@ -25,7 +25,7 @@ from ai_video_editor.worker.executor import (
 from ai_video_editor.worker.settings import WorkerSettings
 
 
-FIXTURES = Path(__file__).parent / "fixtures" / "worker_contract"
+FIXTURES = Path(__file__).parent / "data" / "worker_contract"
 API_TOKEN = "worker-api-token-000000000000"
 CALLBACK_TOKEN = "callback-token-0000000000000"
 

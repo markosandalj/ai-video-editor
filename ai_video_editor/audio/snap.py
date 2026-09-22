@@ -1,7 +1,7 @@
 """Acoustic cut-boundary snapping.
 
 Transcript timestamps describe words, but they are not reliable edit points.  This
-module persists a compact RMS envelope and chooses a quiet, safe point near each
+module computes a compact RMS envelope and chooses a quiet, safe point near each
 transcript boundary so preview and render can share the same splice.
 """
 from __future__ import annotations
@@ -27,7 +27,7 @@ class TimedWord(Protocol):
 
 
 class AudioEnvelope(BaseModel):
-    """Quantized per-frame RMS energy stored beside a processed video."""
+    """Quantized per-frame RMS energy for analysis and acoustic cut points."""
 
     version: str = SCHEMA_VERSION
     hop_ms: int = Field(gt=0)
@@ -78,10 +78,6 @@ class AudioEnvelope(BaseModel):
         return center_s + np.arange(len(self.energy), dtype=np.float64) * self.hop_ms / 1000.0
 
 
-def audio_envelope_path_for(video_path: Path) -> Path:
-    return video_path.with_name(f"{video_path.stem}.audio.json")
-
-
 def build_audio_envelope(
     audio_path: Path,
     *,
@@ -102,28 +98,6 @@ def build_audio_envelope(
         noise_floor_db=floor,
         duration_s=len(samples) / sample_rate,
     )
-
-
-def write_audio_envelope(video_path: Path, envelope: AudioEnvelope) -> Path:
-    output = audio_envelope_path_for(video_path)
-    output.write_text(envelope.model_dump_json(), encoding="utf-8")
-    return output
-
-
-def load_audio_envelope(video_path: Path) -> AudioEnvelope | None:
-    path = audio_envelope_path_for(video_path)
-    if not path.exists():
-        return None
-    return AudioEnvelope.model_validate_json(path.read_text(encoding="utf-8"))
-
-
-def ensure_audio_envelope(video_path: Path, audio_path: Path | None) -> AudioEnvelope | None:
-    envelope = load_audio_envelope(video_path)
-    if envelope is not None or audio_path is None or not audio_path.exists():
-        return envelope
-    envelope = build_audio_envelope(audio_path)
-    write_audio_envelope(video_path, envelope)
-    return envelope
 
 
 def envelope_to_peaks(envelope: AudioEnvelope, *, buckets: int) -> list[float]:

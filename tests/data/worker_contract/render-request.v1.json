@@ -1,0 +1,37 @@
+{
+  "operation": "render",
+  "render_profile": "student_video.v1",
+  "source": {
+    "type": "google_drive",
+    "file_id": "drive-source-1",
+    "head_revision_id": "revision-1",
+    "size_bytes": 184223001,
+    "mime_type": "video/mp4",
+    "checksum": {
+      "algorithm": "md5",
+      "value": "46c4f00d"
+    }
+  },
+  "processed_audio": {
+    "type": "s3_object",
+    "key": "jobs/018f1000-0000-7000-8000-000000000001/processed-audio.flac",
+    "size_bytes": 48123122,
+    "mime_type": "audio/flac",
+    "etag": "processed-audio-etag"
+  },
+  "output": {
+    "type": "google_drive",
+    "folder_id": "drive-output-folder-1",
+    "display_name": "problem-123-final.mp4"
+  },
+  "edit": {
+    "schema": "cut_ranges.v1",
+    "duration_ms": 912340,
+    "cut_ranges": [
+      {
+        "start_ms": 12540,
+        "end_ms": 18920
+      }
+    ]
+  }
+}

@@ -5,8 +5,8 @@ analysis and rendering must not consume Gradivo's production resources. It
 accepts authenticated machine jobs, keeps operational processing state and
 temporary artifacts, and returns analysis or render results to Gradivo. The
 production editor, human review, permissions, and canonical editorial state
-live in Gradivo's Problem Builder; the current local review UI may remain only
-as a development and migration reference. Media moves directly between Google
+live in Gradivo's Problem Builder. The former local review UI, review API and
+CLI workflow are removed; Git retains their migration history. Media moves directly between Google
 Drive, the worker, and a private Cloudflare R2 Standard bucket rather than
 through the Gradivo application server. The worker uses its own configured Drive
 credentials; Gradivo sends file identity and an integrity fingerprint, never a
@@ -36,34 +36,24 @@ entry. Gradivo's explicit Retry action creates the replacement job UUID and
 records `retry_of`. Already-terminal jobs remain unchanged and resume only any
 unacknowledged callback delivery.
 
-The Mac runtime uses one long-lived FastAPI control process and at most one
-media-execution subprocess. The control process alone owns SQLite, HTTP
+The Mac runtime uses one long-lived FastAPI control process and up to
+`MAX_NUMBER_OF_JOBS` media-execution subprocesses (initially one). The control process alone owns SQLite, HTTP
 acceptance, capacity, snapshot revisions, and callback-outbox delivery. It
 starts a subprocess immediately after durably accepting a job; no internal
 pending queue, Redis, or Celery worker is introduced. The subprocess runs either
 operation and reports events to the control process, keeping the HTTP boundary
 responsive and isolating media-pipeline failures.
 
-The initial primary worker deployment is a dedicated, always-on office Mac
-mini. The same processing implementation must also support an on-demand cloud
-fallback with no idle compute charge. Both execution targets consume the same
-immutable job payload, use the same job UUID and artifact keys, and deliver the
-same revisioned callbacks; the fallback is not a second editorial workflow or
-pending-work queue.
-
-The cloud fallback is a manually activated cold standby in v1. It may execute
-only a Gradivo job that remains `queued` and whose primary-worker acceptance is
-known not to have occurred. Transport timeouts never trigger automatic
-failover, because the Mac worker may have persisted the job before its response
-was lost. Ambiguous attempts must be reconciled before another executor runs
-them.
+The primary worker is a separate ARM64 MacBook Air running OrbStack. Cloud
+fallback is deferred; no standby executor or automatic failover is implemented.
+Ambiguous acceptance must be reconciled using the existing UUID before another
+attempt is dispatched.
 
 Deployment routing is environment-only configuration. Gradivo reads the worker
 origin from `VIDEO_PROCESSING_HTTP_BASE_URL`; the worker reads Gradivo's callback
 origin from `GRADIVO_VIDEO_CALLBACK_BASE_URL`. Neither hostname is hard-coded or
-included in a job payload. The first real end-to-end topology is hosted
-development Gradivo at `https://gradmin.com.hr` connected to the office Mac mini
-worker, but the same contract applies to another environment or executor.
+included in a job payload. Gradivo and its callback endpoint currently remain
+local on the first computer; a hosted development rollout is a separate step.
 
 Cloudflare Tunnel supplies the Mac worker's initial public HTTPS origin through
 an outbound `cloudflared` connection, without an inbound office-router port.
@@ -94,11 +84,9 @@ image, or shared across services. The dedicated Docker owner is trusted
 because Docker administration can inspect container environment values. A
 future cloud secret store may replace these files without changing the worker
 contract.
-One dedicated non-admin macOS service account owns Docker Desktop and is not
-used for normal office work. After a cold Mac restart, an operator signs in to
-that account once; Docker Desktop starts at login and the Compose restart policy
-restores both containers. Automatic macOS login and a separately managed
-headless Linux VM are not part of the first E2E deployment.
+OrbStack supplies the Docker engine on the separate MacBook Air. After a cold
+restart, an operator signs in and starts OrbStack; Compose uses `unless-stopped`
+for both services. Durable state, scratch and logs stay outside the checkout.
 
 Image distribution and rollout automation are deferred until both real worker
 operations work end to end. For the initial tracer bullet, the operator manually
@@ -162,22 +150,19 @@ that audio instead of repeating preprocessing or relying on local scratch files
 surviving human review.
 
 The service boundary uses its own versioned `analysis_result.v1` DTO rather
-than exposing the local editor's `review.v4` model. Filesystem paths and human
-review state stay internal; a dedicated adapter emits only portable processing
+than exposing the retired local review model. Filesystem paths stay internal
+and human review state stays in Gradivo; a dedicated adapter emits only portable processing
 results for Gradivo.
 
 The implementation exposes two reusable headless application use cases:
-`AnalysisUseCase.execute(...)` and `RenderUseCase.execute(...)`. One worker
-media subprocess calls one use case for each accepted job, while the existing
-CLI may retain its one-command workflow by composing both sequentially. The
-worker neither shells out to the CLI and parses sidecars nor duplicates the
-processing pipeline.
+`AnalysisUseCase.execute(...)` and `RenderUseCase.execute_cut_ranges(...)`. One
+worker media subprocess calls one use case for each accepted job. There is no
+combined local processing command, editable review sidecar or UI server.
 
 Current human cut ranges live in one mutable Gradivo database field. A render
 job carries its own immutable snapshot of those ranges, and the worker derives
-any full render EDL only in job-scoped scratch space. Existing review sidecar
-files remain a local-development implementation detail and are not part of the
-production integration.
+the full render EDL internally for that job. Editorial state remains exclusively
+in Gradivo.
 
 Render requests use a named compatible pipeline selector rather than
 caller-supplied FFmpeg flags. `student_video.v1` versions the render pipeline and

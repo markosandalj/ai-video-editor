@@ -31,13 +31,11 @@ _Avoid_: Review Proxy, student video
 
 **Analysis Use Case**:
 The reusable headless application operation that turns one verified local Raw
-Recording into analysis data, a Review Proxy, and Processed Audio. The worker
-and local CLI call this operation; CLI output and sidecars are not its service
-contract.
+Recording into analysis data, a Review Proxy, and Processed Audio. The worker calls this operation; results use the versioned HTTP contract.
 _Avoid_: analysis CLI, preprocessing job
 
 **Render Use Case**:
 The reusable headless application operation that combines a verified local Raw
 Recording, durable Processed Audio, and one immutable human edit snapshot into
-a Final Render Artifact. The worker and local CLI call this operation.
+a Final Render Artifact. The worker calls this operation from the immutable Gradivo request.
 _Avoid_: final-render command, automatic render

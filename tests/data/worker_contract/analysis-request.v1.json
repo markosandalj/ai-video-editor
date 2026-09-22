@@ -1,0 +1,14 @@
+{
+  "operation": "analysis",
+  "source": {
+    "type": "google_drive",
+    "file_id": "drive-source-1",
+    "head_revision_id": "revision-1",
+    "size_bytes": 184223001,
+    "mime_type": "video/mp4",
+    "checksum": {
+      "algorithm": "md5",
+      "value": "46c4f00d"
+    }
+  }
+}

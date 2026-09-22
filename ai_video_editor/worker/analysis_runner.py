@@ -138,14 +138,13 @@ def execute_analysis_job(
     pipeline_settings = default_pipeline_settings.model_copy(
         update={
             "general": default_pipeline_settings.general.model_copy(
-                update={"temp_dir": job_dir, "output_dir": job_dir}
+                update={"temp_dir": job_dir}
             )
         }
     )
     try:
         output = use_case_factory(pipeline_settings).execute(
             source_path,
-            force=True,
             progress=progress,
         )
     except InvalidMediaError as exc:
