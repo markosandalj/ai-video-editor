@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import multiprocessing
 from pathlib import Path
 import signal
 import subprocess
@@ -179,6 +180,64 @@ def test_shutdown_waits_for_terminal_event_persistence(tmp_path):
         release.set()
         thread.join(timeout=5)
     assert shutdown_done.is_set()
+
+
+def queue_terminal_before_exit(events, ready, terminal, delivery_delay):
+    os.setsid()
+    events.put({"type": "progress", "percent": 80, "stage": "uploading_artifacts"})
+    if delivery_delay:
+        ready.set()
+        time.sleep(delivery_delay)
+    events.put(terminal)
+    ready.set()
+    # Keep the producer alive after Queue.put(), including while its feeder
+    # thread flushes the terminal event to the parent.
+    threading.Event().wait(10)
+
+
+@pytest.mark.parametrize("outcome", ["completed", "failed"])
+@pytest.mark.parametrize("delivery_delay", [0, 0.05])
+def test_shutdown_preserves_terminal_event_from_live_process(tmp_path, outcome, delivery_delay):
+    context = multiprocessing.get_context("spawn")
+    events = context.Queue()
+    ready = context.Event()
+    job_id = uuid4()
+    if outcome == "completed":
+        terminal = {
+            "type": "completed",
+            "result": finish_successfully(job_id, {}, None, lambda *args: None),
+        }
+    else:
+        terminal = {
+            "type": "failed", "code": "invalid_media",
+            "stage": "rendering", "message": "Source has no video stream",
+        }
+    process = context.Process(
+        target=queue_terminal_before_exit,
+        args=(events, ready, terminal, delivery_delay),
+    )
+    executor = SubprocessMediaExecutor(
+        finish_successfully, scratch_dir=tmp_path, termination_grace_seconds=0.5,
+    )
+    job_dir = tmp_path / str(job_id)
+    job_dir.mkdir()
+    received = []
+    process.start()
+    try:
+        assert ready.wait(5)
+        assert process.is_alive()
+        executor._stopping.set()
+        executor._monitor(process, events, "analysis", received.append, job_id, time.monotonic())
+        terminal_events = [event for event in received if isinstance(event, (CompletedEvent, FailedEvent))]
+        assert terminal_events == [executor._parse_event(terminal, "analysis")]
+        assert not process.is_alive()
+        assert not job_dir.exists()
+    finally:
+        if process.is_alive():
+            process.kill()
+        process.join(timeout=5)
+        events.close()
+        events.join_thread()
 
 
 def test_restart_recovers_job_and_removes_its_abandoned_scratch(tmp_path):

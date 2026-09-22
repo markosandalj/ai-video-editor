@@ -172,9 +172,9 @@ class SubprocessMediaExecutor:
         with self._lock:
             self._stopping.set()
             monitors = list(self._monitors)
-        # All monitors terminate their process groups concurrently. Include time
-        # for the final SQLite transaction (its busy timeout is 30 seconds).
-        deadline = time.monotonic() + 2 * self._termination_grace_seconds + 35
+        # All monitors drain events, then terminate their process groups
+        # concurrently. Include the final SQLite transaction (30-second timeout).
+        deadline = time.monotonic() + 3 * self._termination_grace_seconds + 35
         for monitor in monitors:
             monitor.join(timeout=max(0, deadline - time.monotonic()))
         with self._lock:
@@ -297,6 +297,19 @@ class SubprocessMediaExecutor:
                 while process.is_alive():
                     if self._stopping.is_set():
                         cancelled = True
+                        # Queue.put() returns before the child feeder finishes
+                        # sending. Drain while the producer is still alive;
+                        # terminating it first can truncate the queue's pipe.
+                        drain_deadline = time.monotonic() + self._termination_grace_seconds
+                        while terminal_event is None:
+                            remaining = drain_deadline - time.monotonic()
+                            if remaining <= 0:
+                                break
+                            try:
+                                handle(events.get(timeout=min(0.1, remaining)))
+                            except queue.Empty:
+                                if not process.is_alive():
+                                    break
                         terminal_event = terminal_event or FailedEvent(
                             WorkerError(
                                 code="worker_interrupted",

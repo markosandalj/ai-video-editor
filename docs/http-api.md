@@ -160,11 +160,13 @@ Bearer tokens and URLs are redacted; SDK exception messages and response bodies
 are omitted. These diagnostics never enter persisted snapshots or callbacks.
 
 Graceful shutdown rejects new execution starts and signals every active job's
-monitor. Each monitor stops and joins its process group, removes that job's
-scratch directory, and persists one terminal event before shutdown returns.
-Jobs interrupted during execution fail with `worker_interrupted`; an already
-received terminal result is preserved. The callback dispatcher stops after these
-transactions, leaving unacknowledged outbox entries available after restart.
+monitor. Each monitor first reads pending events for up to the termination grace
+period (5 seconds by default), stopping as soon as it receives a terminal result.
+It then stops and joins its process group, removes that job's scratch directory,
+and persists one terminal event before shutdown returns. Jobs without a terminal
+result after this wait fail with `worker_interrupted`; queued success or failure
+results received during the wait are preserved. The callback dispatcher stops
+after these transactions, leaving unacknowledged outbox entries available after restart.
 The Docker service allows 60 seconds for this shutdown sequence.
 
 Scratch storage is dedicated to one worker instance. After success, failure,
