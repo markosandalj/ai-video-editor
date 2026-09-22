@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from pathlib import Path
 from typing import Callable
 from uuid import UUID
 
@@ -14,6 +15,7 @@ from ai_video_editor.worker.contracts import (
     AnalysisResultV1,
     AutomaticCutRange,
     Diagnostics,
+    GoogleDriveSource,
     RenderJobRequest,
     RenderResultV1,
     ResolvedRenderConfigV1,
@@ -123,16 +125,7 @@ def execute_analysis_job(
     job_dir.mkdir(parents=True, exist_ok=True)
     source_path = job_dir / "source.mp4"
     progress(5, "downloading_source")
-    try:
-        drive.download(request.source, source_path)
-    except SourceNotFound as exc:
-        raise _source_failure("source_not_found", "Source media was not found") from exc
-    except SourceAccessDenied as exc:
-        raise _source_failure("source_access_denied", "Source media access was denied") from exc
-    except SourceChanged as exc:
-        raise _source_failure("source_changed", "Source media changed after confirmation") from exc
-    except SourceDownloadFailed as exc:
-        raise _source_failure("source_download_failed", "Could not download source media") from exc
+    _download_source(drive, request.source, source_path)
 
     default_pipeline_settings = Settings()
     pipeline_settings = default_pipeline_settings.model_copy(
@@ -225,16 +218,7 @@ def execute_render_job(
     processed_audio_path = job_dir / "processed-audio.flac"
 
     progress(8, "downloading_source")
-    try:
-        drive.download(request.source, source_path)
-    except SourceNotFound as exc:
-        raise _source_failure("source_not_found", "Source media was not found") from exc
-    except SourceAccessDenied as exc:
-        raise _source_failure("source_access_denied", "Source media access was denied") from exc
-    except SourceChanged as exc:
-        raise _source_failure("source_changed", "Source media changed after confirmation") from exc
-    except SourceDownloadFailed as exc:
-        raise _source_failure("source_download_failed", "Could not download source media") from exc
+    _download_source(drive, request.source, source_path)
 
     progress(18, "downloading_processed_audio")
     try:
@@ -394,6 +378,27 @@ def analysis_result_from_output(
             warnings=list(output.warnings),
         ),
     )
+
+
+def _download_source(
+    drive: DriveSourceProvider, source: GoogleDriveSource, destination: Path
+) -> None:
+    try:
+        drive.download(source, destination)
+    except SourceNotFound as exc:
+        raise _source_failure("source_not_found", "Source media was not found") from exc
+    except SourceAccessDenied as exc:
+        raise _source_failure(
+            "source_access_denied", "Source media access was denied"
+        ) from exc
+    except SourceChanged as exc:
+        raise _source_failure(
+            "source_changed", "Source media changed after confirmation"
+        ) from exc
+    except SourceDownloadFailed as exc:
+        raise _source_failure(
+            "source_download_failed", "Could not download source media"
+        ) from exc
 
 
 def _source_failure(code: str, message: str) -> MediaExecutionFailure:

@@ -123,8 +123,11 @@ its unacknowledged callback delivery.
 
 ## Runtime process boundary
 
-The initial worker runtime has one long-lived FastAPI control process and at
-most one media-execution subprocess while `MAX_NUMBER_OF_JOBS=1`. Only the
+The worker runtime has one long-lived FastAPI control process and at most
+`MAX_NUMBER_OF_JOBS` media-execution subprocesses. The setting is a positive
+integer, initially `1`, parsed from the environment and enforced by both durable
+acceptance and the subprocess executor. Each job has its own process group and
+timeout; finishing or timing out one job releases only that job's slot. Only the
 control process reads and writes operational SQLite state. It owns HTTP
 authentication, idempotent acceptance, capacity, snapshot revisions, and the
 callback outbox.
@@ -150,6 +153,11 @@ existing durable outbox. Retry remains an explicit Gradivo action with a new
 UUID. If the media process cannot be stopped, capacity is retained rather than
 risking overlapping executions. Job start/finish and callback-failure logs use
 job UUIDs and safe diagnostic fields, never callback bodies or credentials.
+Subprocess failures send bounded internal diagnostics to the control process's
+rotating worker log: exception cause types, stack locations (without locals or
+source text), and the FFmpeg stderr tail. Configured environment credentials,
+Bearer tokens and URLs are redacted; SDK exception messages and response bodies
+are omitted. These diagnostics never enter persisted snapshots or callbacks.
 
 ## Domain isolation
 

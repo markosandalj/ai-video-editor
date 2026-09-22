@@ -4,7 +4,7 @@ import json
 import sqlite3
 import threading
 import time
-from contextlib import closing
+from contextlib import closing, contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from uuid import UUID
@@ -63,8 +63,8 @@ class JobStore:
         capacity: int = 1,
         resolved_render_config: ResolvedRenderConfigV1 | None = None,
     ):
-        if capacity != 1:
-            raise ValueError("the v1 worker has exactly one execution slot")
+        if type(capacity) is not int or capacity < 1:
+            raise ValueError("worker capacity must be a positive integer")
         self._path = Path(path)
         self._capacity = capacity
         self._resolved_render_config = resolved_render_config or _default_render_config()
@@ -362,32 +362,26 @@ class JobStore:
 
     def _connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self._path, timeout=30.0)
-        connection.row_factory = sqlite3.Row
-        connection.execute("PRAGMA foreign_keys = ON")
-        connection.execute("PRAGMA journal_mode = WAL")
+        try:
+            connection.row_factory = sqlite3.Row
+            connection.execute("PRAGMA foreign_keys = ON")
+            connection.execute("PRAGMA journal_mode = WAL")
+        except BaseException:
+            connection.close()
+            raise
         return connection
 
+    @contextmanager
     def _transaction(self):
-        store = self
-
-        class Transaction:
-            def __enter__(self) -> sqlite3.Connection:
-                store._lock.acquire()
-                self.connection = store._connect()
-                self.connection.execute("BEGIN IMMEDIATE")
-                return self.connection
-
-            def __exit__(self, exc_type, exc, traceback) -> None:
-                try:
-                    if exc_type is None:
-                        self.connection.commit()
-                    else:
-                        self.connection.rollback()
-                finally:
-                    self.connection.close()
-                    store._lock.release()
-
-        return Transaction()
+        # Each context unwinds even when opening the connection or BEGIN fails.
+        with self._lock, closing(self._connect()) as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                yield connection
+                connection.commit()
+            except BaseException:
+                connection.rollback()
+                raise
 
     @staticmethod
     def _job_row(connection: sqlite3.Connection, job_id: UUID) -> sqlite3.Row:

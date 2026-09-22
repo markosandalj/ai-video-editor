@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import math
 import multiprocessing
@@ -22,6 +23,7 @@ from ai_video_editor.worker.contracts import (
     WorkerError,
     job_result_adapter,
 )
+from ai_video_editor.worker.diagnostics import exception_diagnostics
 
 logger = logging.getLogger(__name__)
 
@@ -101,26 +103,29 @@ def _subprocess_entry(
                 "code": exc.code,
                 "stage": exc.stage,
                 "message": exc.message,
+                "diagnostics": exception_diagnostics(exc),
             }
         )
-    except BaseException:
+    except BaseException as exc:
         events.put(
             {
                 "type": "failed",
                 "code": "processing_failed",
                 "stage": current_stage,
                 "message": "Media processing failed unexpectedly",
+                "diagnostics": exception_diagnostics(exc),
             }
         )
 
 
 class SubprocessMediaExecutor:
-    """Owns one media subprocess and reports its events to the control process."""
+    """Owns bounded media subprocesses and reports events to the control process."""
 
     def __init__(
         self,
         runner: MediaRunner,
         *,
+        max_number_of_jobs: int = 1,
         analysis_timeout_seconds: float = 4 * 60 * 60,
         render_timeout_seconds: float = 4 * 60 * 60,
         termination_grace_seconds: float = 5.0,
@@ -132,6 +137,9 @@ class SubprocessMediaExecutor:
         ):
             if not math.isfinite(value) or value <= 0:
                 raise ValueError("execution time limits must be positive and finite")
+        if type(max_number_of_jobs) is not int or max_number_of_jobs < 1:
+            raise ValueError("worker capacity must be a positive integer")
+        self._capacity = max_number_of_jobs
         self._runner = runner
         self._timeouts = {
             "analysis": analysis_timeout_seconds,
@@ -139,7 +147,7 @@ class SubprocessMediaExecutor:
         }
         self._termination_grace_seconds = termination_grace_seconds
         self._lock = threading.Lock()
-        self._active = False
+        self._active: set[UUID] = set()
         self._context = multiprocessing.get_context("spawn")
 
     def start(
@@ -150,9 +158,8 @@ class SubprocessMediaExecutor:
         emit: EventSink,
     ) -> None:
         with self._lock:
-            if self._active:
-                raise RuntimeError("media subprocess slot is already occupied")
-            self._active = True
+            if job_id in self._active or len(self._active) >= self._capacity:
+                raise RuntimeError("media subprocess capacity is already occupied")
             events = self._context.Queue()
             process = self._context.Process(
                 target=_subprocess_entry,
@@ -174,8 +181,9 @@ class SubprocessMediaExecutor:
             try:
                 started_at = time.monotonic()
                 process.start()
+                self._active.add(job_id)
             except BaseException:
-                self._active = False
+                self._active.discard(job_id)
                 events.close()
                 raise
 
@@ -185,7 +193,14 @@ class SubprocessMediaExecutor:
             name=f"video-job-monitor-{job_id}",
             daemon=True,
         )
-        monitor.start()
+        try:
+            monitor.start()
+        except BaseException:
+            self._stop_process_tree(process)
+            events.close()
+            with self._lock:
+                self._active.discard(job_id)
+            raise
 
     def _monitor(
         self,
@@ -204,6 +219,14 @@ class SubprocessMediaExecutor:
         def handle(raw: object) -> None:
             nonlocal last_stage, terminal_event
             event = self._parse_event(raw, operation)
+            if isinstance(event, FailedEvent) and isinstance(raw, dict):
+                logger.error(
+                    "job_failure_details job_id=%s operation=%s stage=%s diagnostics=%s",
+                    job_id,
+                    operation,
+                    event.error.stage,
+                    json.dumps(raw.get("diagnostics", [])),
+                )
             if isinstance(event, (CompletedEvent, FailedEvent)):
                 terminal_event = event
             else:
@@ -236,9 +259,17 @@ class SubprocessMediaExecutor:
                     except queue.Empty:
                         break
                     handle(raw)
-            except Exception:
+            except Exception as exc:
+                logger.error(
+                    "job_monitor_failed job_id=%s diagnostics=%s",
+                    job_id,
+                    json.dumps(exception_diagnostics(exc)),
+                )
                 terminal_event = None
             if terminal_event is None:
+                logger.error(
+                    "job_process_exited job_id=%s exitcode=%s", job_id, process.exitcode
+                )
                 terminal_event = FailedEvent(
                     WorkerError(
                         code="processing_failed",
@@ -249,16 +280,17 @@ class SubprocessMediaExecutor:
         finally:
             try:
                 self._stop_process_tree(process)
-            except Exception:
+            except Exception as exc:
                 logger.error(
-                    "job_cleanup_failed job_id=%s operation=%s capacity_retained=true",
+                    "job_cleanup_failed job_id=%s operation=%s capacity_retained=true diagnostics=%s",
                     job_id,
                     operation,
+                    json.dumps(exception_diagnostics(exc)),
                 )
                 raise
             events.close()
             with self._lock:
-                self._active = False
+                self._active.discard(job_id)
         assert terminal_event is not None
         logger.info(
             "job_finished job_id=%s operation=%s outcome=%s stage=%s elapsed_seconds=%.3f",

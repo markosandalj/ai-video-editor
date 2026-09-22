@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal
 from urllib.parse import urlparse
 
 from pydantic import Field, field_validator, model_validator
@@ -27,7 +26,7 @@ class WorkerSettings(BaseSettings):
         default=Path("/tmp/ai-video-worker/logs"),
         alias="VIDEO_PROCESSING_LOG_DIR",
     )
-    max_number_of_jobs: Literal[1] = Field(default=1, alias="MAX_NUMBER_OF_JOBS")
+    max_number_of_jobs: int = Field(default=1, gt=0, alias="MAX_NUMBER_OF_JOBS")
     analysis_timeout_seconds: float = Field(
         default=4 * 60 * 60,
         gt=0,

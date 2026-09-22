@@ -96,20 +96,13 @@ class GoogleDriveSourceProvider:
         client_secret: str,
         refresh_token: str,
     ) -> GoogleDriveSourceProvider:
-        if not all((client_id, client_secret, refresh_token)):
-            raise ValueError("Worker Google Drive OAuth credentials are incomplete")
-        from google.oauth2.credentials import Credentials
-        from googleapiclient.discovery import build
-
-        credentials = Credentials(
-            token=None,
-            refresh_token=refresh_token,
-            token_uri="https://oauth2.googleapis.com/token",
-            client_id=client_id,
-            client_secret=client_secret,
-            scopes=["https://www.googleapis.com/auth/drive"],
+        return cls(
+            _google_drive_service(
+                client_id=client_id,
+                client_secret=client_secret,
+                refresh_token=refresh_token,
+            )
         )
-        return cls(build("drive", "v3", credentials=credentials, cache_discovery=False))
 
     def download(self, source: GoogleDriveSource, destination: Path) -> Path:
         try:
@@ -195,18 +188,15 @@ class R2AnalysisArtifactStore:
         access_key_id: str,
         secret_access_key: str,
     ) -> R2AnalysisArtifactStore:
-        if not all((endpoint_url, bucket, access_key_id, secret_access_key)):
-            raise ValueError("Worker R2 credentials are incomplete")
-        import boto3
-
-        client = boto3.client(
-            "s3",
-            endpoint_url=endpoint_url,
-            region_name="auto",
-            aws_access_key_id=access_key_id,
-            aws_secret_access_key=secret_access_key,
+        return cls(
+            _r2_client(
+                endpoint_url=endpoint_url,
+                bucket=bucket,
+                access_key_id=access_key_id,
+                secret_access_key=secret_access_key,
+            ),
+            bucket=bucket,
         )
-        return cls(client, bucket=bucket)
 
     def upload(
         self,
@@ -265,18 +255,15 @@ class R2ProcessedAudioProvider:
         access_key_id: str,
         secret_access_key: str,
     ) -> R2ProcessedAudioProvider:
-        if not all((endpoint_url, bucket, access_key_id, secret_access_key)):
-            raise ValueError("Worker R2 credentials are incomplete")
-        import boto3
-
-        client = boto3.client(
-            "s3",
-            endpoint_url=endpoint_url,
-            region_name="auto",
-            aws_access_key_id=access_key_id,
-            aws_secret_access_key=secret_access_key,
+        return cls(
+            _r2_client(
+                endpoint_url=endpoint_url,
+                bucket=bucket,
+                access_key_id=access_key_id,
+                secret_access_key=secret_access_key,
+            ),
+            bucket=bucket,
         )
-        return cls(client, bucket=bucket)
 
     def download(self, reference: S3ObjectReference, destination: Path) -> Path:
         try:
@@ -334,20 +321,13 @@ class GoogleDriveOutputProvider:
         client_secret: str,
         refresh_token: str,
     ) -> GoogleDriveOutputProvider:
-        if not all((client_id, client_secret, refresh_token)):
-            raise ValueError("Worker Google Drive OAuth credentials are incomplete")
-        from google.oauth2.credentials import Credentials
-        from googleapiclient.discovery import build
-
-        credentials = Credentials(
-            token=None,
-            refresh_token=refresh_token,
-            token_uri="https://oauth2.googleapis.com/token",
-            client_id=client_id,
-            client_secret=client_secret,
-            scopes=["https://www.googleapis.com/auth/drive"],
+        return cls(
+            _google_drive_service(
+                client_id=client_id,
+                client_secret=client_secret,
+                refresh_token=refresh_token,
+            )
         )
-        return cls(build("drive", "v3", credentials=credentials, cache_discovery=False))
 
     def find_completed(
         self, job_id: UUID, output: GoogleDriveOutput
@@ -477,6 +457,39 @@ class GoogleDriveOutputProvider:
         if not isinstance(files, list) or not all(isinstance(item, dict) for item in files):
             raise OutputUploadFailed
         return files
+
+
+def _google_drive_service(*, client_id: str, client_secret: str, refresh_token: str):
+    if not all((client_id, client_secret, refresh_token)):
+        raise ValueError("Worker Google Drive OAuth credentials are incomplete")
+    from google.oauth2.credentials import Credentials
+    from googleapiclient.discovery import build
+
+    credentials = Credentials(
+        token=None,
+        refresh_token=refresh_token,
+        token_uri="https://oauth2.googleapis.com/token",
+        client_id=client_id,
+        client_secret=client_secret,
+        scopes=["https://www.googleapis.com/auth/drive"],
+    )
+    return build("drive", "v3", credentials=credentials, cache_discovery=False)
+
+
+def _r2_client(
+    *, endpoint_url: str, bucket: str, access_key_id: str, secret_access_key: str
+):
+    if not all((endpoint_url, bucket, access_key_id, secret_access_key)):
+        raise ValueError("Worker R2 credentials are incomplete")
+    import boto3
+
+    return boto3.client(
+        "s3",
+        endpoint_url=endpoint_url,
+        region_name="auto",
+        aws_access_key_id=access_key_id,
+        aws_secret_access_key=secret_access_key,
+    )
 
 
 def _metadata_int(value: object) -> int | None:

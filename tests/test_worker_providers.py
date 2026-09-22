@@ -403,3 +403,40 @@ def test_drive_output_uuid_lookup_reuses_one_and_rejects_duplicates(
     files.matches = [complete, {**complete, "id": "duplicate-id"}]
     with pytest.raises(DuplicateOutputArtifacts):
         provider.find_completed(uuid4(), _drive_output())
+
+
+@pytest.mark.parametrize("provider_type", [GoogleDriveSourceProvider, GoogleDriveOutputProvider])
+def test_drive_factories_share_oauth_configuration(provider_type):
+    with patch("googleapiclient.discovery.build") as build:
+        provider = provider_type.from_oauth(
+            client_id="fake-client-id", client_secret="fake-client-secret",
+            refresh_token="fake-refresh-token",
+        )
+    assert provider._service is build.return_value
+    args, kwargs = build.call_args
+    assert args == ("drive", "v3")
+    assert kwargs["cache_discovery"] is False
+    credentials = kwargs["credentials"]
+    assert credentials.client_id == "fake-client-id"
+    assert credentials.client_secret == "fake-client-secret"
+    assert credentials.refresh_token == "fake-refresh-token"
+    assert credentials.scopes == ["https://www.googleapis.com/auth/drive"]
+    with pytest.raises(ValueError, match="incomplete"):
+        provider_type.from_oauth(client_id="fake-client-id", client_secret="", refresh_token="")
+
+
+@pytest.mark.parametrize("provider_type", [R2AnalysisArtifactStore, R2ProcessedAudioProvider])
+def test_r2_factories_share_endpoint_and_credentials(provider_type):
+    with patch("boto3.client") as client:
+        provider = provider_type.from_credentials(
+            endpoint_url="https://test.r2.cloudflarestorage.com", bucket="test-bucket",
+            access_key_id="fake-access-key", secret_access_key="fake-secret-key",
+        )
+    assert provider._client is client.return_value
+    assert provider._bucket == "test-bucket"
+    client.assert_called_once_with(
+        "s3", endpoint_url="https://test.r2.cloudflarestorage.com", region_name="auto",
+        aws_access_key_id="fake-access-key", aws_secret_access_key="fake-secret-key",
+    )
+    with pytest.raises(ValueError, match="incomplete"):
+        provider_type.from_credentials(endpoint_url="", bucket="test-bucket", access_key_id="", secret_access_key="")

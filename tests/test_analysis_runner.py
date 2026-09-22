@@ -133,9 +133,10 @@ def test_real_analysis_media_with_fake_external_adapters(tmp_path: Path) -> None
         (SourceDownloadFailed, "source_download_failed"),
     ],
 )
-def test_source_failures_have_stable_codes(tmp_path: Path, failure, code: str) -> None:
+@pytest.mark.parametrize("operation", ["analysis", "render"])
+def test_source_failures_have_stable_codes(tmp_path: Path, failure, code: str, operation) -> None:
     request = job_request_adapter.validate_json(
-        (FIXTURES / "analysis-request.v1.json").read_text()
+        (FIXTURES / f"{operation}-request.v1.json").read_text()
     )
 
     class FailingDrive:
@@ -143,17 +144,28 @@ def test_source_failures_have_stable_codes(tmp_path: Path, failure, code: str) -
             del manifest, destination
             raise failure
 
-    with pytest.raises(MediaExecutionFailure) as raised:
-        execute_analysis_job(
-            UUID("018f1000-0000-7000-8000-000000000001"),
-            request,
-            settings=worker_settings(tmp_path),
-            drive=FailingDrive(),
-            artifacts=FakeArtifacts(),
-            progress=lambda percent, stage: None,
-            use_case_factory=fake_use_case,
-        )
+    class UnusedOutput:
+        def find_completed(self, job_id, output):
+            return None
 
+    config = worker_settings(tmp_path)
+    with pytest.raises(MediaExecutionFailure) as raised:
+        common = dict(
+            settings=config, drive=FailingDrive(), progress=lambda percent, stage: None,
+        )
+        if operation == "analysis":
+            execute_analysis_job(
+                UUID("018f1000-0000-7000-8000-000000000001"), request,
+                artifacts=FakeArtifacts(), use_case_factory=fake_use_case, **common,
+            )
+        else:
+            execute_render_job(
+                UUID("018f1000-0000-7000-8000-000000000001"), request,
+                resolved_config=config.resolve_render_config(),
+                processed_audio=None, output=UnusedOutput(), **common,
+            )
+
+    assert isinstance(raised.value.__cause__, failure)
     assert raised.value.code == code
     assert raised.value.stage == "downloading_source"
 

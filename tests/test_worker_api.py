@@ -365,3 +365,72 @@ def test_execution_deadlines_must_be_positive_and_finite(tmp_path, value) -> Non
         values[name] = value
         with pytest.raises(ValidationError):
             WorkerSettings.model_validate(values)
+
+
+@pytest.mark.parametrize("value", ["1", "2", "4"])
+def test_capacity_accepts_environment_integer(monkeypatch, tmp_path, value):
+    monkeypatch.setenv("MAX_NUMBER_OF_JOBS", value)
+    assert settings(tmp_path / "jobs.sqlite3").max_number_of_jobs == int(value)
+
+
+@pytest.mark.parametrize("value", ["0", "-1", "1.5", "true", "invalid"])
+def test_capacity_rejects_invalid_environment_value(monkeypatch, tmp_path, value):
+    from pydantic import ValidationError
+
+    monkeypatch.setenv("MAX_NUMBER_OF_JOBS", value)
+    with pytest.raises(ValidationError):
+        settings(tmp_path / "jobs.sqlite3")
+
+
+def test_two_job_capacity_preserves_replay_and_releases_only_finished_job(tmp_path):
+    executor = DeterministicFakeExecutor()
+    config = settings(tmp_path / "jobs.sqlite3").model_copy(update={"max_number_of_jobs": 2})
+    app = create_worker_app(config, executor=executor, start_callback_dispatcher=False)
+    first, second, third, fourth = [uuid4() for _ in range(4)]
+    with TestClient(app) as client:
+        def submit(job_id):
+            return client.put(f"/v1/jobs/{job_id}", json=request_payload(), headers=auth_headers())
+
+        assert submit(first).status_code == 201
+        assert submit(second).status_code == 201
+        assert submit(third).status_code == 429
+        assert submit(first).status_code == 200
+        executor.complete_analysis(first)
+        assert submit(third).status_code == 201
+        assert submit(fourth).status_code == 429
+        executor.crash(second)
+        assert submit(fourth).status_code == 201
+
+
+def test_default_app_executor_runs_configured_capacity(monkeypatch, tmp_path):
+    from tests.test_worker_executor import WaitForRelease
+
+    monkeypatch.setenv("MAX_NUMBER_OF_JOBS", "2")
+    monkeypatch.setattr("ai_video_editor.worker.app.run_configured_media_job", WaitForRelease(tmp_path))
+    config = settings(tmp_path / "jobs.sqlite3").model_copy(update={"analysis_timeout_seconds": 10})
+    app = create_worker_app(config, start_callback_dispatcher=False)
+    job_ids = [uuid4(), uuid4()]
+    with TestClient(app) as client:
+        try:
+            for job_id in job_ids:
+                assert client.put(f"/v1/jobs/{job_id}", json=request_payload(), headers=auth_headers()).status_code == 201
+            deadline = time.monotonic() + 6
+            while True:
+                snapshots = [client.get(f"/v1/jobs/{job_id}", headers=auth_headers()).json() for job_id in job_ids]
+                assert all(snapshot["status"] == "processing" for snapshot in snapshots)
+                if all(snapshot["progress"]["percent"] == 10 for snapshot in snapshots):
+                    break
+                assert time.monotonic() < deadline
+                time.sleep(0.02)
+            assert client.get("/healthz", headers=auth_headers()).status_code == 200
+            assert client.put(f"/v1/jobs/{uuid4()}", json=request_payload(), headers=auth_headers()).status_code == 429
+        finally:
+            for job_id in job_ids:
+                (tmp_path / str(job_id)).touch()
+        deadline = time.monotonic() + 6
+        while True:
+            snapshots = [client.get(f"/v1/jobs/{job_id}", headers=auth_headers()).json() for job_id in job_ids]
+            if all(snapshot["status"] == "completed" for snapshot in snapshots):
+                break
+            assert time.monotonic() < deadline
+            time.sleep(0.02)

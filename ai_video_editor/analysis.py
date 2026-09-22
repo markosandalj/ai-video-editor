@@ -162,7 +162,9 @@ class AnalysisUseCase:
 def _run_ffmpeg(command: list[str], *, failure: str, stage: str) -> None:
     result = subprocess.run(command, capture_output=True, text=True)
     if result.returncode != 0:
-        raise InvalidMediaError(failure, stage=stage)
+        raise InvalidMediaError(failure, stage=stage) from subprocess.CalledProcessError(
+            result.returncode, command, stderr=result.stderr
+        )
 
 
 def _probe_source_duration(source: Path) -> float:

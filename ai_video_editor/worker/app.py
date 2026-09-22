@@ -45,6 +45,7 @@ def create_worker_app(
     )
     media_executor = executor or SubprocessMediaExecutor(
         run_configured_media_job,
+        max_number_of_jobs=settings.max_number_of_jobs,
         analysis_timeout_seconds=settings.analysis_timeout_seconds,
         render_timeout_seconds=settings.render_timeout_seconds,
     )

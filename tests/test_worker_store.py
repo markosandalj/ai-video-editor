@@ -176,3 +176,62 @@ def test_initialize_migrates_legacy_jobs_table_before_accepting_render(
             for row in connection.execute("PRAGMA table_info(jobs)").fetchall()
         }
     assert "resolved_render_config_json" in columns
+
+
+@pytest.mark.parametrize("failure_point", ["connect", "begin"])
+def test_transaction_start_failure_does_not_block_other_threads(tmp_path, monkeypatch, failure_point):
+    import threading
+
+    store = JobStore(tmp_path / "jobs.sqlite3")
+    store.initialize()
+    request = job_request_adapter.validate_json(
+        (FIXTURES / "analysis-request.v1.json").read_text()
+    )
+    connect = store._connect
+    blocker = connect()
+    opened = []
+
+    def failing_connect():
+        if failure_point == "connect":
+            raise sqlite3.OperationalError("simulated connection failure")
+        connection = connect()
+        connection.execute("PRAGMA busy_timeout = 10")
+        opened.append(connection)
+        return connection
+
+    blocker.execute("BEGIN IMMEDIATE")
+    monkeypatch.setattr(store, "_connect", failing_connect)
+    try:
+        with pytest.raises(sqlite3.OperationalError):
+            store.accept(uuid4(), request)
+    finally:
+        blocker.rollback()
+        blocker.close()
+        monkeypatch.setattr(store, "_connect", connect)
+
+    completed = threading.Event()
+    errors = []
+
+    def accept_from_other_thread():
+        try:
+            store.accept(uuid4(), request)
+        except Exception as exc:
+            errors.append(exc)
+        finally:
+            completed.set()
+
+    thread = threading.Thread(target=accept_from_other_thread, daemon=True)
+    thread.start()
+    try:
+        assert completed.wait(2), "transaction failure leaked the store lock"
+        assert not errors
+        for connection in opened:
+            with pytest.raises(sqlite3.ProgrammingError, match="closed"):
+                connection.execute("SELECT 1")
+    finally:
+        # Unblock the regression's leaked RLock on the old implementation.
+        if not completed.is_set():
+            store._lock.release()
+        thread.join(timeout=2)
+        for connection in opened:
+            connection.close()
