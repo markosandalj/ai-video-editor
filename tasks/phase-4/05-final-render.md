@@ -12,7 +12,9 @@ Combine all assembly steps into a single render pipeline: noise-reduced audio + 
 
 - Single function: `render_video(video_path, edl, denoised_audio_path, settings) -> Path`.
 - Reads EDL keep segments, builds FFmpeg filter graph with audio crossfades, produces `<stem>_edited.mp4`.
-- Codec: H.265 (libx265), CRF 18, preset slow.
+- Codec, CRF, and preset are configurable. The implemented development defaults
+  are H.264 through `libx264`, CRF 28, and `ultrafast`; this historical task does
+  not define the later production profile.
 - Audio crossfade: 30ms at splice points.
 - No intro/outro (deferred).
 - All parameters configurable via `RenderConfig` in settings.
@@ -27,6 +29,6 @@ Combine all assembly steps into a single render pipeline: noise-reduced audio + 
 ## Acceptance Criteria
 
 - [x] Single function `render_video()` produces final MP4 from raw input + EDL + denoised audio
-- [x] Output codec (H.265) and quality (CRF 18, slow) configurable via `RenderConfig`
+- [x] Output codec, CRF, and preset configurable via `RenderConfig`
 - [x] Render completes without manual intervention
 - [x] Integrated into existing CLI process/batch commands

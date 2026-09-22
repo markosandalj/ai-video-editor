@@ -24,6 +24,8 @@ output/
 
 # Env
 .env
+.env.worker
+.env.cloudflared
 .env.local
 .env.*.local
 

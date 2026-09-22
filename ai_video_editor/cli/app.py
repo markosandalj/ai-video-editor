@@ -41,56 +41,31 @@ def _process_video_file(
     position: int,
     total: int,
 ) -> bool:
-    from ai_video_editor.audio import (
-        build_audio_envelope,
-        build_disruptions,
-        compute_keep_regions,
-        detect_silences,
-        extract_audio,
-        reduce_noise,
-        snap_edl_boundaries,
-        write_audio_envelope,
-    )
-    from ai_video_editor.decisions import decide_edits
-    from ai_video_editor.duplicate.debug import save_debug_files
-    from ai_video_editor.render import render_video
-    from ai_video_editor.transcription import load_cached_transcript, save_transcript
-    from ai_video_editor.transcription.pipeline import transcribe_with_elevenlabs_and_grammar
+    from ai_video_editor.analysis import AnalysisUseCase, LocalAnalysisPersistence
+    from ai_video_editor.render import RenderUseCase
 
     stem = p.stem
     attach_video_log(settings, stem)
     log = logger.bind(video=stem)
     log.info("[{}/{}] Processing: {}", position, total, p)
     try:
-        meta = extract_audio(p, settings)
-        denoised = reduce_noise(meta, settings)
-        silences = detect_silences(denoised, settings)
-        keeps = compute_keep_regions(silences, denoised.duration_s, settings)
-
-        cached = None if force else load_cached_transcript(p)
-        if cached is not None:
-            log.info("Using cached transcript ({} sentences)", len(cached.sentences))
-        else:
-            cached = transcribe_with_elevenlabs_and_grammar(denoised, p, settings)
-            save_transcript(p, cached)
-
-        disruptions = build_disruptions(Path(meta.path), cached, settings.disruption)
-        edl = decide_edits(cached, keeps, silences, settings, disruptions=disruptions)
-
-        envelope = build_audio_envelope(Path(denoised.path))
-        write_audio_envelope(p, envelope)
-        edl = snap_edl_boundaries(edl, cached, envelope)
-
-        edl_path = p.with_suffix(".edl.json")
-        edl_path.write_text(edl.model_dump_json(indent=2), encoding="utf-8")
-
-        save_debug_files(p, cached, edl)
-
-        output = render_video(p, edl, Path(denoised.path), settings.render)
+        analysis = AnalysisUseCase(
+            settings,
+            persistence=LocalAnalysisPersistence(),
+        ).execute(p, force=force)
+        output = RenderUseCase().execute(
+            p,
+            analysis.edl,
+            analysis.processed_audio_path,
+            settings.render,
+        )
 
         log.info(
             "Done: {} sentences, keep={:.1f}s cut={:.1f}s → {}",
-            len(cached.sentences), edl.keep_duration, edl.cut_duration, output.name,
+            len(analysis.transcript.sentences),
+            analysis.edl.keep_duration,
+            analysis.edl.cut_duration,
+            output.name,
         )
         return True
     except Exception:
@@ -270,56 +245,27 @@ def process(
     log = logger.bind(video=stem)
     log.info("Processing: {}", input_path)
 
-    from ai_video_editor.audio import (
-        build_audio_envelope,
-        build_disruptions,
-        compute_keep_regions,
-        detect_silences,
-        extract_audio,
-        reduce_noise,
-        snap_edl_boundaries,
-        write_audio_envelope,
-    )
-    from ai_video_editor.decisions import decide_edits
-    from ai_video_editor.duplicate.debug import save_debug_files
-    from ai_video_editor.render import render_video
-    from ai_video_editor.transcription import load_cached_transcript, save_transcript
-    from ai_video_editor.transcription.pipeline import transcribe_with_elevenlabs_and_grammar
+    from ai_video_editor.analysis import AnalysisUseCase, LocalAnalysisPersistence
+    from ai_video_editor.render import RenderUseCase
 
-    meta = extract_audio(input_path, settings)
-    denoised = reduce_noise(meta, settings)
-    silences = detect_silences(denoised, settings)
-    keeps = compute_keep_regions(silences, denoised.duration_s, settings)
+    analysis = AnalysisUseCase(
+        settings,
+        persistence=LocalAnalysisPersistence(),
+    ).execute(input_path, force=force)
 
-    cached = None if force else load_cached_transcript(input_path)
-    if cached is not None:
-        log.info("Using cached transcript ({} sentences)", len(cached.sentences))
-    else:
-        cached = transcribe_with_elevenlabs_and_grammar(denoised, input_path, settings)
-        save_transcript(input_path, cached)
-
-    disruptions = build_disruptions(Path(meta.path), cached, settings.disruption)
-    edl = decide_edits(cached, keeps, silences, settings, disruptions=disruptions)
-
-    envelope = build_audio_envelope(Path(denoised.path))
-    write_audio_envelope(input_path, envelope)
-    edl = snap_edl_boundaries(edl, cached, envelope)
-
-    edl_path = input_path.with_suffix(".edl.json")
-    edl_path.write_text(edl.model_dump_json(indent=2), encoding="utf-8")
-
-    save_debug_files(input_path, cached, edl)
-
-    output = render_video(
+    output = RenderUseCase().execute(
         input_path,
-        edl,
-        Path(denoised.path),
+        analysis.edl,
+        analysis.processed_audio_path,
         settings.render,
     )
 
     log.info(
         "Pipeline complete: {} sentences, keep={:.1f}s cut={:.1f}s → {}",
-        len(cached.sentences), edl.keep_duration, edl.cut_duration, output.name,
+        len(analysis.transcript.sentences),
+        analysis.edl.keep_duration,
+        analysis.edl.cut_duration,
+        output.name,
     )
     remove_video_log(stem)
 
@@ -751,7 +697,7 @@ def review_render(
     """Render a reviewed sidecar EDL to <stem>_reviewed.mp4."""
     from ai_video_editor.config.settings import RenderConfig
     from ai_video_editor.duplicate.edl import EditDecisionList
-    from ai_video_editor.render import render_video
+    from ai_video_editor.render import RenderUseCase
     from ai_video_editor.review import review_edl_path_for
 
     review_path = review_edl_path_for(input_path)
@@ -765,7 +711,12 @@ def review_render(
         raise typer.Exit(code=1)
 
     edl = EditDecisionList.model_validate_json(review_path.read_text(encoding="utf-8"))
-    output = render_video(input_path, edl, audio_path, RenderConfig(output_suffix="_reviewed"))
+    output = RenderUseCase().execute(
+        input_path,
+        edl,
+        audio_path,
+        RenderConfig(output_suffix="_reviewed"),
+    )
     logger.info("Reviewed render complete: {}", output)
 
 

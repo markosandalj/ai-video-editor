@@ -1,0 +1,65 @@
+name: ai-video-worker
+
+services:
+  worker:
+    image: "${AI_VIDEO_WORKER_IMAGE:?Set AI_VIDEO_WORKER_IMAGE in the stack env file}"
+    env_file:
+      - path: "${AI_VIDEO_WORKER_ENV_FILE:?Set AI_VIDEO_WORKER_ENV_FILE to the root .env.worker path}"
+        required: true
+    environment:
+      VIDEO_PROCESSING_STATE_DB_PATH: /var/lib/ai-video-worker/state/jobs.sqlite3
+      VIDEO_PROCESSING_SCRATCH_DIR: /var/lib/ai-video-worker/scratch
+      VIDEO_PROCESSING_LOG_DIR: /var/log/ai-video-worker
+    volumes:
+      - type: bind
+        source: "${AI_VIDEO_WORKER_STATE_DIR:?Set an external state directory}"
+        target: /var/lib/ai-video-worker/state
+      - type: bind
+        source: "${AI_VIDEO_WORKER_SCRATCH_DIR:?Set an external scratch directory}"
+        target: /var/lib/ai-video-worker/scratch
+      - type: bind
+        source: "${AI_VIDEO_WORKER_LOG_DIR:?Set an external log directory}"
+        target: /var/log/ai-video-worker
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-m", "ai_video_editor.worker.healthcheck"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 10s
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - tunnel
+
+  cloudflared:
+    image: "${CLOUDFLARED_IMAGE:?Pin CLOUDFLARED_IMAGE in the stack env file}"
+    command: tunnel --no-autoupdate run
+    env_file:
+      - path: "${AI_VIDEO_CLOUDFLARED_ENV_FILE:?Set AI_VIDEO_CLOUDFLARED_ENV_FILE to the root .env.cloudflared path}"
+        required: true
+    depends_on:
+      worker:
+        condition: service_healthy
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - tunnel
+
+networks:
+  tunnel:
+    driver: bridge
