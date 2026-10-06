@@ -40,11 +40,10 @@ _TYPE_TO_REASON: dict[str, FlagReason] = {
     "retake": FlagReason.DUPLICATE,
     "false_start": FlagReason.FALSE_START,
     "stutter": FlagReason.STUTTER,
-    "filler": FlagReason.FILLER,
     "redundant": FlagReason.FILLER,
 }
 
-DeleteType = Literal["retake", "false_start", "stutter", "filler", "redundant"]
+DeleteType = Literal["retake", "false_start", "stutter", "redundant"]
 
 
 def _normalise(text: str) -> str:
@@ -64,7 +63,7 @@ class SectionDeletion(BaseModel):
         ),
     )
     delete_type: DeleteType = Field(
-        ..., description="Why it should go: retake, false_start, stutter, filler, redundant"
+        ..., description="Why it should go: retake, false_start, stutter, redundant"
     )
     reason: str = Field(default="", description="Short justification in Croatian")
     kept_index: int | None = Field(
@@ -153,10 +152,10 @@ ODGOVOR: Vrati isključivo validan JSON prema shemi. Bez Markdowna, bez dodatnog
 - "retake": govornik je istu misao rekao dva puta (lažni pa ispravan pokušaj). Izbaci RANIJU verziju, zadrži KASNIJU. U kept_index navedi indeks verzije koju zadržavaš.
 - "false_start": započeta pa prekinuta misao ("Dakle, ovaj-", "Kako bismo, kako bismo..."), nakon koje slijedi potpuna verzija.
 - "stutter": ponovljene/zamuckane riječi UNUTAR rečenice ("Firstly, youngsters s- Firstly, youngsters spend..."). Izbaci SAMO zamuckani dio, ne cijelu rečenicu.
-- "filler": prazne poštapalice bez sadržaja ("znači", "evo", "ovaj" same za sebe).
 - "redundant": rečenica koja ne dodaje NIŠTA novo jer je sadržaj već rečen (npr. suvišno prepričavanje). Budi OPREZAN — ovo je najrizičnije.
 
 KLJUČNA PRAVILA:
+- Sačuvaj prirodan govorni stil. Poštapalice, povezne riječi i oklijevanja nisu sami po sebi razlog za rezanje. Ukloni ih samo ako pripadaju jasno pogrešnom ili prekinutom pokušaju koji je zamijenjen kasnijim ispravnim izgovorom.
 - verbatim_text MORA biti točno prepisan iz rečenice (može biti dio rečenice za djelomično izbacivanje).
 - Za zamuckivanje/lažni početak izbaci samo pogrešni dio, ne cijelu rečenicu.
 - Ako govornik ponovi kratku frazu radi naglaska ili se vraća temi kao PODSJETNIKU (velik vremenski razmak), NE briši — to nije retake.
@@ -272,7 +271,7 @@ def _deletion_to_flag(
         return None
     word_start, word_end, _ratio, coverage = located
 
-    reason = _TYPE_TO_REASON.get(deletion.delete_type, FlagReason.FILLER)
+    reason = _TYPE_TO_REASON[deletion.delete_type]
     full_sentence = coverage >= cfg.full_sentence_threshold
     confidence = 0.9
     notes: list[str] = [deletion.reason] if deletion.reason else []
