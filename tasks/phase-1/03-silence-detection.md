@@ -12,7 +12,7 @@ Detect all silent regions in the (noise-reduced) audio track, producing precise 
 
 - Use FFmpeg's `silencedetect` filter for speed (operates on audio stream directly)
 - Default threshold: -40 dB
-- Minimum silence duration: 3 seconds
+- Minimum silence duration: 2 seconds
 - Both values configurable in `AudioConfig`
 - Output: list of `SilenceRegion(start, end, duration)` objects
 
@@ -21,7 +21,7 @@ Detect all silent regions in the (noise-reduced) audio track, producing precise 
 - Run via `ffmpeg-python`: pipe to `silencedetect` filter, parse stderr for timestamps
 - Parse `silence_start` and `silence_end` lines from FFmpeg output
 - Runs on the noise-reduced WAV (not raw audio) since noise reduction happens first
-- Add `silence_threshold_db` (default -40) and `silence_min_duration_s` (default 3.0) to `AudioConfig`
+- Add `silence_threshold_db` (default -40) and `silence_min_duration_s` (default 2.0) to `AudioConfig`
 - Define `SilenceRegion` Pydantic model in `ai_video_editor/audio/models.py`
 
 ## Acceptance Criteria
