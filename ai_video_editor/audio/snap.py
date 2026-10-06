@@ -217,10 +217,11 @@ def acoustic_split_points(
 
 
 def snap_edl_boundaries(edl, transcript, envelope: AudioEnvelope):
-    """Move every EDL action transition to a nearby safe acoustic split.
+    """Move each EDL boundary to quiet audio near its original timestamp.
 
     The midpoint of the word on either side is a hard guard: even when no quiet
-    frame exists, snapping cannot consume more than half of either word.
+    frame exists, snapping cannot consume more than half of either word. The
+    two edges of a silence cut must remain distinct, even between the same words.
     """
     decisions = [decision.model_copy() for decision in edl.decisions]
     if len(decisions) < 2:
@@ -231,8 +232,7 @@ def snap_edl_boundaries(edl, transcript, envelope: AudioEnvelope):
         key=lambda word: (word.start, word.end),
     )
     midpoints = [(word.start + word.end) / 2.0 for word in words]
-    splits = acoustic_split_points(words, envelope, total_duration=edl.total_duration)
-    if not splits:
+    if not words:
         return edl.model_copy(update={"decisions": decisions})
     previous = 0.0
     for idx in range(len(decisions) - 1):
@@ -240,7 +240,21 @@ def snap_edl_boundaries(edl, transcript, envelope: AudioEnvelope):
         right = decisions[idx + 1]
         boundary = (left.end + right.start) / 2.0
         split_idx = sum(midpoint <= boundary for midpoint in midpoints)
-        snapped = min(max(splits[split_idx], previous, left.start), right.end)
+        # Word splits are shared by both edges of an inter-word silence. Search
+        # locally around this edge instead of mapping both edges to that split.
+        snapped = snap_cut_boundary(
+            boundary,
+            envelope,
+            lo=midpoints[split_idx - 1] if split_idx else 0.0,
+            hi=midpoints[split_idx] if split_idx < len(words) else edl.total_duration,
+        )
+        snapped = min(max(snapped, previous, left.start), right.end)
+        # Overlapping search windows can still pick the same frame for a short
+        # segment. Keep the original boundary rather than erase a cut or speech.
+        if (left.start < boundary and snapped <= left.start) or (
+            boundary < right.end and snapped >= right.end
+        ):
+            snapped = boundary
         decisions[idx] = left.model_copy(update={"end": snapped})
         decisions[idx + 1] = right.model_copy(update={"start": snapped})
         previous = snapped

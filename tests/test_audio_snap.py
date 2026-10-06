@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from ai_video_editor.audio.snap import AudioEnvelope, snap_cut_boundary, snap_edl_boundaries
 from ai_video_editor.duplicate.edl import EditAction, EditDecision, EditDecisionList, EditReason
@@ -54,3 +55,53 @@ def test_snap_edl_boundaries_moves_export_splice_into_quiet_audio() -> None:
 
     assert snapped.decisions[0].end == 0.62
     assert snapped.decisions[1].start == 0.62
+
+
+@pytest.mark.parametrize("gap_s", [0.08, 2.4, 10.0])
+@pytest.mark.parametrize("with_audio", [True, False])
+def test_snap_edl_preserves_both_edges_of_a_silence_cut(gap_s, with_audio) -> None:
+    next_word_start = 1.0 + gap_s
+    duration = next_word_start + 1.0
+    times = 0.01 + np.arange(round(duration * 100)) * 0.01
+    db = np.where((times >= 1.0) & (times <= next_word_start), -80.0, -20.0)
+    envelope = AudioEnvelope.from_db(
+        db if with_audio else np.array([]),
+        hop_ms=10,
+        frame_ms=20,
+        noise_floor_db=-80.0,
+        duration_s=duration,
+    )
+    transcript = Transcript(
+        sentences=[
+            Sentence(text="Prije", start=0.0, end=1.0,
+                     words=[Word(text="Prije", start=0.0, end=1.0)]),
+            Sentence(text="Poslije", start=next_word_start, end=duration,
+                     words=[Word(text="Poslije", start=next_word_start, end=duration)]),
+        ],
+        source_video="clip.mp4",
+        language="hr",
+        model_size="test",
+    )
+    edl = EditDecisionList(
+        source_video="clip.mp4",
+        total_duration=duration,
+        decisions=[
+            EditDecision(start=0.0, end=1.0, action=EditAction.KEEP, reason=EditReason.SPEECH),
+            EditDecision(start=1.0, end=next_word_start, action=EditAction.CUT,
+                         reason=EditReason.SILENCE),
+            EditDecision(start=next_word_start, end=duration, action=EditAction.KEEP,
+                         reason=EditReason.SPEECH),
+        ],
+    )
+    original = edl.model_dump()
+
+    snapped = snap_edl_boundaries(edl, transcript, envelope)
+
+    before, cut, after = snapped.decisions
+    assert cut.duration > 0
+    assert 1.0 <= cut.start <= 1.25
+    assert next_word_start - 0.25 <= cut.end <= next_word_start
+    assert before.end == cut.start
+    assert cut.end == after.start
+    assert before.start == 0.0 and after.end == duration
+    assert edl.model_dump() == original

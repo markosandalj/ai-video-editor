@@ -52,7 +52,7 @@ class AudioConfig(BaseModel):
         description="dB level below which audio is considered silent.",
     )
     silence_min_duration_s: float = Field(
-        default=3.0,
+        default=2.0,
         gt=0.0,
         description="Minimum silence duration (seconds) to trigger a cut.",
     )

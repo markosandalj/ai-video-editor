@@ -10,12 +10,16 @@ from uuid import UUID, uuid4
 import pytest
 
 from ai_video_editor.analysis import AnalysisOutput, AnalysisUseCase
-from ai_video_editor.audio.snap import AudioEnvelope
+from ai_video_editor.audio.models import SilenceRegion
+from ai_video_editor.audio.regions import compute_keep_regions
+from ai_video_editor.audio.snap import AudioEnvelope, snap_edl_boundaries
+from ai_video_editor.config.settings import Settings
 from ai_video_editor.duplicate.edl import (
     EditAction,
     EditDecision,
     EditDecisionList,
     EditReason,
+    build_edl,
 )
 from ai_video_editor.transcription.models import Sentence, Transcript, Word
 from ai_video_editor.worker.analysis_runner import (
@@ -233,6 +237,57 @@ def test_boundary_adapter_drops_sub_millisecond_cut_and_out_of_duration_word(
     assert [word.text for word in result.transcript] == ["inside"]
     assert result.transcript[0].idx == 0
     assert result.automatic_cut_ranges == []
+
+
+def test_detected_silence_survives_edl_snapping_and_worker_projection(tmp_path: Path) -> None:
+    transcript = Transcript(
+        sentences=[
+            Sentence(text="Prije", start=1.0, end=2.0,
+                     words=[Word(text="Prije", start=1.0, end=2.0)]),
+            Sentence(text="Poslije", start=12.0, end=13.0,
+                     words=[Word(text="Poslije", start=12.0, end=13.0)]),
+        ],
+        source_video="source.mp4",
+        language="hr",
+        model_size="test",
+    )
+    envelope = AudioEnvelope(
+        hop_ms=10,
+        frame_ms=20,
+        noise_floor_db=-80.0,
+        duration_s=14.0,
+        energy=[
+            204 if 100 <= i < 200 or 1200 <= i < 1300 else 51
+            for i in range(1400)
+        ],
+    )
+    keeps = compute_keep_regions(
+        [SilenceRegion(start=2.0, end=12.0)], 14.0, Settings(),
+    )
+    edl = build_edl(transcript, keeps, [])
+    output = AnalysisOutput(
+        source_path=tmp_path / "source.mp4",
+        duration_ms=14000,
+        transcript=transcript,
+        edl=snap_edl_boundaries(edl, transcript, envelope),
+        waveform=envelope,
+        processed_audio_path=tmp_path / "processed.flac",
+        review_proxy_path=tmp_path / "proxy.mp4",
+    )
+    reference = S3ObjectReference(
+        type="s3_object", key="jobs/job/artifact", size_bytes=1,
+        mime_type="application/octet-stream", etag="etag",
+    )
+
+    result = analysis_result_from_output(output, reference, reference)
+
+    internal_cuts = [cut for cut in result.automatic_cut_ranges if cut.start_ms > 1500]
+    assert len(internal_cuts) == 1
+    cut = internal_cuts[0]
+    assert cut.reason == "silence"
+    assert 2000 <= cut.start_ms <= 2250
+    assert 11750 <= cut.end_ms <= 12000
+    assert [word.text for word in result.transcript] == ["Prije", "Poslije"]
 
 
 @pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg is required")
