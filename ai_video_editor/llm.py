@@ -20,7 +20,10 @@ class LangChainModelConfig(BaseModel):
         description="Import path for the LangChain chat model class.",
     )
     model: str = Field(description="Provider model name passed to the chat class.")
-    temperature: float = Field(default=0.0, ge=0.0, le=2.0)
+    temperature: float | None = Field(
+        default=0.0, ge=0.0, le=2.0,
+        description="Sampling temperature; null omits it for reasoning models.",
+    )
     api_key_env: str | None = Field(
         default="GEMINI_API_KEY",
         description="Environment variable containing the provider API key. Null disables API key injection.",
@@ -65,23 +68,30 @@ def direct_gemini_model_config(
 def default_section_editor_model_config() -> LangChainModelConfig:
     """The section-editor model selected by the corpus evaluation."""
     return LangChainModelConfig(
-        id="gpt-5.6-sol",
+        id="gpt-6.1-sol-low",
         class_path="langchain_openai.ChatOpenAI",
-        model="openai/gpt-5.6-sol",
-        temperature=1.0,
+        model="openai/gpt-6.1-sol",
+        temperature=None,
         api_key_env="OPENROUTER_API_KEY",
         provider_kwargs={
             "base_url": "https://openrouter.ai/api/v1",
             "timeout": 300,
             "max_retries": 3,
             "max_tokens": 16_000,
-            "extra_body": {"reasoning": {"effort": "low", "exclude": True}},
+            "extra_body": {
+                "reasoning": {"effort": "low", "exclude": True},
+                "provider": {
+                    "only": ["openai"],
+                    "allow_fallbacks": False,
+                    "require_parameters": True,
+                },
+            },
         },
     )
 
 
 def default_section_editor_fallback_model_config() -> LangChainModelConfig:
-    """Direct OpenAI fallback for the default OpenRouter Sol route."""
+    """Legacy direct GPT-5.6 fallback, available only through explicit config."""
     return LangChainModelConfig(
         id="gpt-5.6-sol-openai-direct",
         class_path="langchain_openai.ChatOpenAI",
@@ -130,11 +140,10 @@ def build_chat_model(config: LangChainModelConfig) -> Any:
     """
     configure_observability()
 
-    kwargs: dict[str, Any] = {
-        "model": config.model,
-        "temperature": config.temperature,
-        **config.provider_kwargs,
-    }
+    kwargs: dict[str, Any] = {"model": config.model}
+    if config.temperature is not None:
+        kwargs["temperature"] = config.temperature
+    kwargs.update(config.provider_kwargs)
     if config.api_key_env:
         api_key = os.environ.get(config.api_key_env)
         if not api_key:

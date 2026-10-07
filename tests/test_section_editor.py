@@ -18,23 +18,25 @@ from ai_video_editor.duplicate.section_editor import (
     detect_section_edits,
 )
 from ai_video_editor.transcription.models import Sentence, Word
+from ai_video_editor.llm import (
+    LangChainModelConfig,
+    default_section_editor_fallback_model_config,
+)
 
 
 def test_section_editor_is_the_default_cutter() -> None:
     settings = Settings()
 
-    assert settings.section_editor.llm.id == "gpt-5.6-sol"
+    assert settings.section_editor.llm.id == "gpt-6.1-sol-low"
     assert settings.section_editor.llm.class_path == "langchain_openai.ChatOpenAI"
-    assert settings.section_editor.llm.model == "openai/gpt-5.6-sol"
+    assert settings.section_editor.llm.model == "openai/gpt-6.1-sol"
     assert settings.section_editor.llm.api_key_env == "OPENROUTER_API_KEY"
     assert settings.section_editor.llm.provider_kwargs["base_url"] == (
         "https://openrouter.ai/api/v1"
     )
-    assert settings.section_editor.fallback_llm is not None
-    assert settings.section_editor.fallback_llm.model == "gpt-5.6-sol"
-    assert settings.section_editor.fallback_llm.api_key_env == "OPENAI_API_KEY"
-    assert "base_url" not in settings.section_editor.fallback_llm.provider_kwargs
-    assert settings.section_editor.fallback_llm.provider_kwargs["reasoning_effort"] == "low"
+    assert settings.section_editor.llm.temperature is None
+    assert settings.section_editor.llm.provider_kwargs["extra_body"]["reasoning"]["effort"] == "low"
+    assert settings.section_editor.fallback_llm is None
 
 
 def _sentence(text: str, start: float, end: float) -> Sentence:
@@ -374,7 +376,7 @@ class TestDetectSectionEditsEndToEnd:
         assert trace.proposals[0].flag is not None
         assert trace.proposals[1].flag is None
 
-    def test_primary_failure_falls_back_to_direct_model(self, monkeypatch):
+    def test_primary_failure_uses_explicit_fallback(self, monkeypatch):
         import ai_video_editor.duplicate.section_editor as se
 
         sents = [
@@ -416,11 +418,17 @@ class TestDetectSectionEditsEndToEnd:
         health = SectionHealth()
         flags = detect_section_edits(
             sents,
-            SectionEditorConfig(section_max_attempts=1, section_retry_backoff_s=0),
+            SectionEditorConfig(
+                section_max_attempts=1,
+                section_retry_backoff_s=0,
+                fallback_llm=LangChainModelConfig(
+                    id="explicit-fallback", model="fallback-model", api_key_env=None,
+                ),
+            ),
             health=health,
         )
 
-        assert built == ["gpt-5.6-sol", "gpt-5.6-sol-openai-direct"]
+        assert built == ["gpt-6.1-sol-low", "explicit-fallback"]
         assert health.sections_fallback == 1
         assert health.sections_failed == 0
         assert [flag.idx for flag in flags] == [0]
@@ -453,7 +461,11 @@ class TestDetectSectionEditsEndToEnd:
         health = SectionHealth()
         flags = detect_section_edits(
             sents,
-            SectionEditorConfig(section_max_attempts=1, section_retry_backoff_s=0),
+            SectionEditorConfig(
+                section_max_attempts=1,
+                section_retry_backoff_s=0,
+                fallback_llm=default_section_editor_fallback_model_config(),
+            ),
             llm_config=candidate,
             health=health,
         )
