@@ -59,6 +59,7 @@ running image is `ai-video-worker:f779947` and the tunnel is pinned to
 - [Domain language](CONTEXT.md)
 - [HTTP contract](docs/http-api.md)
 - [Edit safety and decision traces](docs/edit-safety.md)
+- [Sol 6.1 low prompt evaluation](docs/prompt-evaluation-20261007.md)
 - [Headless architecture decision](docs/adr/0001-keep-ai-video-editor-headless.md)
 - [Integration completion scope](docs/integration-completion.md)
 - [Cleanup inventory, restoration and verification](docs/headless-cleanup.md)

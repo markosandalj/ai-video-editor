@@ -125,6 +125,42 @@ class TestLocateSpan:
         s = _sentence("Dakle danas", 0, 1)
         assert _locate_span(s, "   ") is None
 
+    @staticmethod
+    def _multiword_sentence():
+        return Sentence(
+            text="Jedinica je gram mol na minus prvu. Zatim nastavljamo.",
+            start=0, end=6,
+            words=[
+                Word(text=text, start=i, end=i + 1)
+                for i, text in enumerate([
+                    "Jedinica", "je", "gram", "mol na minus prvu.", "Zatim", "nastavljamo.",
+                ])
+            ],
+        )
+
+    def test_multiword_token_maps_to_original_timed_words(self):
+        sentence = self._multiword_sentence()
+        located = _locate_span(sentence, "gram mol na minus prvu.")
+        assert located is not None
+        assert located[:2] == (2, 3)
+        flag = _deletion_to_flag(
+            SectionDeletion(sentence_index=0, verbatim_text="gram mol na minus prvu.",
+                            delete_type="stutter"),
+            [sentence], SectionEditorConfig(),
+        )
+        assert flag is not None
+        assert [(trim.start, trim.end) for trim in flag.word_trims] == [(2, 4)]
+
+    @pytest.mark.parametrize("text", ["mol", "gram mol", "minus prvu Zatim"])
+    def test_cannot_cut_inside_one_timed_word(self, text):
+        assert _locate_span(self._multiword_sentence(), text) is None
+
+    def test_repeated_multiword_token_is_ambiguous(self):
+        sentence = Sentence(text="mol na minus prvu mol na minus prvu", start=0, end=2,
+                            words=[Word(text="mol na minus prvu", start=i, end=i + 1)
+                                   for i in range(2)])
+        assert _locate_span(sentence, "mol na minus prvu") is None
+
 
 class TestDeletionToFlag:
     def test_filler_is_not_a_model_deletion_type(self):

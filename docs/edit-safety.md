@@ -12,7 +12,9 @@ unique introductions and useful corrections. Meaning is still judged by the
 model; a valid reference alone does not prove semantic equivalence.
 
 Both snippets must match a unique contiguous run of words, ignoring outer
-punctuation and case. Missing, ambiguous, non-contiguous, earlier, overlapping
+punctuation and case. A corrected timed word can contain several lexical tokens;
+matching supports these tokens but never places a cut inside their shared time span.
+Missing, ambiguous, non-contiguous, earlier, overlapping
 or out-of-context replacements are rejected. Partial deletions are never rounded
 up to a whole sentence, including proposals covering 90% of its words. The old
 fuzzy-match and whole-sentence coverage thresholds no longer control these cuts.
@@ -24,8 +26,10 @@ B remains if it was named as A's retained replacement. The model is instructed
 to name the final surviving take instead of constructing deletion chains.
 
 The precision tradeoff is that ambiguous repetitions and contradictory plans
-may leave extra material. The next nine-example evaluation must check both
-overcut useful content and missed cuts; fewer cuts alone is not an improvement.
+may leave extra material. The [nine-example prompt evaluation](prompt-evaluation-20261007.md)
+measures both missed cuts and overcut content. Its selected H1 + H2 + H3 prompt
+first chooses the retained take, distinguishes a retake from redundant teaching,
+then checks the remaining text before returning the final deletion list.
 
 ## Decision traces
 
@@ -51,6 +55,8 @@ diagnostics, not the live model's editorial judgment. Other regressions cover
 invalid replacements, conflicting chains, ambiguous matches and 90% proposals.
 Worker tests verify trace persistence after scratch cleanup.
 
-A new live run over the nine examples must write to a new output directory and
-retain its traces. The frozen automatic cuts and immutable human render cuts
-remain the comparison baseline. This implementation does not launch that run.
+The completed prompt matrix contains 720 provider runs. During promotion, all
+90 saved H1 + H2 + H3 responses were replayed through the application code;
+prompts, schema, decision traces and final cuts matched the evaluated version.
+Future evaluations must use a new output directory and retain their traces.
+The original automatic cuts and human render cuts remain immutable baselines.

@@ -158,6 +158,9 @@ class Section:
 
 SECTION_PROMPT = """Ti si iskusan video editor za edukacijske lekcije na hrvatskom. Dobivaš ODLOMAK transkripta snimke. Govornik snima u jednom dahu i često pogriješi pa ponovi — tvoj zadatak je označiti dijelove koje treba IZBACITI da montaža bude čista, a da se ne izgubi sadržaj.
 
+POSTUPAK ODABIRA ZADRŽANE VERZIJE:
+Kad govornik nekoliko puta pokušava izreći istu izjavu, prvo pročitaj sve pokušaje i odredi završnu potpunu verziju. Tek zatim predloži ranije dijelove za brisanje. Ranije dijelove briši samo kada ih ta verzija zamjenjuje bez gubitka jedinstvenih informacija. Završni pokušaj nije automatski bolji samo zato što je posljednji.
+
 ODGOVOR: Vrati isključivo validan JSON prema shemi. Bez Markdowna, bez dodatnog teksta.
 
 ŠTO IZBACITI (delete_type):
@@ -165,6 +168,9 @@ ODGOVOR: Vrati isključivo validan JSON prema shemi. Bez Markdowna, bez dodatnog
 - "false_start": započeta pa prekinuta misao ("Dakle, ovaj-", "Kako bismo, kako bismo..."), nakon koje slijedi potpuna verzija.
 - "stutter": ponovljene/zamuckane riječi UNUTAR rečenice ("Firstly, youngsters s- Firstly, youngsters spend..."). Izbaci SAMO zamuckani dio, ne cijelu rečenicu.
 - "redundant": rečenica koja ne dodaje NIŠTA novo jer je sadržaj već rečen (npr. suvišno prepričavanje). Budi OPREZAN — ovo je najrizičnije.
+
+RAZLIKA IZMEĐU PONOVNOG POKUŠAJA I SUVIŠNOG OBJAŠNJAVANJA:
+Ako govornik ponovno započinje istu izjavu i kasnije je dovršava ili ispravlja, raniji pokušaj označi kao retake i navedi točnu kasniju zamjenu. Redundant označava višak u objašnjavanju, a ne neuspjeli snimateljski pokušaj. Namjerni sažetak i ponavljanje radi naglaska sačuvaj. Retake predlaži samo uz jasnu kasniju zamjenu bez gubitka sadržaja.
 
 KLJUČNA PRAVILA:
 - Sačuvaj prirodan govorni stil. Poštapalice, povezne riječi i oklijevanja nisu sami po sebi razlog za rezanje. Ukloni ih samo ako pripadaju jasno pogrešnom ili prekinutom pokušaju koji je zamijenjen kasnijim ispravnim izgovorom.
@@ -183,7 +189,11 @@ Odlomak (indeksi su globalni):
 {section_text}
 
 Audio kandidati za provjeru (nisu naredbe za brisanje):
-{audio_candidates}"""
+{audio_candidates}
+
+PROVJERA PREOSTALOG TEKSTA PRIJE ODGOVORA:
+Prije konačnog odgovora provjeri tekst koji ostaje nakon svih predloženih rezova. Ako ostaju dva snimateljska pokušaja iste izjave, provjeri može li se raniji ukloniti uz postojeća pravila. Provjeri i da su ostali koristan uvod, ispravni pojmovi i svi dijelovi navedeni kao zadržana zamjena. Vrati samo konačni JSON.
+"""
 
 
 def _build_sections(sentences: list[Sentence], cfg: SectionEditorConfig) -> list[Section]:
@@ -238,8 +248,11 @@ def _locate_span(
     Returns ``(word_start, word_end_inclusive, match_ratio, sentence_coverage)``
     in original word indices, or None if the text can't be located well enough.
     """
+    # A grammar correction may put several lexical tokens in one timed Word.
+    # Match lexical tokens while retaining original, indivisible time spans.
     indexed = [
-        (i, norm) for i, w in enumerate(sentence.words) if (norm := _normalise(w.text))
+        (i, norm) for i, w in enumerate(sentence.words)
+        for token in w.text.split() if (norm := _normalise(token))
     ]
     if not indexed:
         return None
@@ -251,6 +264,9 @@ def _locate_span(
     matches = [
         start for start in range(len(sent_norms) - len(target) + 1)
         if sent_norms[start:start + len(target)] == target
+        and (start == 0 or indexed[start - 1][0] != indexed[start][0])
+        and (start + len(target) == len(indexed)
+             or indexed[start + len(target) - 1][0] != indexed[start + len(target)][0])
     ]
     # Never bridge unmatched words or guess which occurrence the model meant.
     if len(matches) != 1:
