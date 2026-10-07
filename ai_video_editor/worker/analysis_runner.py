@@ -132,7 +132,10 @@ def execute_analysis_job(
     pipeline_settings = default_pipeline_settings.model_copy(
         update={
             "general": default_pipeline_settings.general.model_copy(
-                update={"temp_dir": job_dir}
+                update={
+                    "temp_dir": job_dir,
+                    "output_dir": settings.log_dir / "analyses" / str(job_id),
+                }
             )
         }
     )

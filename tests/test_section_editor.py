@@ -95,7 +95,7 @@ class TestLocateSpan:
     def test_full_sentence_match(self):
         s = _sentence("Dakle danas ucimo o bazama podataka", 0, 3)
         cfg = SectionEditorConfig()
-        ws, we, ratio, cov = _locate_span(s, "Dakle danas ucimo o bazama podataka", cfg)
+        ws, we, ratio, cov = _locate_span(s, "Dakle danas ucimo o bazama podataka")
         assert (ws, we) == (0, 5)
         assert ratio == pytest.approx(1.0)
         assert cov == pytest.approx(1.0)
@@ -103,7 +103,7 @@ class TestLocateSpan:
     def test_partial_span_locates_middle(self):
         s = _sentence("Firstly youngsters s Firstly youngsters spend more time", 0, 4)
         cfg = SectionEditorConfig()
-        located = _locate_span(s, "Firstly youngsters s", cfg)
+        located = _locate_span(s, "Firstly youngsters s")
         assert located is not None
         ws, we, ratio, cov = located
         assert ws == 0
@@ -113,17 +113,16 @@ class TestLocateSpan:
     def test_punctuation_and_case_insensitive(self):
         s = _sentence("Znaci, minus nekoliko i imamo.", 0, 2)
         cfg = SectionEditorConfig()
-        located = _locate_span(s, "znaci minus", cfg)
+        located = _locate_span(s, "znaci minus")
         assert located is not None
 
     def test_rejects_absent_text(self):
         s = _sentence("Dakle danas ucimo o bazama podataka", 0, 3)
-        cfg = SectionEditorConfig(min_span_match_ratio=0.8)
-        assert _locate_span(s, "potpuno druga recenica koje nema", cfg) is None
+        assert _locate_span(s, "potpuno druga recenica koje nema") is None
 
     def test_empty_target(self):
         s = _sentence("Dakle danas", 0, 1)
-        assert _locate_span(s, "   ", SectionEditorConfig()) is None
+        assert _locate_span(s, "   ") is None
 
 
 class TestDeletionToFlag:
@@ -141,6 +140,7 @@ class TestDeletionToFlag:
             verbatim_text="Dakle danas cemo raditi na projektu za web aplikaciju",
             delete_type="retake",
             kept_index=2,
+            kept_verbatim_text=sents[2].text,
         )
         flag = _deletion_to_flag(d, sents, SectionEditorConfig())
         assert flag is not None
@@ -174,7 +174,8 @@ class TestDeletionToFlag:
             _sentence("Dobro", 10, 10.4),
         ]
         d = SectionDeletion(
-            sentence_index=0, verbatim_text="Dobro", delete_type="retake", kept_index=2
+            sentence_index=0, verbatim_text="Dobro", delete_type="retake", kept_index=2,
+            kept_verbatim_text=sents[2].text,
         )
         assert _deletion_to_flag(d, sents, SectionEditorConfig(protect_min_words=4)) is None
 
@@ -186,6 +187,7 @@ class TestDeletionToFlag:
             verbatim_text="Dakle danas cemo raditi na projektu za web aplikaciju",
             delete_type="retake",
             kept_index=0,
+            kept_verbatim_text=sents[0].text,
         )
         assert _deletion_to_flag(d, sents, SectionEditorConfig()) is None
 
@@ -199,6 +201,7 @@ class TestDeletionToFlag:
             verbatim_text="Danas govorimo o zakonu ocuvanja kolicine gibanja",
             delete_type="retake",
             kept_index=1,
+            kept_verbatim_text=sents[1].text,
         )
         assert _deletion_to_flag(
             d, sents, SectionEditorConfig(retake_max_gap_s=60)
@@ -218,7 +221,7 @@ class TestMergeFlags:
         sents = [_sentence("jedan dva tri cetiri pet sest sedam osam", 0, 4)]
         cfg = SectionEditorConfig()
         full = _deletion_to_flag(
-            SectionDeletion(sentence_index=0, verbatim_text="jedan dva tri cetiri pet sest sedam osam", delete_type="false_start"),
+            SectionDeletion(sentence_index=0, verbatim_text="jedan dva tri cetiri pet sest sedam osam", delete_type="filler"),
             sents, cfg,
         )
         partial = _deletion_to_flag(
@@ -351,6 +354,7 @@ class TestDetectSectionEditsEndToEnd:
                         verbatim_text="Prvi pokušaj rečenice koji treba ukloniti sada",
                         delete_type="retake",
                         kept_index=1,
+                        kept_verbatim_text=sents[1].text,
                     ),
                     SectionDeletion(
                         sentence_index=0,
@@ -400,6 +404,7 @@ class TestDetectSectionEditsEndToEnd:
                         verbatim_text="Prvi pokušaj rečenice koji treba ukloniti sada",
                         delete_type="retake",
                         kept_index=1,
+                        kept_verbatim_text=sents[1].text,
                     )
                 ])
 
@@ -496,6 +501,7 @@ class TestDetectSectionEditsEndToEnd:
                         verbatim_text="Prvi pokušaj rečenice koji treba ukloniti sada",
                         delete_type="retake",
                         kept_index=1,
+                        kept_verbatim_text=sents[1].text,
                     )
                 ])
 
@@ -535,6 +541,7 @@ class TestDetectSectionEditsEndToEnd:
                         verbatim_text="Dakle danas cemo raditi na projektu za web aplikaciju",
                         delete_type="retake",
                         kept_index=2,
+                        kept_verbatim_text=sents[2].text,
                     ),
                     SectionDeletion(
                         sentence_index=1, verbatim_text="Znaci ovaj", delete_type="filler"

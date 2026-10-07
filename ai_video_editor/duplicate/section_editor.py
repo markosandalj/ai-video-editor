@@ -18,16 +18,17 @@ keep-later rule and a recap time-gap. Output is the same ``DuplicateFlag`` /
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass
-from difflib import SequenceMatcher
+from dataclasses import asdict, dataclass
 from typing import Literal
 
 from loguru import logger
 from pydantic import BaseModel, Field
 
 from ai_video_editor.config.settings import SectionEditorConfig
+from ai_video_editor.duplicate.false_start_audio import AudioFalseStartCandidate
 from ai_video_editor.duplicate.local_corrections import detect_local_corrections
-from ai_video_editor.duplicate.models import DuplicateFlag, FlagReason, WordTrim
+from ai_video_editor.duplicate.models import DuplicateFlag, FlagReason, KeptSpan, RejectedCut, WordTrim
+from ai_video_editor.duplicate.safeguards import protect_kept_spans
 from ai_video_editor.llm import (
     LangChainModelConfig,
     build_chat_model,
@@ -69,7 +70,11 @@ class SectionDeletion(BaseModel):
     reason: str = Field(default="", description="Short justification in Croatian")
     kept_index: int | None = Field(
         default=None,
-        description="For retake: the [n] index of the surviving version of this thought",
+        description="Required for retake and false_start: [n] index containing the later replacement.",
+    )
+    kept_verbatim_text: str | None = Field(
+        default=None,
+        description="Required for retake and false_start: exact contiguous text of the later replacement that must stay. It must replace ALL the content being deleted.",
     )
 
 
@@ -86,12 +91,19 @@ class SectionProposalTrace(BaseModel):
         "accepted", "rejected_unverifiable", "rejected_guardrail"
     ]
     flag: DuplicateFlag | None = None
+    detail: str = ""
+    model_id: str = ""
 
 
 class SectionTrace(BaseModel):
     """Durable evidence for every proposal made during one video run."""
 
     proposals: list[SectionProposalTrace] = Field(default_factory=list)
+    audio_candidates: list[AudioFalseStartCandidate] = Field(default_factory=list)
+    protected_spans: list[KeptSpan] = Field(default_factory=list)
+    rejected_conflicts: list[RejectedCut] = Field(default_factory=list)
+    local_flags: list[DuplicateFlag] = Field(default_factory=list)
+    health: dict[str, int] = Field(default_factory=dict)
 
 
 @dataclass
@@ -150,7 +162,7 @@ SECTION_PROMPT = """Ti si iskusan video editor za edukacijske lekcije na hrvatsk
 ODGOVOR: Vrati isključivo validan JSON prema shemi. Bez Markdowna, bez dodatnog teksta.
 
 ŠTO IZBACITI (delete_type):
-- "retake": govornik je istu misao rekao dva puta (lažni pa ispravan pokušaj). Izbaci RANIJU verziju, zadrži KASNIJU. U kept_index navedi indeks verzije koju zadržavaš.
+- "retake": govornik je istu misao rekao dva puta (lažni pa ispravan pokušaj). Izbaci samo dio RANIJE verzije koji je u cijelosti zamijenjen KASNIJOM.
 - "false_start": započeta pa prekinuta misao ("Dakle, ovaj-", "Kako bismo, kako bismo..."), nakon koje slijedi potpuna verzija.
 - "stutter": ponovljene/zamuckane riječi UNUTAR rečenice ("Firstly, youngsters s- Firstly, youngsters spend..."). Izbaci SAMO zamuckani dio, ne cijelu rečenicu.
 - "filler": prazne poštapalice bez sadržaja ("znači", "evo", "ovaj" same za sebe).
@@ -158,13 +170,21 @@ ODGOVOR: Vrati isključivo validan JSON prema shemi. Bez Markdowna, bez dodatnog
 
 KLJUČNA PRAVILA:
 - verbatim_text MORA biti točno prepisan iz rečenice (može biti dio rečenice za djelomično izbacivanje).
+- Za retake i false_start OBAVEZNO navedi kept_index i kept_verbatim_text: točan kasniji tekst koji zamjenjuje CIJELI predloženi rez. Taj tekst mora ostati u konačnom videu. Ako nema jasne zamjene, ne predlaži takav rez.
+- Ako kasniji pokušaj ponavlja samo nastavak, sačuvaj koristan uvod ranijeg pokušaja. Izbaci samo zamijenjeni nastavak; zajednička tema nije dokaz da je cijela ranija rečenica suvišna.
+- Kratak ispravak pojma, broja ili formule nosi sadržaj lekcije. Sačuvaj ispravnu verziju i ukloni samo pogrešni dio koji ona zamjenjuje. Ispravak nije filler čak ni nakon duge pauze ili šuma.
+- Audio kandidati su samo trag za provjeru. Pauza, šum i mali broj riječi NISU dovoljan razlog za brisanje. Provjeri značenje u kontekstu; bez potvrde iz sadržaja zadrži kandidat.
+- Ne briši tekst koji si drugom prijedlogu naveo kao kept_verbatim_text. Navedi završnu zadržanu verziju umjesto lanca međusobno izbrisanih zamjena.
 - Za zamuckivanje/lažni početak izbaci samo pogrešni dio, ne cijelu rečenicu.
 - Ako govornik ponovi kratku frazu radi naglaska ili se vraća temi kao PODSJETNIKU (velik vremenski razmak), NE briši — to nije retake.
 - Kad nisi siguran, radije NE briši (montažer lakše doda cut nego što vrati izgubljen sadržaj).
 - Označavaj SAMO rečenice s indeksima koji su u rasponu za uređivanje: {editable_range}. Rečenice označene (kontekst) su samo za razumijevanje — NE vraćaj brisanja za njih.
 
 Odlomak (indeksi su globalni):
-{section_text}"""
+{section_text}
+
+Audio kandidati za provjeru (nisu naredbe za brisanje):
+{audio_candidates}"""
 
 
 def _build_sections(sentences: list[Sentence], cfg: SectionEditorConfig) -> list[Section]:
@@ -212,7 +232,7 @@ def _render_section(sentences: list[Sentence], section: Section) -> str:
 
 
 def _locate_span(
-    sentence: Sentence, verbatim_text: str, cfg: SectionEditorConfig
+    sentence: Sentence, verbatim_text: str
 ) -> tuple[int, int, float, float] | None:
     """Find the contiguous word run in *sentence* matching *verbatim_text*.
 
@@ -229,24 +249,19 @@ def _locate_span(
     if not target:
         return None
 
-    matcher = SequenceMatcher(None, sent_norms, target, autojunk=False)
-    matched_positions = [
-        block.a + off
-        for block in matcher.get_matching_blocks()
-        for off in range(block.size)
+    matches = [
+        start for start in range(len(sent_norms) - len(target) + 1)
+        if sent_norms[start:start + len(target)] == target
     ]
-    if not matched_positions:
+    # Never bridge unmatched words or guess which occurrence the model meant.
+    if len(matches) != 1:
         return None
-
-    lo_pos, hi_pos = min(matched_positions), max(matched_positions)
-    match_ratio = len(set(matched_positions)) / len(target)
-    if match_ratio < cfg.min_span_match_ratio:
-        return None
-
+    lo_pos = matches[0]
+    hi_pos = lo_pos + len(target) - 1
     word_start = indexed[lo_pos][0]
     word_end = indexed[hi_pos][0]
     sentence_coverage = (hi_pos - lo_pos + 1) / len(indexed)
-    return word_start, word_end, match_ratio, sentence_coverage
+    return word_start, word_end, 1.0, sentence_coverage
 
 
 def _deletion_to_flag(
@@ -254,26 +269,32 @@ def _deletion_to_flag(
     sentences: list[Sentence],
     cfg: SectionEditorConfig,
     health: SectionHealth | None = None,
+    *,
+    rejection_reasons: list[str] | None = None,
 ) -> DuplicateFlag | None:
     """Map one validated deletion to a flag, applying the guardrails."""
     health = health if health is not None else SectionHealth()
+
+    def reject(message: str, *, unverifiable: bool = False) -> None:
+        if unverifiable:
+            health.deletions_rejected_unverifiable += 1
+        else:
+            health.deletions_rejected_guardrail += 1
+        if rejection_reasons is not None:
+            rejection_reasons.append(message)
+        logger.info("Section editor: rejecting [{}] — {}", deletion.sentence_index, message)
+
     idx = deletion.sentence_index
     if not (0 <= idx < len(sentences)):
-        health.deletions_rejected_unverifiable += 1
-        return None
+        return reject("Sentence index is outside the transcript", unverifiable=True)
 
-    located = _locate_span(sentences[idx], deletion.verbatim_text, cfg)
+    located = _locate_span(sentences[idx], deletion.verbatim_text)
     if located is None:
-        logger.info(
-            "Section editor: rejecting unverifiable span in sentence {} — {!r}",
-            idx, deletion.verbatim_text[:60],
-        )
-        health.deletions_rejected_unverifiable += 1
-        return None
-    word_start, word_end, _ratio, coverage = located
+        return reject("Deletion text is absent, non-contiguous or ambiguous", unverifiable=True)
+    word_start, word_end, _ratio, _coverage = located
 
     reason = _TYPE_TO_REASON.get(deletion.delete_type, FlagReason.FILLER)
-    full_sentence = coverage >= cfg.full_sentence_threshold
+    full_sentence = word_start == 0 and word_end == len(sentences[idx].words) - 1
     confidence = 0.9
     notes: list[str] = [deletion.reason] if deletion.reason else []
 
@@ -283,45 +304,37 @@ def _deletion_to_flag(
         and deletion.delete_type == "retake"
         and len(sentences[idx].words) < cfg.protect_min_words
     ):
-        logger.info(
-            "Section editor: protecting short interjection sentence {} ({!r})",
-            idx, sentences[idx].text[:40],
-        )
-        health.deletions_rejected_guardrail += 1
-        return None
+        return reject("Short whole-sentence retake is protected")
 
     # Guardrail: reject retake proposals that would require human review. With
     # no annotation queue, lowering confidence would still auto-cut the flag.
-    if deletion.delete_type == "retake" and deletion.kept_index is not None:
+    kept_spans: list[KeptSpan] = []
+    if deletion.delete_type in {"retake", "false_start"}:
         kept = deletion.kept_index
-        if 0 <= kept < len(sentences):
-            if kept < idx:
-                logger.info(
-                    "Section editor: rejecting sentence {} — model kept earlier take {}",
-                    idx,
-                    kept,
-                )
-                health.deletions_rejected_guardrail += 1
-                return None
-            gap = abs(sentences[kept].start - sentences[idx].start)
-            if gap > cfg.retake_max_gap_s:
-                logger.info(
-                    "Section editor: rejecting sentence {} — twin is {:.0f}s away (recap risk)",
-                    idx,
-                    gap,
-                )
-                health.deletions_rejected_guardrail += 1
-                return None
+        if kept is None or not (0 <= kept < len(sentences)) or not deletion.kept_verbatim_text:
+            return reject("Missing or invalid retained replacement")
+        kept_location = _locate_span(sentences[kept], deletion.kept_verbatim_text)
+        if kept_location is None:
+            return reject("Replacement text is absent, non-contiguous or ambiguous", unverifiable=True)
+        kept_start, kept_end, _, _ = kept_location
+        replacement = KeptSpan(
+            sentence_index=kept,
+            start=sentences[kept].words[kept_start].start,
+            end=sentences[kept].words[kept_end].end,
+            text=" ".join(w.text for w in sentences[kept].words[kept_start:kept_end + 1]),
+        )
+        cut_end = sentences[idx].words[word_end].end
+        if kept < idx or replacement.start < cut_end or replacement.end <= replacement.start:
+            return reject("Replacement must follow and not overlap the deletion")
+        if replacement.start - cut_end > cfg.retake_max_gap_s:
+            return reject("Replacement is too far away (recap risk)")
+        kept_spans.append(replacement)
+    elif deletion.kept_index is not None or deletion.kept_verbatim_text is not None:
+        return reject("Replacement supplied for a deletion type that does not use one")
 
     # Guardrail: risky unique-content removals stay kept until a review system exists.
     if deletion.delete_type in cfg.reject_types:
-        logger.info(
-            "Section editor: rejecting sentence {} — protected deletion type {}",
-            idx,
-            deletion.delete_type,
-        )
-        health.deletions_rejected_guardrail += 1
-        return None
+        return reject(f"Protected deletion type: {deletion.delete_type}")
 
     word_trims: list[WordTrim] = []
     if not full_sentence:
@@ -338,6 +351,8 @@ def _deletion_to_flag(
         confidence=confidence,
         note=" | ".join(n for n in notes if n),
         word_trims=word_trims,
+        source="section_editor",
+        kept_spans=kept_spans,
     )
 
 
@@ -355,7 +370,10 @@ def _merge_flags(flags: list[DuplicateFlag]) -> list[DuplicateFlag]:
     for idx, group in by_idx.items():
         full = [f for f in group if not f.word_trims]
         if full:
-            merged.append(max(full, key=lambda f: f.confidence))
+            base = max(full, key=lambda f: f.confidence)
+            merged.append(base.model_copy(update={
+                "kept_spans": [span for flag in group for span in flag.kept_spans],
+            }))
             continue
         by_reason: dict[FlagReason, list[DuplicateFlag]] = {}
         for flag in group:
@@ -366,7 +384,10 @@ def _merge_flags(flags: list[DuplicateFlag]) -> list[DuplicateFlag]:
                 key=lambda trim: trim.start,
             )
             base = max(reason_group, key=lambda flag: flag.confidence)
-            merged.append(base.model_copy(update={"word_trims": trims}))
+            merged.append(base.model_copy(update={
+                "word_trims": trims,
+                "kept_spans": [span for flag in reason_group for span in flag.kept_spans],
+            }))
     merged.sort(key=lambda flag: (
         flag.idx,
         flag.word_trims[0].start if flag.word_trims else float("-inf"),
@@ -378,15 +399,21 @@ def _edit_section(
     sentences: list[Sentence],
     section: Section,
     llm,
+    *,
+    audio_candidates: list[AudioFalseStartCandidate] | None = None,
 ) -> list[SectionDeletion]:
     prompt = SECTION_PROMPT.format(
         editable_range=f"{section.owned_lo}–{section.owned_hi - 1}",
         section_text=_render_section(sentences, section),
+        audio_candidates="\n".join(
+            f"[{candidate.sentence_index}] {candidate.evidence}"
+            for candidate in audio_candidates or []
+            if section.ctx_lo <= candidate.sentence_index < section.ctx_hi
+        ) or "Nema audio kandidata.",
     )
     structured = llm.with_structured_output(SectionEdits)
     result: SectionEdits = structured.invoke(prompt)
-    # Only accept deletions the section owns — dedups the overlap context.
-    return [d for d in result.deletions if section.owns(d.sentence_index)]
+    return result.deletions
 
 
 def _edit_section_with_retry(
@@ -395,11 +422,13 @@ def _edit_section_with_retry(
     llm,
     cfg: SectionEditorConfig,
     health: SectionHealth,
+    *,
+    audio_candidates: list[AudioFalseStartCandidate] | None = None,
 ) -> list[SectionDeletion]:
     """Retry structured-output failures that occur after a successful HTTP response."""
     for attempt in range(1, cfg.section_max_attempts + 1):
         try:
-            return _edit_section(sentences, section, llm)
+            return _edit_section(sentences, section, llm, audio_candidates=audio_candidates)
         except Exception as exc:
             if attempt >= cfg.section_max_attempts:
                 raise
@@ -426,6 +455,7 @@ def detect_section_edits(
     llm_config: LangChainModelConfig | None = None,
     health: SectionHealth | None = None,
     trace: SectionTrace | None = None,
+    audio_candidates: list[AudioFalseStartCandidate] | None = None,
 ) -> list[DuplicateFlag]:
     """Run the section editor and return removal flags.
 
@@ -437,6 +467,8 @@ def detect_section_edits(
     if cfg is None:
         cfg = SectionEditorConfig()
     health = health if health is not None else SectionHealth()
+    trace = trace if trace is not None else SectionTrace()
+    trace.audio_candidates = list(audio_candidates or [])
     if len(sentences) < 2:
         return []
 
@@ -461,8 +493,11 @@ def detect_section_edits(
 
     raw_flags: list[DuplicateFlag] = []
     for si, section in enumerate(sections):
+        model_id = primary_config.id or primary_config.model
         try:
-            deletions = _edit_section_with_retry(sentences, section, llm, cfg, health)
+            deletions = _edit_section_with_retry(
+                sentences, section, llm, cfg, health, audio_candidates=audio_candidates,
+            )
         except Exception as primary_exc:
             if fallback_config is None:
                 logger.exception(
@@ -487,8 +522,10 @@ def detect_section_edits(
                 if fallback_llm is None:
                     fallback_llm = build_chat_model(fallback_config)
                 deletions = _edit_section_with_retry(
-                    sentences, section, fallback_llm, cfg, health
+                    sentences, section, fallback_llm, cfg, health,
+                    audio_candidates=audio_candidates,
                 )
+                model_id = fallback_config.id or fallback_config.model
             except Exception:
                 logger.exception(
                     "Section editor: primary and fallback failed for section {}/{} "
@@ -500,7 +537,17 @@ def detect_section_edits(
         health.deletions_proposed += len(deletions)
         for d in deletions:
             unverifiable_before = health.deletions_rejected_unverifiable
-            flag = _deletion_to_flag(d, sentences, cfg, health)
+            rejection_reasons = []
+            if not section.owns(d.sentence_index) or (
+                d.kept_index is not None and not section.ctx_lo <= d.kept_index < section.ctx_hi
+            ):
+                flag = None
+                health.deletions_rejected_guardrail += 1
+                rejection_reasons.append("Deletion is not owned or replacement is outside the supplied context")
+            else:
+                flag = _deletion_to_flag(
+                    d, sentences, cfg, health, rejection_reasons=rejection_reasons,
+                )
             if trace is not None:
                 if flag is not None:
                     disposition = "accepted"
@@ -512,13 +559,23 @@ def detect_section_edits(
                     deletion=d,
                     disposition=disposition,
                     flag=flag,
+                    detail="; ".join(rejection_reasons),
+                    model_id=model_id,
                 ))
             if flag is not None:
                 raw_flags.append(flag)
 
-    raw_flags.extend(detect_local_corrections(sentences))
-    flags = _merge_flags(raw_flags)
+    trace.local_flags = [
+        flag.model_copy(update={"source": "local_correction"})
+        for flag in detect_local_corrections(sentences)
+    ]
+    raw_flags.extend(trace.local_flags)
+    trace.protected_spans = [span for flag in raw_flags for span in flag.kept_spans]
+    flags = _merge_flags(protect_kept_spans(
+        raw_flags, sentences, protected=trace.protected_spans, rejected=trace.rejected_conflicts,
+    ))
     health.flags_emitted += len(flags)
+    trace.health = asdict(health)
     full = sum(1 for f in flags if not f.word_trims)
     trims = sum(1 for f in flags if f.word_trims)
     logger.info(

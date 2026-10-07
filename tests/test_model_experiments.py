@@ -361,7 +361,8 @@ def test_section_pilot_checkpoints_and_resumes_completed_fixture(
     assert (output / "results.json").exists()
     assert (output / "report.md").exists()
     assert json.loads((output / "traces" / "tiny.json").read_text()) == {
-        "proposals": []
+        "proposals": [], "audio_candidates": [], "protected_spans": [],
+        "rejected_conflicts": [], "local_flags": [], "health": {},
     }
     run_manifest = json.loads((output / "run.json").read_text())
     assert run_manifest["model_id"] == "gpt-6.1-sol-low"

@@ -9,7 +9,7 @@ import numpy as np
 from ai_video_editor.audio.disruption import detect_disruptions
 from ai_video_editor.audio.models import DisruptionRegion
 from ai_video_editor.config.settings import DisruptionConfig, FalseStartAudioConfig
-from ai_video_editor.duplicate.false_start_audio import detect_audio_false_starts
+from ai_video_editor.duplicate.false_start_audio import detect_audio_false_start_candidates
 from ai_video_editor.duplicate.models import FlagReason
 from ai_video_editor.transcription.models import AudioEvent, Sentence, Transcript, Word
 
@@ -96,9 +96,9 @@ def test_audio_false_start_fires_on_stranded_phrase_after_disruption() -> None:
     ]
     disruptions = [DisruptionRegion(start=8.0, end=8.5, peak_db=-32.0, floor_db=-72.0)]
 
-    flags = detect_audio_false_starts(sentences, disruptions, set(), FalseStartAudioConfig())
-    assert [f.idx for f in flags] == [1]
-    assert flags[0].reason == FlagReason.FALSE_START
+    flags = detect_audio_false_start_candidates(sentences, disruptions, set(), FalseStartAudioConfig())
+    assert [f.sentence_index for f in flags] == [1]
+    assert not hasattr(flags[0], "word_trims")
 
 
 def test_audio_false_start_respects_guards() -> None:
@@ -110,7 +110,7 @@ def test_audio_false_start_respects_guards() -> None:
     ]
 
     # No disruption in the pause -> nothing fires (require_disruption=True).
-    assert detect_audio_false_starts(base, [], set(), cfg) == []
+    assert detect_audio_false_start_candidates(base, [], set(), cfg) == []
 
     # Short pause before -> not a flubbed restart.
     short_gap = [
@@ -119,7 +119,7 @@ def test_audio_false_start_respects_guards() -> None:
         _phrase("Treca.", 12.0, 14.0),
     ]
     disr = [DisruptionRegion(start=10.1, end=10.3, peak_db=-30.0, floor_db=-72.0)]
-    assert detect_audio_false_starts(short_gap, disr, set(), cfg) == []
+    assert detect_audio_false_start_candidates(short_gap, disr, set(), cfg) == []
 
     # Too many words -> likely real content, not a stranded filler.
     long_phrase = [
@@ -128,7 +128,7 @@ def test_audio_false_start_respects_guards() -> None:
         _phrase("Treca.", 13.5, 15.0),
     ]
     disr2 = [DisruptionRegion(start=8.0, end=8.5, peak_db=-30.0, floor_db=-72.0)]
-    assert detect_audio_false_starts(long_phrase, disr2, set(), cfg) == []
+    assert detect_audio_false_start_candidates(long_phrase, disr2, set(), cfg) == []
 
 
 def test_audio_false_start_skips_already_flagged() -> None:
@@ -138,7 +138,7 @@ def test_audio_false_start_skips_already_flagged() -> None:
         _phrase("Treca recenica.", 12.5, 16.0),
     ]
     disr = [DisruptionRegion(start=8.0, end=8.5, peak_db=-30.0, floor_db=-72.0)]
-    assert detect_audio_false_starts(sentences, disr, {1}, FalseStartAudioConfig()) == []
+    assert detect_audio_false_start_candidates(sentences, disr, {1}, FalseStartAudioConfig()) == []
 
 
 def test_stt_event_counts_as_disruption() -> None:
@@ -152,12 +152,12 @@ def test_stt_event_counts_as_disruption() -> None:
         DisruptionRegion(start=8.0, end=8.6, peak_db=0.0, floor_db=0.0,
                          source="stt_event", label="(cough)")
     ]
-    flags = detect_audio_false_starts(sentences, event_disr, set(), FalseStartAudioConfig())
-    assert [f.idx for f in flags] == [1]
-    assert "(cough)" in flags[0].note
+    flags = detect_audio_false_start_candidates(sentences, event_disr, set(), FalseStartAudioConfig())
+    assert [f.sentence_index for f in flags] == [1]
+    assert "(cough)" in flags[0].evidence
 
 
-def test_detect_all_flags_upgrades_existing_text_flag_with_audio_evidence(monkeypatch) -> None:
+def test_audio_hint_does_not_override_an_existing_text_decision(monkeypatch) -> None:
     from ai_video_editor import decisions
     from ai_video_editor.config.settings import Settings
     from ai_video_editor.duplicate.models import DuplicateFlag, FlagReason
@@ -193,9 +193,9 @@ def test_detect_all_flags_upgrades_existing_text_flag_with_audio_evidence(monkey
 
     assert len(flags) == 1
     assert flags[0].idx == 1
-    assert flags[0].reason == FlagReason.FALSE_START
-    assert flags[0].note.startswith("Audio false start:")
-    assert "Text flag:" in flags[0].note
+    assert flags[0].reason == FlagReason.DUPLICATE
+    assert flags[0].confidence == 0.8
+    assert flags[0].note == "ordinary text-derived duplicate"
 
 
 def test_stt_parser_captures_audio_events_separately() -> None:

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from rapidfuzz import fuzz
 
-from ai_video_editor.duplicate.models import DuplicateFlag, FlagReason, WordTrim
+from ai_video_editor.duplicate.models import DuplicateFlag, FlagReason, KeptSpan, WordTrim
 from ai_video_editor.transcription.models import Sentence
 
 _MIN_ENDPOINT_WORDS = 7
@@ -93,6 +93,12 @@ def _word_trim(sentence: Sentence, start_word: int, end_word: int) -> WordTrim:
     )
 
 
+def _kept_span(sentence: Sentence, index: int, start_word: int, end_word: int) -> KeptSpan:
+    words = sentence.words[start_word:end_word]
+    return KeptSpan(sentence_index=index, start=words[0].start, end=words[-1].end,
+                    text=" ".join(word.text for word in words))
+
+
 def _derive_chain_flags(
     sentences: list[Sentence], earlier_index: int, later_index: int
 ) -> list[DuplicateFlag]:
@@ -128,6 +134,7 @@ def _derive_chain_flags(
             idx=earlier_index,
             reason=FlagReason.DUPLICATE,
             confidence=0.99,
+            kept_spans=[_kept_span(later, later_index, 0, len(later.words))],
             note=(
                 "Mehanički prepoznat raniji potpuni pokušaj u lokalnom lancu "
                 f"ispravka; dovršena verzija je rečenica [{later_index}]."
@@ -156,6 +163,7 @@ def _derive_chain_flags(
             confidence=0.99,
             note=note,
             word_trims=[_word_trim(earlier, earlier_cut_start, len(earlier.words))],
+            kept_spans=[_kept_span(later, later_index, later_cut_end, len(later.words))],
         ),
         DuplicateFlag(
             idx=later_index,
@@ -163,6 +171,7 @@ def _derive_chain_flags(
             confidence=0.99,
             note=note,
             word_trims=[_word_trim(later, 0, later_cut_end)],
+            kept_spans=[_kept_span(earlier, earlier_index, 0, earlier_cut_start)],
         ),
     ]
 
@@ -236,6 +245,7 @@ def _derive_adjacent_flags(
             reason=FlagReason.FALSE_START,
             confidence=0.99,
             note=note,
+            kept_spans=[_kept_span(later, earlier_index + 1, 0, later_indexed[prefix_length - 1][0] + 1)],
         )]
 
     reason = (
@@ -250,6 +260,7 @@ def _derive_adjacent_flags(
         confidence=0.99,
         note=note,
         word_trims=[_word_trim(earlier, cut_start, len(earlier.words))],
+        kept_spans=[_kept_span(later, earlier_index + 1, 0, later_indexed[prefix_length - 1][0] + 1)],
     )]
 
 

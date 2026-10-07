@@ -18,14 +18,30 @@ class WordTrim(BaseModel):
     end: float = Field(..., description="End time of the words to cut")
 
 
+class KeptSpan(BaseModel):
+    """A verified replacement that must survive every cutting lane."""
+
+    sentence_index: int
+    start: float
+    end: float
+    text: str
+
+
 class DuplicateFlag(BaseModel):
     """A sentence flagged for removal."""
     idx: int
     reason: FlagReason
     confidence: float = Field(default=1.0, ge=0.0, le=1.0)
     note: str = ""
+    source: str = "unspecified"
+    kept_spans: list[KeptSpan] = Field(default_factory=list)
     word_trims: list[WordTrim] = Field(
         default_factory=list,
         description="Sub-sentence time ranges to cut instead of the whole sentence. "
         "If non-empty, only these ranges are cut; the rest of the sentence is kept.",
     )
+
+
+class RejectedCut(BaseModel):
+    flag: DuplicateFlag
+    reason: str

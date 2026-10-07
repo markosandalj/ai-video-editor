@@ -51,7 +51,7 @@ class AudioConfig(BaseModel):
         description="dB level below which audio is considered silent.",
     )
     silence_min_duration_s: float = Field(
-        default=3.0,
+        default=2.0,
         gt=0.0,
         description="Minimum silence duration (seconds) to trigger a cut.",
     )
@@ -157,26 +157,6 @@ class SectionEditorConfig(BaseModel):
         ge=0.0,
         le=30.0,
         description="Linear backoff in seconds between section attempts.",
-    )
-    min_span_match_ratio: float = Field(
-        default=0.8,
-        ge=0.0,
-        le=1.0,
-        description=(
-            "A proposed deletion's verbatim text must match this fraction of a "
-            "contiguous word run in the named sentence or it is rejected. This is "
-            "the verify-the-claim guardrail: the model may only delete text that "
-            "actually exists."
-        ),
-    )
-    full_sentence_threshold: float = Field(
-        default=0.9,
-        ge=0.0,
-        le=1.0,
-        description=(
-            "If a matched span covers at least this fraction of the sentence's "
-            "words, cut the whole sentence; otherwise emit a word-level trim."
-        ),
     )
     protect_min_words: int = Field(
         default=4,
@@ -292,24 +272,20 @@ class DisruptionConfig(BaseModel):
 
 
 class FalseStartAudioConfig(BaseModel):
-    """Audio-driven false-start rule: cut a short, stranded phrase that sits right
-    after an acoustic disruption (cough/noise) in a long pause and is followed by
-    a prompt restart. This catches flubbed takes the transcript looks innocent for
-    (e.g. a hesitant 'I dobro.' after the speaker coughs, before redoing the line)."""
+    """Find short phrases after disruptions for semantic review, never direct cuts."""
 
     model_config = ConfigDict(extra="allow")
 
     enabled: bool = Field(
         default=True,
-        description="Run the audio-driven false-start pass.",
+        description="Supply audio-driven false-start candidates to the section editor.",
     )
     max_words: int = Field(
         default=3,
         ge=1,
         description=(
-            "Only short phrases (<= this many words) are candidates. 98-video sweep: "
-            "3 (vs 4) roughly halves false positives — 4-word hits are mostly real "
-            "content ('Što nam znači reschedule?'), 1-3-word hits are fillers."
+            "Only phrases up to this length are audio candidates. Even a short "
+            "phrase may be a useful correction, so semantic review is required."
         ),
     )
     min_gap_before_s: float = Field(
@@ -335,12 +311,6 @@ class FalseStartAudioConfig(BaseModel):
             "The disruption is the distinctive cue; turning this off falls back to a "
             "long-pause-only heuristic (higher recall, lower precision)."
         ),
-    )
-    confidence: float = Field(
-        default=0.85,
-        ge=0.0,
-        le=1.0,
-        description="Confidence assigned to an audio-driven false-start flag.",
     )
 
 
