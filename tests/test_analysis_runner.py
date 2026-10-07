@@ -133,6 +133,30 @@ def test_real_analysis_media_with_fake_external_adapters(tmp_path: Path) -> None
     assert "uploading_artifacts" in stages
 
 
+def test_decision_trace_survives_worker_scratch_cleanup(tmp_path: Path, monkeypatch) -> None:
+    from ai_video_editor import decisions
+
+    source = tmp_path / "input.mp4"
+    create_tiny_video(source)
+    request = job_request_adapter.validate_json((FIXTURES / "analysis-request.v1.json").read_text())
+    config = worker_settings(tmp_path).model_copy(update={"log_dir": tmp_path / "logs"})
+    job_id = uuid4()
+    monkeypatch.setattr(decisions, "detect_asides", lambda *args, **kwargs: [])
+
+    execute_analysis_job(
+        job_id, request, settings=config, drive=FakeDrive(source), artifacts=FakeArtifacts(),
+        progress=lambda percent, stage: None,
+        use_case_factory=lambda settings: AnalysisUseCase(settings, transcriber=fake_transcriber),
+    )
+    trace_path, = (config.log_dir / "analyses" / str(job_id) / "decision-traces").glob("*.json")
+    shutil.rmtree(config.scratch_dir / str(job_id))
+
+    trace = json.loads(trace_path.read_text())
+    assert trace["version"] == "edit_decisions.v2"
+    assert trace["transcript"]["sentences"][0]["text"] == "Prvi primjer"
+    assert "edl_before_snapping" in trace
+
+
 @pytest.mark.parametrize(
     ("failure", "code"),
     [

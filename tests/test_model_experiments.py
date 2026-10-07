@@ -6,6 +6,7 @@ import types
 from pathlib import Path
 
 import pytest
+import httpx
 from typer.testing import CliRunner
 
 from ai_video_editor.cli.app import app
@@ -24,7 +25,11 @@ from ai_video_editor.experiments.runner import (
     format_report,
 )
 from ai_video_editor.experiments.section_pilot import run_section_pilot
-from ai_video_editor.llm import LangChainModelConfig, build_chat_model
+from ai_video_editor.llm import (
+    LangChainModelConfig,
+    build_chat_model,
+    default_section_editor_model_config,
+)
 from ai_video_editor.qa.decision_eval import _cut_reason
 from ai_video_editor.transcription.models import Sentence, Transcript, Word
 
@@ -121,6 +126,52 @@ def test_manifest_validation_rejects_unknown_model(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="unknown models"):
         load_manifest(path)
+
+
+def test_default_section_model_sends_evaluated_openrouter_request(monkeypatch) -> None:
+    from ai_video_editor.duplicate.section_editor import SectionEdits
+
+    monkeypatch.setattr("ai_video_editor.llm.configure_observability", lambda: None)
+    monkeypatch.setenv("LANGSMITH_TRACING", "false")
+    requests = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(200, json={
+            "id": "test-response", "object": "chat.completion", "created": 0,
+            "model": "openai/gpt-6.1-sol",
+            "choices": [{
+                "index": 0, "finish_reason": "stop",
+                "message": {"role": "assistant", "content": '{"deletions": []}'},
+            }],
+            "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+        })
+
+    default = default_section_editor_model_config()
+    with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+        config = default.model_copy(update={
+            "api_key_env": None,
+            "provider_kwargs": {
+                **default.provider_kwargs, "api_key": "test-key", "http_client": client,
+            },
+        })
+        result = build_chat_model(config).with_structured_output(SectionEdits).invoke(
+            "Return no deletions."
+        )
+
+    assert result.deletions == []
+    assert len(requests) == 1
+    request = requests[0]
+    assert str(request.url) == "https://openrouter.ai/api/v1/chat/completions"
+    payload = json.loads(request.content)
+    assert payload["model"] == "openai/gpt-6.1-sol"
+    assert payload["reasoning"] == {"effort": "low", "exclude": True}
+    assert payload["provider"] == {
+        "only": ["openai"], "allow_fallbacks": False, "require_parameters": True,
+    }
+    assert "temperature" not in payload
+    assert payload["response_format"]["type"] == "json_schema"
+    assert payload["max_completion_tokens"] == 16_000
 
 
 def test_cached_cutting_reconstruction_keeps_silence_fixed() -> None:
@@ -310,10 +361,11 @@ def test_section_pilot_checkpoints_and_resumes_completed_fixture(
     assert (output / "results.json").exists()
     assert (output / "report.md").exists()
     assert json.loads((output / "traces" / "tiny.json").read_text()) == {
-        "proposals": []
+        "proposals": [], "audio_candidates": [], "protected_spans": [],
+        "rejected_conflicts": [], "local_flags": [], "health": {},
     }
     run_manifest = json.loads((output / "run.json").read_text())
-    assert run_manifest["model_id"] == "gpt-5.6-sol"
+    assert run_manifest["model_id"] == "gpt-6.1-sol-low"
     assert run_manifest["fixtures"] == ["tiny"]
     assert run_manifest["repeat_cases"] == str(repeat_cases)
     assert "Explicit local-repeat cases" in (output / "report.md").read_text()

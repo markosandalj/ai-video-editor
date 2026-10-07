@@ -19,23 +19,25 @@ from ai_video_editor.duplicate.section_editor import (
     detect_section_edits,
 )
 from ai_video_editor.transcription.models import Sentence, Word
+from ai_video_editor.llm import (
+    LangChainModelConfig,
+    default_section_editor_fallback_model_config,
+)
 
 
 def test_section_editor_is_the_default_cutter() -> None:
     settings = Settings()
 
-    assert settings.section_editor.llm.id == "gpt-5.6-sol"
+    assert settings.section_editor.llm.id == "gpt-6.1-sol-low"
     assert settings.section_editor.llm.class_path == "langchain_openai.ChatOpenAI"
-    assert settings.section_editor.llm.model == "openai/gpt-5.6-sol"
+    assert settings.section_editor.llm.model == "openai/gpt-6.1-sol"
     assert settings.section_editor.llm.api_key_env == "OPENROUTER_API_KEY"
     assert settings.section_editor.llm.provider_kwargs["base_url"] == (
         "https://openrouter.ai/api/v1"
     )
-    assert settings.section_editor.fallback_llm is not None
-    assert settings.section_editor.fallback_llm.model == "gpt-5.6-sol"
-    assert settings.section_editor.fallback_llm.api_key_env == "OPENAI_API_KEY"
-    assert "base_url" not in settings.section_editor.fallback_llm.provider_kwargs
-    assert settings.section_editor.fallback_llm.provider_kwargs["reasoning_effort"] == "low"
+    assert settings.section_editor.llm.temperature is None
+    assert settings.section_editor.llm.provider_kwargs["extra_body"]["reasoning"]["effort"] == "low"
+    assert settings.section_editor.fallback_llm is None
 
 
 def _sentence(text: str, start: float, end: float) -> Sentence:
@@ -94,7 +96,7 @@ class TestLocateSpan:
     def test_full_sentence_match(self):
         s = _sentence("Dakle danas ucimo o bazama podataka", 0, 3)
         cfg = SectionEditorConfig()
-        ws, we, ratio, cov = _locate_span(s, "Dakle danas ucimo o bazama podataka", cfg)
+        ws, we, ratio, cov = _locate_span(s, "Dakle danas ucimo o bazama podataka")
         assert (ws, we) == (0, 5)
         assert ratio == pytest.approx(1.0)
         assert cov == pytest.approx(1.0)
@@ -102,7 +104,7 @@ class TestLocateSpan:
     def test_partial_span_locates_middle(self):
         s = _sentence("Firstly youngsters s Firstly youngsters spend more time", 0, 4)
         cfg = SectionEditorConfig()
-        located = _locate_span(s, "Firstly youngsters s", cfg)
+        located = _locate_span(s, "Firstly youngsters s")
         assert located is not None
         ws, we, ratio, cov = located
         assert ws == 0
@@ -112,17 +114,52 @@ class TestLocateSpan:
     def test_punctuation_and_case_insensitive(self):
         s = _sentence("Znaci, minus nekoliko i imamo.", 0, 2)
         cfg = SectionEditorConfig()
-        located = _locate_span(s, "znaci minus", cfg)
+        located = _locate_span(s, "znaci minus")
         assert located is not None
 
     def test_rejects_absent_text(self):
         s = _sentence("Dakle danas ucimo o bazama podataka", 0, 3)
-        cfg = SectionEditorConfig(min_span_match_ratio=0.8)
-        assert _locate_span(s, "potpuno druga recenica koje nema", cfg) is None
+        assert _locate_span(s, "potpuno druga recenica koje nema") is None
 
     def test_empty_target(self):
         s = _sentence("Dakle danas", 0, 1)
-        assert _locate_span(s, "   ", SectionEditorConfig()) is None
+        assert _locate_span(s, "   ") is None
+
+    @staticmethod
+    def _multiword_sentence():
+        return Sentence(
+            text="Jedinica je gram mol na minus prvu. Zatim nastavljamo.",
+            start=0, end=6,
+            words=[
+                Word(text=text, start=i, end=i + 1)
+                for i, text in enumerate([
+                    "Jedinica", "je", "gram", "mol na minus prvu.", "Zatim", "nastavljamo.",
+                ])
+            ],
+        )
+
+    def test_multiword_token_maps_to_original_timed_words(self):
+        sentence = self._multiword_sentence()
+        located = _locate_span(sentence, "gram mol na minus prvu.")
+        assert located is not None
+        assert located[:2] == (2, 3)
+        flag = _deletion_to_flag(
+            SectionDeletion(sentence_index=0, verbatim_text="gram mol na minus prvu.",
+                            delete_type="stutter"),
+            [sentence], SectionEditorConfig(),
+        )
+        assert flag is not None
+        assert [(trim.start, trim.end) for trim in flag.word_trims] == [(2, 4)]
+
+    @pytest.mark.parametrize("text", ["mol", "gram mol", "minus prvu Zatim"])
+    def test_cannot_cut_inside_one_timed_word(self, text):
+        assert _locate_span(self._multiword_sentence(), text) is None
+
+    def test_repeated_multiword_token_is_ambiguous(self):
+        sentence = Sentence(text="mol na minus prvu mol na minus prvu", start=0, end=2,
+                            words=[Word(text="mol na minus prvu", start=i, end=i + 1)
+                                   for i in range(2)])
+        assert _locate_span(sentence, "mol na minus prvu") is None
 
 
 class TestDeletionToFlag:
@@ -150,6 +187,7 @@ class TestDeletionToFlag:
             verbatim_text="Dakle danas cemo raditi na projektu za web aplikaciju",
             delete_type="retake",
             kept_index=2,
+            kept_verbatim_text=sents[2].text,
         )
         flag = _deletion_to_flag(d, sents, SectionEditorConfig())
         assert flag is not None
@@ -183,7 +221,8 @@ class TestDeletionToFlag:
             _sentence("Dobro", 10, 10.4),
         ]
         d = SectionDeletion(
-            sentence_index=0, verbatim_text="Dobro", delete_type="retake", kept_index=2
+            sentence_index=0, verbatim_text="Dobro", delete_type="retake", kept_index=2,
+            kept_verbatim_text=sents[2].text,
         )
         assert _deletion_to_flag(d, sents, SectionEditorConfig(protect_min_words=4)) is None
 
@@ -195,6 +234,7 @@ class TestDeletionToFlag:
             verbatim_text="Dakle danas cemo raditi na projektu za web aplikaciju",
             delete_type="retake",
             kept_index=0,
+            kept_verbatim_text=sents[0].text,
         )
         assert _deletion_to_flag(d, sents, SectionEditorConfig()) is None
 
@@ -208,6 +248,7 @@ class TestDeletionToFlag:
             verbatim_text="Danas govorimo o zakonu ocuvanja kolicine gibanja",
             delete_type="retake",
             kept_index=1,
+            kept_verbatim_text=sents[1].text,
         )
         assert _deletion_to_flag(
             d, sents, SectionEditorConfig(retake_max_gap_s=60)
@@ -227,7 +268,7 @@ class TestMergeFlags:
         sents = [_sentence("jedan dva tri cetiri pet sest sedam osam", 0, 4)]
         cfg = SectionEditorConfig()
         full = _deletion_to_flag(
-            SectionDeletion(sentence_index=0, verbatim_text="jedan dva tri cetiri pet sest sedam osam", delete_type="false_start"),
+            SectionDeletion(sentence_index=0, verbatim_text="jedan dva tri cetiri pet sest sedam osam", delete_type="stutter"),
             sents, cfg,
         )
         partial = _deletion_to_flag(
@@ -252,7 +293,10 @@ class TestMergeFlags:
         assert len(merged[0].word_trims) == 2
 
     def test_partial_trims_with_different_reasons_keep_separate_provenance(self):
-        sents = [_sentence("aa bb cc dd ee ff gg hh ii jj kk ll", 0, 6)]
+        sents = [
+            _sentence("aa bb cc dd ee ff gg hh ii jj kk ll", 0, 6),
+            _sentence("kk ll mm", 7, 9),
+        ]
         cfg = SectionEditorConfig()
         stutter = _deletion_to_flag(
             SectionDeletion(
@@ -268,6 +312,8 @@ class TestMergeFlags:
                 sentence_index=0,
                 verbatim_text="kk ll",
                 delete_type="false_start",
+                kept_index=1,
+                kept_verbatim_text="kk ll",
             ),
             sents,
             cfg,
@@ -391,6 +437,7 @@ class TestDetectSectionEditsEndToEnd:
                         verbatim_text="Prvi pokušaj rečenice koji treba ukloniti sada",
                         delete_type="retake",
                         kept_index=1,
+                        kept_verbatim_text=sents[1].text,
                     ),
                     SectionDeletion(
                         sentence_index=0,
@@ -416,7 +463,7 @@ class TestDetectSectionEditsEndToEnd:
         assert trace.proposals[0].flag is not None
         assert trace.proposals[1].flag is None
 
-    def test_primary_failure_falls_back_to_direct_model(self, monkeypatch):
+    def test_primary_failure_uses_explicit_fallback(self, monkeypatch):
         import ai_video_editor.duplicate.section_editor as se
 
         sents = [
@@ -440,6 +487,7 @@ class TestDetectSectionEditsEndToEnd:
                         verbatim_text="Prvi pokušaj rečenice koji treba ukloniti sada",
                         delete_type="retake",
                         kept_index=1,
+                        kept_verbatim_text=sents[1].text,
                     )
                 ])
 
@@ -458,11 +506,17 @@ class TestDetectSectionEditsEndToEnd:
         health = SectionHealth()
         flags = detect_section_edits(
             sents,
-            SectionEditorConfig(section_max_attempts=1, section_retry_backoff_s=0),
+            SectionEditorConfig(
+                section_max_attempts=1,
+                section_retry_backoff_s=0,
+                fallback_llm=LangChainModelConfig(
+                    id="explicit-fallback", model="fallback-model", api_key_env=None,
+                ),
+            ),
             health=health,
         )
 
-        assert built == ["gpt-5.6-sol", "gpt-5.6-sol-openai-direct"]
+        assert built == ["gpt-6.1-sol-low", "explicit-fallback"]
         assert health.sections_fallback == 1
         assert health.sections_failed == 0
         assert [flag.idx for flag in flags] == [0]
@@ -495,7 +549,11 @@ class TestDetectSectionEditsEndToEnd:
         health = SectionHealth()
         flags = detect_section_edits(
             sents,
-            SectionEditorConfig(section_max_attempts=1, section_retry_backoff_s=0),
+            SectionEditorConfig(
+                section_max_attempts=1,
+                section_retry_backoff_s=0,
+                fallback_llm=default_section_editor_fallback_model_config(),
+            ),
             llm_config=candidate,
             health=health,
         )
@@ -526,6 +584,7 @@ class TestDetectSectionEditsEndToEnd:
                         verbatim_text="Prvi pokušaj rečenice koji treba ukloniti sada",
                         delete_type="retake",
                         kept_index=1,
+                        kept_verbatim_text=sents[1].text,
                     )
                 ])
 
@@ -568,6 +627,7 @@ class TestDetectSectionEditsEndToEnd:
                         verbatim_text="Dakle danas cemo raditi na projektu za web aplikaciju",
                         delete_type="retake",
                         kept_index=2,
+                        kept_verbatim_text=sents[2].text,
                     ),
                 ])
 

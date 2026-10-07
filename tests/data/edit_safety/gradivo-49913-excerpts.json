@@ -1,0 +1,809 @@
+{
+  "source": "Frozen source 49913 analysis export; excerpts only, no media or credentials",
+  "export_sha256": "397052d0148e97e4714f3b46438dc9f5db34515af4df4c2f0429d5d8c28e1719",
+  "cases": [
+    {
+      "number": 5,
+      "original_sentence_indices": [
+        3,
+        4,
+        5,
+        6
+      ],
+      "sentences": [
+        {
+          "text": "Pa idemo povezati maseni udio nekog spoja, pa idemo povezati maseni udio nekog elementa u spoju sa njegovim brojem.",
+          "start": 25.96,
+          "end": 36.88,
+          "words": [
+            {
+              "text": "Pa",
+              "start": 25.96,
+              "end": 26.3
+            },
+            {
+              "text": "idemo",
+              "start": 26.36,
+              "end": 26.6
+            },
+            {
+              "text": "povezati",
+              "start": 26.66,
+              "end": 27.3
+            },
+            {
+              "text": "maseni",
+              "start": 27.92,
+              "end": 28.6
+            },
+            {
+              "text": "udio",
+              "start": 28.76,
+              "end": 29.4
+            },
+            {
+              "text": "nekog",
+              "start": 29.56,
+              "end": 29.94
+            },
+            {
+              "text": "spoja,",
+              "start": 30.02,
+              "end": 30.38
+            },
+            {
+              "text": "pa",
+              "start": 31.44,
+              "end": 31.62
+            },
+            {
+              "text": "idemo",
+              "start": 31.72,
+              "end": 31.98
+            },
+            {
+              "text": "povezati",
+              "start": 32.04,
+              "end": 32.659
+            },
+            {
+              "text": "maseni",
+              "start": 32.74,
+              "end": 33.24
+            },
+            {
+              "text": "udio",
+              "start": 33.4,
+              "end": 33.74
+            },
+            {
+              "text": "nekog",
+              "start": 33.8,
+              "end": 34.1
+            },
+            {
+              "text": "elementa",
+              "start": 34.16,
+              "end": 34.72
+            },
+            {
+              "text": "u",
+              "start": 34.78,
+              "end": 34.86
+            },
+            {
+              "text": "spoju",
+              "start": 34.92,
+              "end": 35.3
+            },
+            {
+              "text": "sa",
+              "start": 35.78,
+              "end": 36.02
+            },
+            {
+              "text": "njegovim",
+              "start": 36.08,
+              "end": 36.46
+            },
+            {
+              "text": "brojem.",
+              "start": 36.5,
+              "end": 36.88
+            }
+          ]
+        },
+        {
+          "text": "Maseni udio određenog atoma X u nekom spoju biti će jednaka razlomku gdje gore imamo pomnožen broj,",
+          "start": 38.94,
+          "end": 49.88,
+          "words": [
+            {
+              "text": "Maseni",
+              "start": 38.94,
+              "end": 39.44
+            },
+            {
+              "text": "udio",
+              "start": 39.58,
+              "end": 40.12
+            },
+            {
+              "text": "određenog",
+              "start": 40.28,
+              "end": 41.24
+            },
+            {
+              "text": "atoma",
+              "start": 41.34,
+              "end": 41.78
+            },
+            {
+              "text": "X",
+              "start": 42.12,
+              "end": 42.28
+            },
+            {
+              "text": "u",
+              "start": 42.38,
+              "end": 42.42
+            },
+            {
+              "text": "nekom",
+              "start": 42.48,
+              "end": 42.84
+            },
+            {
+              "text": "spoju",
+              "start": 42.92,
+              "end": 43.36
+            },
+            {
+              "text": "biti",
+              "start": 44.68,
+              "end": 44.92
+            },
+            {
+              "text": "će",
+              "start": 44.98,
+              "end": 45.1
+            },
+            {
+              "text": "jednaka",
+              "start": 45.16,
+              "end": 45.66
+            },
+            {
+              "text": "razlomku",
+              "start": 46.52,
+              "end": 47.08
+            },
+            {
+              "text": "gdje",
+              "start": 47.48,
+              "end": 47.66
+            },
+            {
+              "text": "gore",
+              "start": 47.72,
+              "end": 47.98
+            },
+            {
+              "text": "imamo",
+              "start": 48.06,
+              "end": 48.7
+            },
+            {
+              "text": "pomnožen",
+              "start": 48.78,
+              "end": 49.3
+            },
+            {
+              "text": "broj,",
+              "start": 49.58,
+              "end": 49.88
+            }
+          ]
+        },
+        {
+          "text": "gdje gore imamo pomnožen broj tog atoma, odnosno elementa x pomnožen sa relativnom atomskom masom tog broja.",
+          "start": 52.16,
+          "end": 61.04,
+          "words": [
+            {
+              "text": "gdje",
+              "start": 52.16,
+              "end": 52.4
+            },
+            {
+              "text": "gore",
+              "start": 52.48,
+              "end": 52.72
+            },
+            {
+              "text": "imamo",
+              "start": 52.8,
+              "end": 53.24
+            },
+            {
+              "text": "pomnožen",
+              "start": 53.3,
+              "end": 53.82
+            },
+            {
+              "text": "broj",
+              "start": 54.16,
+              "end": 54.46
+            },
+            {
+              "text": "tog",
+              "start": 54.54,
+              "end": 54.78
+            },
+            {
+              "text": "atoma,",
+              "start": 55.34,
+              "end": 55.72
+            },
+            {
+              "text": "odnosno",
+              "start": 55.78,
+              "end": 56.08
+            },
+            {
+              "text": "elementa",
+              "start": 56.12,
+              "end": 56.68
+            },
+            {
+              "text": "x",
+              "start": 57.04,
+              "end": 57.08
+            },
+            {
+              "text": "pomnožen",
+              "start": 57.54,
+              "end": 57.98
+            },
+            {
+              "text": "sa",
+              "start": 58.06,
+              "end": 58.38
+            },
+            {
+              "text": "relativnom",
+              "start": 58.5,
+              "end": 59.22
+            },
+            {
+              "text": "atomskom",
+              "start": 59.34,
+              "end": 59.78
+            },
+            {
+              "text": "masom",
+              "start": 59.84,
+              "end": 60.26
+            },
+            {
+              "text": "tog",
+              "start": 60.32,
+              "end": 60.54
+            },
+            {
+              "text": "broja.",
+              "start": 60.6,
+              "end": 61.04
+            }
+          ]
+        },
+        {
+          "text": "Gore imamo broj atoma iX u tome spoju pomnožen sa relativnom atomskom masom tog istog elementa podijeliti ćemo sa relativnom molekulska masom tog spoja.",
+          "start": 67.76,
+          "end": 81.18,
+          "words": [
+            {
+              "text": "Gore",
+              "start": 67.76,
+              "end": 68.04
+            },
+            {
+              "text": "imamo",
+              "start": 68.12,
+              "end": 68.46
+            },
+            {
+              "text": "broj",
+              "start": 68.94,
+              "end": 69.5
+            },
+            {
+              "text": "atoma",
+              "start": 69.6,
+              "end": 70.32
+            },
+            {
+              "text": "iX",
+              "start": 70.4,
+              "end": 70.62
+            },
+            {
+              "text": "u",
+              "start": 70.68,
+              "end": 70.72
+            },
+            {
+              "text": "tome",
+              "start": 70.78,
+              "end": 71.0
+            },
+            {
+              "text": "spoju",
+              "start": 71.06,
+              "end": 71.42
+            },
+            {
+              "text": "pomnožen",
+              "start": 71.46,
+              "end": 71.94
+            },
+            {
+              "text": "sa",
+              "start": 72.0,
+              "end": 72.22
+            },
+            {
+              "text": "relativnom",
+              "start": 72.34,
+              "end": 72.86
+            },
+            {
+              "text": "atomskom",
+              "start": 72.98,
+              "end": 73.72
+            },
+            {
+              "text": "masom",
+              "start": 73.78,
+              "end": 74.18
+            },
+            {
+              "text": "tog",
+              "start": 74.54,
+              "end": 74.76
+            },
+            {
+              "text": "istog",
+              "start": 74.88,
+              "end": 75.24
+            },
+            {
+              "text": "elementa",
+              "start": 75.3,
+              "end": 75.86
+            },
+            {
+              "text": "podijeliti",
+              "start": 76.92,
+              "end": 77.32
+            },
+            {
+              "text": "ćemo",
+              "start": 77.38,
+              "end": 77.62
+            },
+            {
+              "text": "sa",
+              "start": 77.7,
+              "end": 78.18
+            },
+            {
+              "text": "relativnom",
+              "start": 78.3,
+              "end": 78.78
+            },
+            {
+              "text": "molekulska",
+              "start": 78.84,
+              "end": 79.52
+            },
+            {
+              "text": "masom",
+              "start": 79.58,
+              "end": 80.08
+            },
+            {
+              "text": "tog",
+              "start": 80.16,
+              "end": 80.36
+            },
+            {
+              "text": "spoja.",
+              "start": 80.7,
+              "end": 81.18
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "number": 8,
+      "original_sentence_indices": [
+        14,
+        15,
+        16,
+        17
+      ],
+      "sentences": [
+        {
+          "text": "Ono što znamo da ako imamo gustoću otopine a b, ona će biti jednaka količniku mase otopine sa volumenom otapala.",
+          "start": 130.38,
+          "end": 142.26,
+          "words": [
+            {
+              "text": "Ono",
+              "start": 130.38,
+              "end": 130.5
+            },
+            {
+              "text": "što",
+              "start": 130.539,
+              "end": 130.68
+            },
+            {
+              "text": "znamo",
+              "start": 130.759,
+              "end": 131.08
+            },
+            {
+              "text": "da",
+              "start": 131.16,
+              "end": 131.36
+            },
+            {
+              "text": "ako",
+              "start": 131.5,
+              "end": 131.7
+            },
+            {
+              "text": "imamo",
+              "start": 131.8,
+              "end": 132.08
+            },
+            {
+              "text": "gustoću",
+              "start": 132.12,
+              "end": 132.68
+            },
+            {
+              "text": "otopine",
+              "start": 132.8,
+              "end": 133.34
+            },
+            {
+              "text": "a",
+              "start": 133.44,
+              "end": 133.54
+            },
+            {
+              "text": "b,",
+              "start": 133.66,
+              "end": 133.8
+            },
+            {
+              "text": "ona",
+              "start": 134.48,
+              "end": 134.7
+            },
+            {
+              "text": "će",
+              "start": 134.8,
+              "end": 135.0
+            },
+            {
+              "text": "biti",
+              "start": 135.06,
+              "end": 135.38
+            },
+            {
+              "text": "jednaka",
+              "start": 135.44,
+              "end": 136.28
+            },
+            {
+              "text": "količniku",
+              "start": 136.38,
+              "end": 137.08
+            },
+            {
+              "text": "mase",
+              "start": 137.8,
+              "end": 138.4
+            },
+            {
+              "text": "otopine",
+              "start": 138.54,
+              "end": 139.04
+            },
+            {
+              "text": "sa",
+              "start": 139.98,
+              "end": 140.14
+            },
+            {
+              "text": "volumenom",
+              "start": 140.58,
+              "end": 141.12
+            },
+            {
+              "text": "otapala.",
+              "start": 141.5,
+              "end": 142.26
+            }
+          ]
+        },
+        {
+          "text": "Sa volumenom otopine.",
+          "start": 146.4,
+          "end": 148.44,
+          "words": [
+            {
+              "text": "Sa",
+              "start": 146.4,
+              "end": 146.58
+            },
+            {
+              "text": "volumenom",
+              "start": 146.96,
+              "end": 147.78
+            },
+            {
+              "text": "otopine.",
+              "start": 147.9,
+              "end": 148.44
+            }
+          ]
+        },
+        {
+          "text": "To znači da ako želimo dobiti volumen, to sve moramo...",
+          "start": 148.76,
+          "end": 152.92,
+          "words": [
+            {
+              "text": "To",
+              "start": 148.76,
+              "end": 148.84
+            },
+            {
+              "text": "znači",
+              "start": 148.88,
+              "end": 149.24
+            },
+            {
+              "text": "da",
+              "start": 149.28,
+              "end": 149.34
+            },
+            {
+              "text": "ako",
+              "start": 149.4,
+              "end": 149.58
+            },
+            {
+              "text": "želimo",
+              "start": 149.64,
+              "end": 149.96
+            },
+            {
+              "text": "dobiti",
+              "start": 150.0,
+              "end": 150.62
+            },
+            {
+              "text": "volumen,",
+              "start": 150.74,
+              "end": 151.26
+            },
+            {
+              "text": "to",
+              "start": 151.84,
+              "end": 151.98
+            },
+            {
+              "text": "sve",
+              "start": 152.1,
+              "end": 152.3
+            },
+            {
+              "text": "moramo...",
+              "start": 152.36,
+              "end": 152.92
+            }
+          ]
+        },
+        {
+          "text": "To znači da ako želimo dobiti volumen, prvo sve moramo pomnožiti sa volumenom od a b da bi dobili ro od a b puta v od a b bit će jednako masa od a b.",
+          "start": 153.94,
+          "end": 168.46,
+          "words": [
+            {
+              "text": "To",
+              "start": 153.94,
+              "end": 154.0
+            },
+            {
+              "text": "znači",
+              "start": 154.06,
+              "end": 154.32
+            },
+            {
+              "text": "da",
+              "start": 154.36,
+              "end": 154.42
+            },
+            {
+              "text": "ako",
+              "start": 154.44,
+              "end": 154.62
+            },
+            {
+              "text": "želimo",
+              "start": 154.66,
+              "end": 154.94
+            },
+            {
+              "text": "dobiti",
+              "start": 154.98,
+              "end": 155.32
+            },
+            {
+              "text": "volumen,",
+              "start": 155.36,
+              "end": 155.76
+            },
+            {
+              "text": "prvo",
+              "start": 155.86,
+              "end": 156.08
+            },
+            {
+              "text": "sve",
+              "start": 156.14,
+              "end": 156.28
+            },
+            {
+              "text": "moramo",
+              "start": 156.32,
+              "end": 156.7
+            },
+            {
+              "text": "pomnožiti",
+              "start": 156.76,
+              "end": 157.46
+            },
+            {
+              "text": "sa",
+              "start": 157.54,
+              "end": 157.68
+            },
+            {
+              "text": "volumenom",
+              "start": 157.74,
+              "end": 158.38
+            },
+            {
+              "text": "od",
+              "start": 158.52,
+              "end": 158.76
+            },
+            {
+              "text": "a",
+              "start": 158.88,
+              "end": 159.06
+            },
+            {
+              "text": "b",
+              "start": 159.08,
+              "end": 159.22
+            },
+            {
+              "text": "da",
+              "start": 160.04,
+              "end": 160.14
+            },
+            {
+              "text": "bi",
+              "start": 160.18,
+              "end": 160.26
+            },
+            {
+              "text": "dobili",
+              "start": 160.3,
+              "end": 160.72
+            },
+            {
+              "text": "ro",
+              "start": 161.46,
+              "end": 161.74
+            },
+            {
+              "text": "od",
+              "start": 161.86,
+              "end": 162.12
+            },
+            {
+              "text": "a",
+              "start": 162.24,
+              "end": 162.46
+            },
+            {
+              "text": "b",
+              "start": 162.48,
+              "end": 162.62
+            },
+            {
+              "text": "puta",
+              "start": 163.14,
+              "end": 163.58
+            },
+            {
+              "text": "v",
+              "start": 164.02,
+              "end": 164.16
+            },
+            {
+              "text": "od",
+              "start": 164.38,
+              "end": 164.56
+            },
+            {
+              "text": "a",
+              "start": 164.68,
+              "end": 164.88
+            },
+            {
+              "text": "b",
+              "start": 164.88,
+              "end": 165.04
+            },
+            {
+              "text": "bit",
+              "start": 165.54,
+              "end": 165.68
+            },
+            {
+              "text": "će",
+              "start": 165.7,
+              "end": 165.8
+            },
+            {
+              "text": "jednako",
+              "start": 165.84,
+              "end": 166.3
+            },
+            {
+              "text": "masa",
+              "start": 166.88,
+              "end": 167.62
+            },
+            {
+              "text": "od",
+              "start": 167.72,
+              "end": 167.9
+            },
+            {
+              "text": "a",
+              "start": 168.02,
+              "end": 168.2
+            },
+            {
+              "text": "b.",
+              "start": 168.22,
+              "end": 168.46
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -92,7 +92,7 @@ def test_section_editor_merges_deterministic_corrections_after_sol(monkeypatch) 
     monkeypatch.setattr(
         section_editor,
         "_edit_section_with_retry",
-        lambda _sentences, _section, _llm, _cfg, _health: [],
+        lambda _sentences, _section, _llm, _cfg, _health, **_kwargs: [],
     )
 
     flags = section_editor.detect_section_edits(sentences, SectionEditorConfig())

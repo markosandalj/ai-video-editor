@@ -43,6 +43,11 @@ worker exposes authenticated job submission/status and healthcheck endpoints.
 Each job runs in a subprocess with a configurable deadline and process-tree
 termination. Render configuration and callback outbox survive worker restarts.
 
+Section editing defaults to `openai/gpt-6.1-sol` with `low` reasoning through
+OpenRouter (`OPENROUTER_API_KEY`), pinned to the OpenAI provider. Automatic
+provider/model fallback is disabled; a section fallback can be configured
+explicitly. This choice follows the nine-example, ten-repeat model comparison.
+
 The current host is a separate ARM64 MacBook Air under OrbStack. The currently
 running image is `ai-video-worker:f779947` and the tunnel is pinned to
 `cloudflared:2026.7.3`; this cleanup does not deploy a replacement.
@@ -53,6 +58,8 @@ running image is `ai-video-worker:f779947` and the tunnel is pinned to
 - [Quality iteration workflow](iterations/WORKFLOW.md) and [baseline](iterations/CURRENT_BASELINE.md)
 - [Domain language](CONTEXT.md)
 - [HTTP contract](docs/http-api.md)
+- [Edit safety and decision traces](docs/edit-safety.md)
+- [Sol 6.1 low prompt evaluation](docs/prompt-evaluation-20261007.md)
 - [Headless architecture decision](docs/adr/0001-keep-ai-video-editor-headless.md)
 - [Integration completion scope](docs/integration-completion.md)
 - [Cleanup inventory, restoration and verification](docs/headless-cleanup.md)
