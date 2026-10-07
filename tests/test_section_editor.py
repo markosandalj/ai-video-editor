@@ -3,6 +3,7 @@ span mapping, guardrails, merge) plus one end-to-end run with a mocked model."""
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
 
 from ai_video_editor.config.settings import SectionEditorConfig, Settings
 from ai_video_editor.duplicate.models import FlagReason
@@ -126,6 +127,16 @@ class TestLocateSpan:
 
 
 class TestDeletionToFlag:
+    def test_filler_is_not_a_model_deletion_type(self):
+        schema = SectionEdits.model_json_schema()
+        assert "filler" not in schema["$defs"]["SectionDeletion"]["properties"]["delete_type"]["enum"]
+        with pytest.raises(ValidationError, match="delete_type"):
+            SectionEdits.model_validate({"deletions": [{
+                "sentence_index": 0,
+                "verbatim_text": "Znači,",
+                "delete_type": "filler",
+            }]})
+
     def _sents(self):
         return [
             _sentence("Dakle danas cemo raditi na projektu za web aplikaciju", 0, 3),
@@ -163,7 +174,7 @@ class TestDeletionToFlag:
     def test_unverifiable_span_rejected(self):
         sents = self._sents()
         d = SectionDeletion(
-            sentence_index=0, verbatim_text="ova recenica ne postoji nigdje", delete_type="filler"
+            sentence_index=0, verbatim_text="ova recenica ne postoji nigdje", delete_type="stutter"
         )
         assert _deletion_to_flag(d, sents, SectionEditorConfig()) is None
 
@@ -221,7 +232,7 @@ class TestMergeFlags:
         sents = [_sentence("jedan dva tri cetiri pet sest sedam osam", 0, 4)]
         cfg = SectionEditorConfig()
         full = _deletion_to_flag(
-            SectionDeletion(sentence_index=0, verbatim_text="jedan dva tri cetiri pet sest sedam osam", delete_type="filler"),
+            SectionDeletion(sentence_index=0, verbatim_text="jedan dva tri cetiri pet sest sedam osam", delete_type="stutter"),
             sents, cfg,
         )
         partial = _deletion_to_flag(
@@ -246,7 +257,10 @@ class TestMergeFlags:
         assert len(merged[0].word_trims) == 2
 
     def test_partial_trims_with_different_reasons_keep_separate_provenance(self):
-        sents = [_sentence("aa bb cc dd ee ff gg hh ii jj kk ll", 0, 6)]
+        sents = [
+            _sentence("aa bb cc dd ee ff gg hh ii jj kk ll", 0, 6),
+            _sentence("kk ll mm", 7, 9),
+        ]
         cfg = SectionEditorConfig()
         stutter = _deletion_to_flag(
             SectionDeletion(
@@ -257,21 +271,23 @@ class TestMergeFlags:
             sents,
             cfg,
         )
-        filler = _deletion_to_flag(
+        false_start = _deletion_to_flag(
             SectionDeletion(
                 sentence_index=0,
                 verbatim_text="kk ll",
-                delete_type="filler",
+                delete_type="false_start",
+                kept_index=1,
+                kept_verbatim_text="kk ll",
             ),
             sents,
             cfg,
         )
 
-        merged = _merge_flags([stutter, filler])
+        merged = _merge_flags([stutter, false_start])
 
         assert [(flag.reason, len(flag.word_trims)) for flag in merged] == [
             (FlagReason.STUTTER, 1),
-            (FlagReason.FILLER, 1),
+            (FlagReason.FALSE_START, 1),
         ]
 
 
@@ -338,6 +354,37 @@ class TestWordLevelScoring:
 
 
 class TestDetectSectionEditsEndToEnd:
+    def test_legacy_filler_response_cannot_produce_a_cut(self, monkeypatch):
+        import ai_video_editor.duplicate.section_editor as se
+
+        sents = [
+            _sentence("Znači, imamo dvadeset grama.", 0, 3),
+            _sentence("Sada računamo masu vode.", 4, 7),
+        ]
+
+        class LegacyLLM:
+            def with_structured_output(self, schema):
+                class Structured:
+                    def invoke(self, prompt):
+                        return schema.model_validate({"deletions": [{
+                            "sentence_index": 0,
+                            "verbatim_text": "Znači,",
+                            "delete_type": "filler",
+                        }]})
+                return Structured()
+
+        monkeypatch.setattr(se, "build_chat_model", lambda cfg: LegacyLLM())
+        health = SectionHealth()
+        flags = detect_section_edits(
+            sents,
+            SectionEditorConfig(section_max_attempts=1, fallback_llm=None),
+            health=health,
+        )
+
+        assert flags == []
+        assert health.sections_failed == 1
+        assert health.flags_emitted == 0
+
     def test_trace_records_every_proposal_and_outcome(self, monkeypatch):
         import ai_video_editor.duplicate.section_editor as se
 
@@ -359,7 +406,7 @@ class TestDetectSectionEditsEndToEnd:
                     SectionDeletion(
                         sentence_index=0,
                         verbatim_text="tekst koji ne postoji",
-                        delete_type="filler",
+                        delete_type="stutter",
                     ),
                 ])
 
@@ -535,6 +582,9 @@ class TestDetectSectionEditsEndToEnd:
 
         class FakeStructured:
             def invoke(self, prompt):
+                assert "Sačuvaj prirodan govorni stil." in prompt
+                assert "Poštapalice, povezne riječi i oklijevanja nisu sami po sebi razlog za rezanje." in prompt
+                assert '"filler":' not in prompt
                 return SectionEdits(deletions=[
                     SectionDeletion(
                         sentence_index=0,
@@ -542,9 +592,6 @@ class TestDetectSectionEditsEndToEnd:
                         delete_type="retake",
                         kept_index=2,
                         kept_verbatim_text=sents[2].text,
-                    ),
-                    SectionDeletion(
-                        sentence_index=1, verbatim_text="Znaci ovaj", delete_type="filler"
                     ),
                 ])
 
@@ -557,7 +604,7 @@ class TestDetectSectionEditsEndToEnd:
         flags = detect_section_edits(sents, SectionEditorConfig(protect_min_words=4))
         idxs = {f.idx for f in flags}
         assert 0 in idxs  # earlier retake cut
-        assert 1 in idxs  # filler cut
+        assert 1 not in idxs  # natural speech stays; no standalone filler deletion
         assert 2 not in idxs  # later take kept
         assert 3 not in idxs  # unique content kept
 

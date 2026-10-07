@@ -41,11 +41,10 @@ _TYPE_TO_REASON: dict[str, FlagReason] = {
     "retake": FlagReason.DUPLICATE,
     "false_start": FlagReason.FALSE_START,
     "stutter": FlagReason.STUTTER,
-    "filler": FlagReason.FILLER,
     "redundant": FlagReason.FILLER,
 }
 
-DeleteType = Literal["retake", "false_start", "stutter", "filler", "redundant"]
+DeleteType = Literal["retake", "false_start", "stutter", "redundant"]
 
 
 def _normalise(text: str) -> str:
@@ -65,7 +64,7 @@ class SectionDeletion(BaseModel):
         ),
     )
     delete_type: DeleteType = Field(
-        ..., description="Why it should go: retake, false_start, stutter, filler, redundant"
+        ..., description="Why it should go: retake, false_start, stutter, redundant"
     )
     reason: str = Field(default="", description="Short justification in Croatian")
     kept_index: int | None = Field(
@@ -165,10 +164,10 @@ ODGOVOR: Vrati isključivo validan JSON prema shemi. Bez Markdowna, bez dodatnog
 - "retake": govornik je istu misao rekao dva puta (lažni pa ispravan pokušaj). Izbaci samo dio RANIJE verzije koji je u cijelosti zamijenjen KASNIJOM.
 - "false_start": započeta pa prekinuta misao ("Dakle, ovaj-", "Kako bismo, kako bismo..."), nakon koje slijedi potpuna verzija.
 - "stutter": ponovljene/zamuckane riječi UNUTAR rečenice ("Firstly, youngsters s- Firstly, youngsters spend..."). Izbaci SAMO zamuckani dio, ne cijelu rečenicu.
-- "filler": prazne poštapalice bez sadržaja ("znači", "evo", "ovaj" same za sebe).
 - "redundant": rečenica koja ne dodaje NIŠTA novo jer je sadržaj već rečen (npr. suvišno prepričavanje). Budi OPREZAN — ovo je najrizičnije.
 
 KLJUČNA PRAVILA:
+- Sačuvaj prirodan govorni stil. Poštapalice, povezne riječi i oklijevanja nisu sami po sebi razlog za rezanje. Ukloni ih samo ako pripadaju jasno pogrešnom ili prekinutom pokušaju koji je zamijenjen kasnijim ispravnim izgovorom.
 - verbatim_text MORA biti točno prepisan iz rečenice (može biti dio rečenice za djelomično izbacivanje).
 - Za retake i false_start OBAVEZNO navedi kept_index i kept_verbatim_text: točan kasniji tekst koji zamjenjuje CIJELI predloženi rez. Taj tekst mora ostati u konačnom videu. Ako nema jasne zamjene, ne predlaži takav rez.
 - Ako kasniji pokušaj ponavlja samo nastavak, sačuvaj koristan uvod ranijeg pokušaja. Izbaci samo zamijenjeni nastavak; zajednička tema nije dokaz da je cijela ranija rečenica suvišna.
@@ -293,7 +292,7 @@ def _deletion_to_flag(
         return reject("Deletion text is absent, non-contiguous or ambiguous", unverifiable=True)
     word_start, word_end, _ratio, _coverage = located
 
-    reason = _TYPE_TO_REASON.get(deletion.delete_type, FlagReason.FILLER)
+    reason = _TYPE_TO_REASON[deletion.delete_type]
     full_sentence = word_start == 0 and word_end == len(sentences[idx].words) - 1
     confidence = 0.9
     notes: list[str] = [deletion.reason] if deletion.reason else []

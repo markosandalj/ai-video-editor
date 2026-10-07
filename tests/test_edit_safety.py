@@ -114,7 +114,7 @@ def test_case_8_correction_survives_all_cutting_lanes(monkeypatch, conflicting_l
     conflicting = DuplicateFlag(idx=1, reason=FlagReason.FILLER, note="Conflicting proposal")
     if conflicting_lane == "section":
         proposals.append(SectionDeletion(sentence_index=1, verbatim_text=sentences[1].text,
-                                         delete_type="filler"))
+                                         delete_type="stutter"))
     if conflicting_lane == "local_correction":
         monkeypatch.setattr(section_editor, "detect_local_corrections", lambda ss: [conflicting])
     monkeypatch.setattr(decisions, "detect_asides",
@@ -148,7 +148,7 @@ def test_case_5_partial_retake_preserves_intro_and_records_proposals(monkeypatch
                         kept_index=3, kept_verbatim_text=sentences[3].text),
         SectionDeletion(sentence_index=2, verbatim_text=sentences[2].text, delete_type="retake",
                         kept_index=3, kept_verbatim_text=sentences[3].text),
-        SectionDeletion(sentence_index=1, verbatim_text="izmišljeni tekst", delete_type="filler"),
+        SectionDeletion(sentence_index=1, verbatim_text="izmišljeni tekst", delete_type="stutter"),
     ]
     _model_proposals(monkeypatch, proposals, [])
     monkeypatch.setattr(decisions, "detect_asides", lambda *args, **kwargs: [])
@@ -206,12 +206,13 @@ def test_ambiguous_occurrence_is_rejected():
 def test_audio_candidate_can_be_cut_after_content_review(monkeypatch):
     sentences = [
         _sentence("Prva korisna rečenica.", 0, 5),
-        _sentence("Ovaj, ovaj.", 11, 12),
-        _sentence("Sada korisno nastavljamo objašnjenje.", 12.5, 16),
+        _sentence("Izračunat ćemo masu...", 11, 12),
+        _sentence("Prvo ćemo računati masu otopine.", 12.5, 16),
     ]
     prompts = []
     _model_proposals(monkeypatch, [SectionDeletion(
-        sentence_index=1, verbatim_text=sentences[1].text, delete_type="filler",
+        sentence_index=1, verbatim_text=sentences[1].text, delete_type="false_start",
+        kept_index=2, kept_verbatim_text=sentences[2].text,
     )], prompts)
     monkeypatch.setattr(decisions, "detect_asides", lambda *args, **kwargs: [])
     flags = decisions.detect_all_flags(
