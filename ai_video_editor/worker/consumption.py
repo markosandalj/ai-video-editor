@@ -13,7 +13,7 @@ from uuid import UUID, uuid4
 
 import httpx
 from langsmith import tracing_context
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 logger = logging.getLogger(__name__)
 
@@ -37,18 +37,6 @@ class ConsumptionV1(BaseModel):
     currency: str = ""
     cost_basis: Literal["charged", "estimated", "unavailable"] = "unavailable"
     coverage_issues: list[str] = Field(default_factory=list)
-
-    @model_validator(mode="before")
-    @classmethod
-    def discard_legacy_timing(cls, values):
-        # Existing durable outbox entries must still deliver their usage/cost.
-        if isinstance(values, dict):
-            values = {
-                key: value
-                for key, value in values.items()
-                if key not in {"duration_ms", "timing_scope"}
-            }
-        return values
 
 
 class ConsumptionRecorder(Protocol):

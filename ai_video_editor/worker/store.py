@@ -86,9 +86,6 @@ class JobStore:
                 );
                 CREATE INDEX IF NOT EXISTS consumption_attempts_job
                 ON consumption_attempts(job_id);
-                -- Unreleased prototype used a separate consumption delivery queue.
-                DROP TABLE IF EXISTS consumption_outbox;
-
                 CREATE TABLE IF NOT EXISTS jobs (
                     job_id TEXT PRIMARY KEY,
                     operation TEXT NOT NULL CHECK (operation IN ('analysis', 'render')),
