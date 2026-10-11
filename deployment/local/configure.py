@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
-from pathlib import Path
 import secrets
+from pathlib import Path
 from urllib.parse import urlparse
 
 from dotenv import dotenv_values, set_key
 
-
 ROOT = Path(__file__).resolve().parents[2]
+LITERAL_ENV_HEADER = "# Generated literal Compose environment\n"
 CREDENTIAL_KEYS = (
     "GOOGLE_DRIVE_CLIENT_ID",
     "GOOGLE_DRIVE_CLIENT_SECRET",
@@ -29,12 +30,30 @@ CREDENTIAL_KEYS = (
 
 
 def write_env(path: Path, values: dict[str, str]) -> None:
-    # Tokens and URLs are single-line scalar values, accepted by Docker and uv.
+    # JSON quoting protects whitespace, hashes, quotes and backslashes;
+    # Compose's $$ escape prevents a second interpolation of credentials.
     if any("\n" in value or "\r" in value for value in values.values()):
         raise ValueError("Local configuration requires single-line values")
-    with open(path, "w", opener=lambda name, flags: os.open(name, flags, 0o600)) as stream:
-        stream.write("".join(f"{key}={value}\n" for key, value in values.items()))
+    with open(
+        path, "w", opener=lambda name, flags: os.open(name, flags, 0o600)
+    ) as stream:
+        stream.write(LITERAL_ENV_HEADER)
+        stream.writelines(
+            f"{key}={json.dumps(value.replace('$', '$$'), ensure_ascii=False)}\n"
+            for key, value in values.items()
+        )
     path.chmod(0o600)
+
+
+def read_env(path: Path) -> dict:
+    values = dotenv_values(path, interpolate=False)
+    if path.is_file() and path.read_text().startswith(LITERAL_ENV_HEADER):
+        # python-dotenv understands quoting but not Compose's dollar escape.
+        return {
+            key: value.replace("$$", "$") if value is not None else None
+            for key, value in values.items()
+        }
+    return values
 
 
 def update_env(path: Path, values: dict[str, str]) -> None:
@@ -65,13 +84,18 @@ def main() -> None:
         parser.error("callback-url must be a local http://*.gradivo.localhost URL")
     gradivo = args.gradivo_dir.resolve()
     if not (gradivo / "docker-compose.worktree.yml").is_file():
-        parser.error("gradivo-dir must contain the Gradivo local worktree configuration")
+        parser.error(
+            "gradivo-dir must contain the Gradivo local worktree configuration"
+        )
     if not (gradivo / ".env").is_file():
         parser.error("Prepare Gradivo's normal .env before configuring the worker")
 
     local_path = ROOT / ".env.worker.local"
-    existing = dotenv_values(local_path) if local_path.exists() else {}
-    source = {**dotenv_values(ROOT / ".env"), **dotenv_values(ROOT / ".env.worker")}
+    existing = read_env(local_path) if local_path.exists() else {}
+    source = {
+        **read_env(ROOT / ".env"),
+        **read_env(ROOT / ".env.worker"),
+    }
     source.update(existing)
     values = {key: source[key] for key in CREDENTIAL_KEYS if source.get(key)}
     stack_defaults = dotenv_values(ROOT / "deployment/mac/env/stack.env.example")
@@ -79,24 +103,32 @@ def main() -> None:
     for directory in ("state", "scratch", "logs"):
         (local_data / directory).mkdir(parents=True, exist_ok=True)
     values.update(
-        AI_VIDEO_EDITOR_API_TOKEN=existing.get("AI_VIDEO_EDITOR_API_TOKEN") or secrets.token_hex(32),
-        GRADIVO_VIDEO_CALLBACK_TOKEN=existing.get("GRADIVO_VIDEO_CALLBACK_TOKEN") or secrets.token_hex(32),
+        AI_VIDEO_EDITOR_API_TOKEN=existing.get("AI_VIDEO_EDITOR_API_TOKEN")
+        or secrets.token_hex(32),
+        GRADIVO_VIDEO_CALLBACK_TOKEN=existing.get("GRADIVO_VIDEO_CALLBACK_TOKEN")
+        or secrets.token_hex(32),
         GRADIVO_VIDEO_CALLBACK_BASE_URL=args.callback_url.rstrip("/"),
         MAX_NUMBER_OF_JOBS="1",
         COMPOSE_PROJECT_NAME="ai-video-worker-local",
         COMPOSE_FILE=f"{ROOT / 'deployment/mac/compose.yaml'}:{ROOT / 'deployment/local/compose.yaml'}",
         AI_VIDEO_WORKER_IMAGE="ai-video-worker:local",
+        # Local bind mounts belong to this host user, not the image's UID 10001.
+        AI_VIDEO_WORKER_UID=str(os.getuid()),
+        AI_VIDEO_WORKER_GID=str(os.getgid()),
         AI_VIDEO_WORKER_ENV_FILE=str(local_path),
         AI_VIDEO_WORKER_STATE_DIR=str(local_data / "state"),
         AI_VIDEO_WORKER_SCRATCH_DIR=str(local_data / "scratch"),
         AI_VIDEO_WORKER_LOG_DIR=str(local_data / "logs"),
-        AI_VIDEO_WORKER_BIND_ADDRESS=existing.get("AI_VIDEO_WORKER_BIND_ADDRESS") or "127.0.0.1",
+        AI_VIDEO_WORKER_BIND_ADDRESS=existing.get("AI_VIDEO_WORKER_BIND_ADDRESS")
+        or "127.0.0.1",
         AI_VIDEO_WORKER_PORT=existing.get("AI_VIDEO_WORKER_PORT") or "8000",
         AI_VIDEO_WORKER_CALLBACK_HOST=parsed.hostname,
         # Compose resolves every service even when only worker is selected.
         # The local override disables cloudflared unless explicitly profiled in.
         CLOUDFLARED_IMAGE=stack_defaults["CLOUDFLARED_IMAGE"],
-        AI_VIDEO_CLOUDFLARED_ENV_FILE=str(ROOT / "deployment/mac/env/cloudflared.env.example"),
+        AI_VIDEO_CLOUDFLARED_ENV_FILE=str(
+            ROOT / "deployment/mac/env/cloudflared.env.example"
+        ),
     )
     write_env(local_path, values)
     gradivo_values = {
@@ -111,8 +143,12 @@ def main() -> None:
             gradivo_values[key] = values[key]
     update_env(gradivo / ".env", gradivo_values)
     missing = [key for key in CREDENTIAL_KEYS if not values.get(key)]
-    print(f"Prepared {local_path}; updated worker settings in {gradivo / '.env'} (mode 0600)")
-    print(f"Worker: http://localhost:{values['AI_VIDEO_WORKER_PORT']}; Gradivo callback: {args.callback_url}")
+    print(
+        f"Prepared {local_path}; updated worker settings in {gradivo / '.env'} (mode 0600)"
+    )
+    print(
+        f"Worker: http://localhost:{values['AI_VIDEO_WORKER_PORT']}; Gradivo callback: {args.callback_url}"
+    )
     print("Credential fields absent: " + (", ".join(missing) or "none"))
 
 

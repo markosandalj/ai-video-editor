@@ -525,3 +525,99 @@ def test_processing_without_provider_usage_creates_no_consumption(tmp_path):
     with consumption_scope(store, uuid4()):
         pass
     assert attempts(store._path) == []
+
+
+def test_real_grammar_passes_reach_terminal_consumption(tmp_path, monkeypatch):
+    from ai_video_editor.transcription.grammar import correct_grammar
+    from ai_video_editor.transcription.models import Sentence, Transcript, Word
+
+    monkeypatch.setenv("GEMINI_API_KEY", "contract-fixture-no-paid-calls")
+    store = JobStore(tmp_path / "state.db")
+    store.initialize()
+    job_id = uuid4()
+    store.accept(job_id, analysis_request())
+    requests = []
+
+    def respond(request):
+        requests.append(json.loads(request.content))
+        corrections = (
+            [{"wrong": "korjen", "correct": "korijen"}] if len(requests) == 1 else []
+        )
+        return httpx.Response(
+            200,
+            json={
+                "candidates": [
+                    {
+                        "content": {
+                            "role": "model",
+                            "parts": [
+                                {"text": json.dumps({"corrections": corrections})}
+                            ],
+                        },
+                        "finishReason": "STOP",
+                    }
+                ],
+                "modelVersion": "gemini-2.5-flash",
+                "responseId": f"grammar-pass-{len(requests)}",
+                "usageMetadata": {
+                    "promptTokenCount": 100,
+                    "candidatesTokenCount": 10,
+                    "totalTokenCount": 110,
+                },
+            },
+        )
+
+    transport = ConsumptionTransport(
+        "google",
+        "gemini-2.5-flash",
+        "worker.llm",
+        transport=httpx.MockTransport(respond),
+    )
+    transcript = Transcript(
+        sentences=[
+            Sentence(
+                text="korjen",
+                start=0,
+                end=1,
+                words=[Word(text="korjen", start=0, end=1)],
+            )
+        ],
+        source_video="fixture.mp4",
+        language="hr",
+        model_size="fixture",
+    )
+    with (
+        patch(
+            "ai_video_editor.worker.consumption.ConsumptionTransport",
+            return_value=transport,
+        ),
+        consumption_scope(store, job_id),
+    ):
+        corrected, report = correct_grammar(transcript)
+    assert report.passes == 2 and report.converged
+    assert corrected.sentences[0].text == "korijen"
+    assert "korjen" in json.dumps(requests[0]) and "korijen" in json.dumps(requests[1])
+    store.fail(
+        job_id,
+        WorkerError(code="processing_failed", stage="later_step", message="fixture"),
+    )
+    delivered = []
+
+    class Receiver:
+        def deliver(self, snapshot, *, consumption=None):
+            delivered.append((snapshot, consumption))
+            return True
+
+    dispatcher = CallbackDispatcher(store, Receiver())
+    while dispatcher.dispatch_once():
+        pass
+    snapshot, receipts = delivered[-1]
+    assert snapshot.status == "failed"
+    assert {row.provider_request_id for row in receipts} == {
+        "grammar-pass-1",
+        "grammar-pass-2",
+    }
+    assert sum(row.usage["totalTokenCount"] for row in receipts) == 220
+    assert all(
+        row.provider == "google" and row.outcome == "succeeded" for row in receipts
+    )

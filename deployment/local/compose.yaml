@@ -2,6 +2,7 @@
 # Compose resolves these relative to deployment/mac/compose.yaml.
 services:
   worker:
+    user: "${AI_VIDEO_WORKER_UID:-10001}:${AI_VIDEO_WORKER_GID:-10001}"
     build:
       context: ../..
       dockerfile: deployment/mac/Dockerfile

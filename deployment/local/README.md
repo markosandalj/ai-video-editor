@@ -40,6 +40,12 @@ read only. You can maintain these env values directly after initial setup.
 local data directories. State, scratch and logs persist under
 `.ai_video_editor_tmp/local-worker/`; deployment data is separate. The worker
 uses the container paths defined in the shared deployment service.
+The helper sets `AI_VIDEO_WORKER_UID` and `AI_VIDEO_WORKER_GID` to the current
+host user so the local container can write these bind mounts on native Linux.
+Run the helper as your normal development user, including after updating an
+older local configuration. The deployed image keeps its default UID/GID 10001.
+Worker env values are quoted literally; rerunning the helper preserves `$` and
+` #` in credentials and paths.
 
 Gradivo keeps its own R2 key and uses the worker's endpoint/bucket for playback.
 The helper verifies credential presence, not external validity or permissions.
