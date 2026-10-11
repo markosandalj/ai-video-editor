@@ -96,6 +96,17 @@ def test_configure_rerun_preserves_literals_and_uses_host_owner(tmp_path, monkey
     configure.main()
     path = root / ".env.worker.local"
     first = configure.read_env(path)
+    overrides = {
+        "VIDEO_PROCESSING_RENDER_CRF": "18",
+        "VIDEO_PROCESSING_ANALYSIS_TIMEOUT_SECONDS": "300",
+        "MAX_NUMBER_OF_JOBS": "2",
+        "AI_VIDEO_WORKER_STATE_DIR": str(tmp_path / "$NAME # custom state"),
+        "AI_VIDEO_WORKER_PORT": "8005",
+        "CUSTOM_WORKER_OPTION": "literal-$NAME-${NAME} # keep this",
+        "EMPTY_OPTION": "",
+    }
+    first.update(overrides)
+    configure.write_env(path, first)
     configure.main()
     assert configure.read_env(path) == first
     worker = compose_config(path)["services"]["worker"]
@@ -106,7 +117,26 @@ def test_configure_rerun_preserves_literals_and_uses_host_owner(tmp_path, monkey
     )
     for mount in worker["volumes"]:
         assert Path(mount["source"]).is_dir()
+    for key in (
+        "VIDEO_PROCESSING_RENDER_CRF",
+        "VIDEO_PROCESSING_ANALYSIS_TIMEOUT_SECONDS",
+        "MAX_NUMBER_OF_JOBS",
+    ):
+        assert worker["environment"][key] == overrides[key]
     assert "UNRELATED=unchanged" in (gradivo / ".env").read_text()
+    assert (
+        configure.read_env(gradivo / ".env")["VIDEO_PROCESSING_HTTP_BASE_URL"]
+        == "http://host.docker.internal:8005"
+    )
+
+    sys.argv[-1] = "http://another.gradivo.localhost"
+    configure.main()
+    updated = configure.read_env(path)
+    assert updated == {
+        **first,
+        "GRADIVO_VIDEO_CALLBACK_BASE_URL": "http://another.gradivo.localhost",
+        "AI_VIDEO_WORKER_CALLBACK_HOST": "another.gradivo.localhost",
+    }
 
 
 @pytest.mark.parametrize("value", ["line\nbreak", "carriage\rreturn"])

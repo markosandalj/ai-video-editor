@@ -34,6 +34,9 @@ values in Gradivo's existing `.env`. It generates separate API/callback tokens,
 retains them on later runs and copies existing worker media credentials without
 printing them. Both files are private (0600). Existing deployment env files are
 read only. You can maintain these env values directly after initial setup.
+Rerunning the helper preserves local overrides, including render quality,
+timeouts, concurrency and data directories. The supplied callback URL and
+checkout-specific Compose/env paths and host UID/GID are refreshed each run.
 
 `.env.worker.local` selects the shared and local Compose files through
 `COMPOSE_FILE`, a separate `COMPOSE_PROJECT_NAME`, the image, published port and

@@ -100,29 +100,15 @@ def main() -> None:
     values = {key: source[key] for key in CREDENTIAL_KEYS if source.get(key)}
     stack_defaults = dotenv_values(ROOT / "deployment/mac/env/stack.env.example")
     local_data = ROOT / ".ai_video_editor_tmp/local-worker"
-    for directory in ("state", "scratch", "logs"):
-        (local_data / directory).mkdir(parents=True, exist_ok=True)
-    values.update(
-        AI_VIDEO_EDITOR_API_TOKEN=existing.get("AI_VIDEO_EDITOR_API_TOKEN")
-        or secrets.token_hex(32),
-        GRADIVO_VIDEO_CALLBACK_TOKEN=existing.get("GRADIVO_VIDEO_CALLBACK_TOKEN")
-        or secrets.token_hex(32),
-        GRADIVO_VIDEO_CALLBACK_BASE_URL=args.callback_url.rstrip("/"),
+    defaults = dict(
         MAX_NUMBER_OF_JOBS="1",
         COMPOSE_PROJECT_NAME="ai-video-worker-local",
-        COMPOSE_FILE=f"{ROOT / 'deployment/mac/compose.yaml'}:{ROOT / 'deployment/local/compose.yaml'}",
         AI_VIDEO_WORKER_IMAGE="ai-video-worker:local",
-        # Local bind mounts belong to this host user, not the image's UID 10001.
-        AI_VIDEO_WORKER_UID=str(os.getuid()),
-        AI_VIDEO_WORKER_GID=str(os.getgid()),
-        AI_VIDEO_WORKER_ENV_FILE=str(local_path),
         AI_VIDEO_WORKER_STATE_DIR=str(local_data / "state"),
         AI_VIDEO_WORKER_SCRATCH_DIR=str(local_data / "scratch"),
         AI_VIDEO_WORKER_LOG_DIR=str(local_data / "logs"),
-        AI_VIDEO_WORKER_BIND_ADDRESS=existing.get("AI_VIDEO_WORKER_BIND_ADDRESS")
-        or "127.0.0.1",
-        AI_VIDEO_WORKER_PORT=existing.get("AI_VIDEO_WORKER_PORT") or "8000",
-        AI_VIDEO_WORKER_CALLBACK_HOST=parsed.hostname,
+        AI_VIDEO_WORKER_BIND_ADDRESS="127.0.0.1",
+        AI_VIDEO_WORKER_PORT="8000",
         # Compose resolves every service even when only worker is selected.
         # The local override disables cloudflared unless explicitly profiled in.
         CLOUDFLARED_IMAGE=stack_defaults["CLOUDFLARED_IMAGE"],
@@ -130,6 +116,33 @@ def main() -> None:
             ROOT / "deployment/mac/env/cloudflared.env.example"
         ),
     )
+    # Existing local overrides win over setup defaults, including settings this
+    # helper does not know about (render quality, timeouts and future options).
+    values = {
+        **defaults,
+        **values,
+        **{k: v for k, v in existing.items() if v is not None},
+    }
+    # These values describe this invocation/checkout, rather than worker tuning.
+    values.update(
+        AI_VIDEO_EDITOR_API_TOKEN=existing.get("AI_VIDEO_EDITOR_API_TOKEN")
+        or secrets.token_hex(32),
+        GRADIVO_VIDEO_CALLBACK_TOKEN=existing.get("GRADIVO_VIDEO_CALLBACK_TOKEN")
+        or secrets.token_hex(32),
+        GRADIVO_VIDEO_CALLBACK_BASE_URL=args.callback_url.rstrip("/"),
+        AI_VIDEO_WORKER_CALLBACK_HOST=parsed.hostname,
+        COMPOSE_FILE=f"{ROOT / 'deployment/mac/compose.yaml'}:{ROOT / 'deployment/local/compose.yaml'}",
+        AI_VIDEO_WORKER_ENV_FILE=str(local_path),
+        # Local bind mounts belong to this host user, not the image's UID 10001.
+        AI_VIDEO_WORKER_UID=str(os.getuid()),
+        AI_VIDEO_WORKER_GID=str(os.getgid()),
+    )
+    for key in (
+        "AI_VIDEO_WORKER_STATE_DIR",
+        "AI_VIDEO_WORKER_SCRATCH_DIR",
+        "AI_VIDEO_WORKER_LOG_DIR",
+    ):
+        Path(values[key]).mkdir(parents=True, exist_ok=True)
     write_env(local_path, values)
     gradivo_values = {
         "VIDEO_PROCESSING_BACKEND": "http",
