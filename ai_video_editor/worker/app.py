@@ -49,6 +49,7 @@ def create_worker_app(
         scratch_dir=settings.scratch_dir,
         analysis_timeout_seconds=settings.analysis_timeout_seconds,
         render_timeout_seconds=settings.render_timeout_seconds,
+        consumption_recorder=store if settings.consumption_enabled else None,
     )
     callback_dispatcher = CallbackDispatcher(
         store,

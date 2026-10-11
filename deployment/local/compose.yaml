@@ -1,0 +1,14 @@
+# Reuse the deployment services, runtime, healthcheck and persistent paths.
+# Compose resolves these relative to deployment/mac/compose.yaml.
+services:
+  worker:
+    build:
+      context: ../..
+      dockerfile: deployment/mac/Dockerfile
+    ports:
+      - "${AI_VIDEO_WORKER_BIND_ADDRESS:-127.0.0.1}:${AI_VIDEO_WORKER_PORT:-8000}:8000"
+    extra_hosts:
+      - "${AI_VIDEO_WORKER_CALLBACK_HOST:?Set the local Gradivo hostname}:host-gateway"
+
+  cloudflared:
+    profiles: [tunnel]

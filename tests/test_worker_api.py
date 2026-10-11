@@ -76,10 +76,11 @@ class RecordingCallbackClient:
         self.fail = fail
         self.snapshots = []
 
-    def deliver(self, snapshot) -> None:
+    def deliver(self, snapshot, *, consumption=None) -> bool:
         self.snapshots.append(snapshot)
         if self.fail:
             raise OSError("Gradivo unavailable")
+        return True
 
 
 def settings(db_path: Path) -> WorkerSettings:

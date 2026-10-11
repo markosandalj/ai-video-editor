@@ -12,6 +12,7 @@ dist/
 build/
 *.egg-info/
 output/
+.playwright-cli/
 .ai_video_editor_tmp/
 
 # OS / editor

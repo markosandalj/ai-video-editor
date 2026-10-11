@@ -14,6 +14,11 @@ from pathlib import Path
 from typing import Callable, Literal, Protocol
 from uuid import UUID
 
+from ai_video_editor.worker.consumption import ConsumptionRecorder, consumption_scope
+from ai_video_editor.worker.consumption_ipc import (
+    SubprocessConsumptionRecorder,
+    receive_consumption,
+)
 from ai_video_editor.worker.contracts import (
     AnalysisJobRequest,
     AnalysisResultV1,
@@ -88,6 +93,7 @@ def _subprocess_entry(
     request: dict[str, object],
     resolved_render_config: dict[str, object] | None,
     events: multiprocessing.queues.Queue,
+    consumption_acknowledgements: multiprocessing.queues.Queue | None = None,
 ) -> None:
     # FFmpeg and other child processes inherit this dedicated process group.
     # Docker/Linux and the local macOS runner both support POSIX sessions.
@@ -100,7 +106,12 @@ def _subprocess_entry(
         events.put({"type": "progress", "percent": percent, "stage": stage})
 
     try:
-        result = runner(job_id, request, resolved_render_config, progress)
+        if consumption_acknowledgements is not None:
+            evidence = SubprocessConsumptionRecorder(events, consumption_acknowledgements)
+            with consumption_scope(evidence, job_id):
+                result = runner(job_id, request, resolved_render_config, progress)
+        else:
+            result = runner(job_id, request, resolved_render_config, progress)
         events.put({"type": "completed", "result": result})
     except MediaExecutionFailure as exc:
         events.put(
@@ -136,6 +147,7 @@ class SubprocessMediaExecutor:
         analysis_timeout_seconds: float = 4 * 60 * 60,
         render_timeout_seconds: float = 4 * 60 * 60,
         termination_grace_seconds: float = 5.0,
+        consumption_recorder: ConsumptionRecorder | None = None,
     ):
         for value in (
             analysis_timeout_seconds,
@@ -146,6 +158,7 @@ class SubprocessMediaExecutor:
                 raise ValueError("execution time limits must be positive and finite")
         if type(max_number_of_jobs) is not int or max_number_of_jobs < 1:
             raise ValueError("worker capacity must be a positive integer")
+        self._consumption_recorder = consumption_recorder
         self._capacity = max_number_of_jobs
         self._runner = runner
         self._timeouts = {
@@ -189,9 +202,13 @@ class SubprocessMediaExecutor:
         emit: EventSink,
         job_id: UUID,
         started_at: float,
+        consumption_acknowledgements: multiprocessing.queues.Queue | None,
     ) -> None:
         try:
-            self._monitor(process, events, operation, emit, job_id, started_at)
+            self._monitor(
+                process, events, operation, emit, job_id, started_at,
+                consumption_acknowledgements,
+            )
         except BaseException as exc:
             with self._lock:
                 self._monitor_errors.append(exc)
@@ -200,6 +217,9 @@ class SubprocessMediaExecutor:
                 job_id, json.dumps(exception_diagnostics(exc)),
             )
         finally:
+            if consumption_acknowledgements is not None:
+                consumption_acknowledgements.cancel_join_thread()
+                consumption_acknowledgements.close()
             with self._lock:
                 self._monitors.discard(threading.current_thread())
 
@@ -216,6 +236,10 @@ class SubprocessMediaExecutor:
             if job_id in self._active or len(self._active) >= self._capacity:
                 raise RuntimeError("media subprocess capacity is already occupied")
             events = self._context.Queue()
+            consumption_acknowledgements = (
+                self._context.Queue(maxsize=1)
+                if self._consumption_recorder is not None else None
+            )
             process = self._context.Process(
                 target=_subprocess_entry,
                 args=(
@@ -230,6 +254,7 @@ class SubprocessMediaExecutor:
                         else None
                     ),
                     events,
+                    consumption_acknowledgements,
                 ),
                 name=f"video-job-{job_id}",
             )
@@ -240,11 +265,16 @@ class SubprocessMediaExecutor:
             except BaseException:
                 self._active.discard(job_id)
                 events.close()
+                if consumption_acknowledgements is not None:
+                    consumption_acknowledgements.close()
                 raise
 
             monitor = threading.Thread(
                 target=self._run_monitor,
-                args=(process, events, request.operation, emit, job_id, started_at),
+                args=(
+                    process, events, request.operation, emit, job_id, started_at,
+                    consumption_acknowledgements,
+                ),
                 name=f"video-job-monitor-{job_id}",
                 daemon=True,
             )
@@ -257,6 +287,8 @@ class SubprocessMediaExecutor:
                 if self._scratch_dir is not None:
                     remove_job_scratch(self._scratch_dir, job_id)
                 events.close()
+                if consumption_acknowledgements is not None:
+                    consumption_acknowledgements.close()
                 self._active.discard(job_id)
                 raise
 
@@ -268,6 +300,7 @@ class SubprocessMediaExecutor:
         emit: EventSink,
         job_id: UUID,
         started_at: float,
+        consumption_acknowledgements: multiprocessing.queues.Queue | None = None,
     ) -> None:
         terminal_event: CompletedEvent | FailedEvent | None = None
         last_stage = "accepted"
@@ -277,6 +310,12 @@ class SubprocessMediaExecutor:
 
         def handle(raw: object) -> None:
             nonlocal last_stage, terminal_event
+            if isinstance(raw, dict) and raw.get("type") == "consumption":
+                receive_consumption(
+                    raw, job_id=job_id, recorder=self._consumption_recorder,
+                    acknowledgements=consumption_acknowledgements,
+                )
+                return
             event = self._parse_event(raw, operation)
             if isinstance(event, FailedEvent) and isinstance(raw, dict):
                 logger.error(
