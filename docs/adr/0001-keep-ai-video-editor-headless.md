@@ -72,6 +72,11 @@ survives an immediate subprocess crash. Unacknowledged evidence can be missing
 after a crash; unknown consumption is never replaced by zero. This internal
 channel does not add a scheduler or change the terminal callback contract.
 
+Speech-to-text receipts carry monetary cost when available, otherwise unknown
+cost. Submitted audio duration is not measured or stored as consumption. The
+transcript's word timestamps and media durations needed for editing/rendering
+remain part of the media pipeline.
+
 The primary worker is a separate ARM64 MacBook Air running OrbStack. Cloud
 fallback is deferred; no standby executor or automatic failover is implemented.
 Ambiguous acceptance must be reconciled using the existing UUID before another

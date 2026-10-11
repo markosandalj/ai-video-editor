@@ -180,7 +180,7 @@ def test_receipt_recovery_only_finalizes_the_stopped_job_and_is_idempotent(tmp_p
     store = JobStore(tmp_path / "state.db")
     store.initialize()
     unfinished = receipt(
-        uuid4(), usage={"audio_seconds": 60}, coverage_issues=["worker_ledger_write_failed"]
+        uuid4(), usage={"total_tokens": 60}, coverage_issues=["worker_ledger_write_failed"]
     )
     active = receipt(uuid4())
     completed = receipt(unfinished.job_id).model_copy(
@@ -193,7 +193,7 @@ def test_receipt_recovery_only_finalizes_the_stopped_job_and_is_idempotent(tmp_p
     store.recover_consumption(job_id=unfinished.job_id)
     recovered, still_active, still_completed = attempts(store._path)
     assert recovered.revision == 2 and recovered.outcome == "interrupted"
-    assert recovered.usage == {"audio_seconds": 60} and recovered.cost_amount is None
+    assert recovered.usage == {"total_tokens": 60} and recovered.cost_amount is None
     assert recovered.coverage_issues == [
         "worker_interrupted_before_receipt", "worker_ledger_write_failed"
     ]
@@ -444,7 +444,7 @@ def test_real_langchain_gemini_sync_and_async_pass_through_transport(
     assert all(row.usage["thoughtsTokenCount"] == 2 for row in api)
 
 
-def test_elevenlabs_sdk_preserves_full_submitted_audio_duration(tmp_path, monkeypatch):
+def test_elevenlabs_sdk_records_unknown_cost_without_measuring_audio(tmp_path, monkeypatch):
     from ai_video_editor.transcription.elevenlabs_stt import transcribe_elevenlabs
 
     store = JobStore(tmp_path / "state.db")
@@ -472,23 +472,22 @@ def test_elevenlabs_sdk_preserves_full_submitted_audio_duration(tmp_path, monkey
         "scribe_v2",
         "worker.transcription",
         transport=httpx.MockTransport(respond),
-        usage={"audio_seconds": 60},
     )
     with (
         patch(
             "ai_video_editor.worker.consumption.ConsumptionTransport",
             return_value=transport,
         ),
-        patch(
-            "subprocess.run", return_value=Mock(stdout='{"format":{"duration":"60"}}')
-        ),
+        patch("subprocess.run") as probe,
         consumption_scope(store, uuid4()),
     ):
         words, text, events = transcribe_elevenlabs(media)
     row = next(row for row in attempts(store._path) if row.provider == "elevenlabs")
     assert text == "Bok" and words[0].end == 1 and events == []
-    assert len(calls) == 1 and row.usage["audio_seconds"] == 60
+    probe.assert_not_called()
+    assert len(calls) == 1 and row.usage == {}
     assert row.provider_request_id == "scribe-receipt" and row.cost_amount is None
+    assert row.cost_basis == "unavailable" and row.coverage_issues == []
 
 
 def test_bad_provider_cost_does_not_fail_successful_content(tmp_path):

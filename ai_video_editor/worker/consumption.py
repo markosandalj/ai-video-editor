@@ -177,12 +177,10 @@ class ConsumptionTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
         *,
         transport=None,
         async_transport=None,
-        usage=None,
     ):
         self.provider, self.model, self.operation = provider, model, operation
         self.sync = transport or httpx.HTTPTransport()
         self.asynchronous = async_transport or httpx.AsyncHTTPTransport()
-        self.usage = usage
 
     def _start(self, request):
         # Gemini file uploads/polling aren't inference attempts.
@@ -192,16 +190,17 @@ class ConsumptionTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
             and "streamGenerateContent" not in request.url.path
         ):
             return None
-        return start_attempt(
-            self.operation, self.provider, self.model, usage=self.usage
-        )
+        return start_attempt(self.operation, self.provider, self.model)
 
     def _finish(self, started, response):
         try:
             payload = response.json()
         except (ValueError, UnicodeDecodeError):
             payload = {}
-        usage = self.usage if self.provider == "elevenlabs" else None
+        # Speech-to-text contributes cost evidence only. Missing audio duration
+        # is not a coverage gap because duration is outside consumption scope.
+        transcription = self.provider == "elevenlabs"
+        usage = {} if transcription else None
         finish_attempt(
             started,
             outcome="succeeded" if response.is_success else "failed",
@@ -209,7 +208,8 @@ class ConsumptionTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
             request_id=response.headers.get("x-request-id", ""),
             usage=usage,
             issues=("usage_unavailable",)
-            if not usage
+            if not transcription
+            and not usage
             and not (
                 isinstance(payload, dict)
                 and (payload.get("usage") or payload.get("usageMetadata"))

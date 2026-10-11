@@ -86,36 +86,10 @@ def transcribe_elevenlabs(
 
     client_kwargs = {}
     if current_context() is not None:
-        import json
-        import subprocess
-
         import httpx
 
-        usage = {}
-        try:
-            metadata = subprocess.run(
-                [
-                    "ffprobe",
-                    "-v",
-                    "error",
-                    "-show_entries",
-                    "format=duration",
-                    "-of",
-                    "json",
-                    str(path),
-                ],
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-            usage["audio_seconds"] = float(
-                json.loads(metadata.stdout)["format"]["duration"]
-            )
-        except (OSError, subprocess.SubprocessError, ValueError, KeyError, TypeError):
-            current_context().issues.add("audio_duration_unavailable")
-            logger.warning("Could not measure submitted audio duration")
         transport = ConsumptionTransport(
-            "elevenlabs", model_id, "worker.transcription", usage=usage
+            "elevenlabs", model_id, "worker.transcription"
         )
         client_kwargs["httpx_client"] = httpx.Client(transport=transport)
     client = ElevenLabs(api_key=api_key, **client_kwargs)
