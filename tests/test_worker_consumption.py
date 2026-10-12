@@ -566,12 +566,11 @@ def test_real_grammar_passes_reach_terminal_consumption(tmp_path, monkeypatch):
             },
         )
 
-    transport = ConsumptionTransport(
-        "google",
-        "gemini-2.5-flash",
-        "worker.llm",
-        transport=httpx.MockTransport(respond),
-    )
+    def instrumented_transport(provider, model, operation):
+        assert operation == "worker.transcript_grammar"
+        return ConsumptionTransport(
+            provider, model, operation, transport=httpx.MockTransport(respond)
+        )
     transcript = Transcript(
         sentences=[
             Sentence(
@@ -588,7 +587,7 @@ def test_real_grammar_passes_reach_terminal_consumption(tmp_path, monkeypatch):
     with (
         patch(
             "ai_video_editor.worker.consumption.ConsumptionTransport",
-            return_value=transport,
+            side_effect=instrumented_transport,
         ),
         consumption_scope(store, job_id),
     ):
@@ -618,5 +617,8 @@ def test_real_grammar_passes_reach_terminal_consumption(tmp_path, monkeypatch):
     }
     assert sum(row.usage["totalTokenCount"] for row in receipts) == 220
     assert all(
-        row.provider == "google" and row.outcome == "succeeded" for row in receipts
+        row.provider == "google"
+        and row.outcome == "succeeded"
+        and row.operation == "worker.transcript_grammar"
+        for row in receipts
     )

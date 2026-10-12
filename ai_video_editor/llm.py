@@ -133,7 +133,9 @@ def import_from_path(class_path: str) -> type[Any]:
     return cls
 
 
-def build_chat_model(config: LangChainModelConfig) -> Any:
+def build_chat_model(
+    config: LangChainModelConfig, *, operation: str = "worker.llm"
+) -> Any:
     """Construct a LangChain chat model from config.
 
     The function intentionally does not import provider packages directly. Gemini
@@ -166,7 +168,7 @@ def build_chat_model(config: LangChainModelConfig) -> Any:
             if "openrouter" in str(kwargs.get("base_url", ""))
             else "openai"
         )
-        transport = ConsumptionTransport(provider, config.model, "worker.llm")
+        transport = ConsumptionTransport(provider, config.model, operation)
         if is_google:
             kwargs["client_args"] = {
                 **kwargs.get("client_args", {}),

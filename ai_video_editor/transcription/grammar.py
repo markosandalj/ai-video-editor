@@ -177,7 +177,8 @@ def spell_check_node(state: CorrectionState) -> CorrectionState:
             model="gemini-2.5-flash",
             temperature=0.1,
             provider_kwargs={"timeout": 120, "max_retries": 4},
-        )
+        ),
+        operation="worker.transcript_grammar",
     )
     structured_llm = llm.with_structured_output(CorrectionResult)
 

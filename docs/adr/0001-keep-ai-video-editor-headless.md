@@ -77,6 +77,12 @@ cost. Submitted audio duration is not measured or stored as consumption. The
 transcript's word timestamps and media durations needed for editing/rendering
 remain part of the media pipeline.
 
+Provider receipts identify the production step separately from the provider and
+model: `worker.transcription`, `worker.transcript_grammar`,
+`worker.section_editing` and `worker.aside_review`. A fallback model keeps the
+same step. Gradivo's PostHog views display these as readable English labels;
+older generic `worker.llm` receipts remain explicitly unspecified.
+
 The primary worker is a separate ARM64 MacBook Air running OrbStack. Cloud
 fallback is deferred; no standby executor or automatic failover is implemented.
 Ambiguous acceptance must be reconciled using the existing UUID before another

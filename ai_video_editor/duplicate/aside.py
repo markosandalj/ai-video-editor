@@ -136,7 +136,9 @@ def verify_asides_with_gemini(
 
     prompt = ASIDE_PROMPT.format(candidates_text="\n\n---\n\n".join(parts))
 
-    llm = build_chat_model(llm_config or default_cutting_model_config())
+    llm = build_chat_model(
+        llm_config or default_cutting_model_config(), operation="worker.aside_review"
+    )
     structured = llm.with_structured_output(AsideReview)
 
     logger.info("Gemini aside verification: {} candidates", len(candidate_indices))
