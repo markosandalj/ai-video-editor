@@ -25,9 +25,7 @@ def _load_api_key() -> str:
     load_dotenv(Path.cwd() / ".env")
     key = os.environ.get("ELEVENLABS_API_KEY")
     if not key:
-        raise RuntimeError(
-            "ELEVENLABS_API_KEY not found. Add it to your .env file."
-        )
+        raise RuntimeError("ELEVENLABS_API_KEY not found. Add it to your .env file.")
     return key
 
 
@@ -47,7 +45,9 @@ def _parse_stt_tokens(raw_words: list[dict]) -> tuple[list[Word], list[AudioEven
         if token_type == "word":
             words.append(Word(text=t, start=float(w["start"]), end=float(w["end"])))
         elif token_type == "audio_event":
-            events.append(AudioEvent(text=t, start=float(w["start"]), end=float(w["end"])))
+            events.append(
+                AudioEvent(text=t, start=float(w["start"]), end=float(w["end"]))
+            )
     return words, events
 
 
@@ -82,7 +82,17 @@ def transcribe_elevenlabs(
         raise FileNotFoundError(path)
 
     api_key = _load_api_key()
-    client = ElevenLabs(api_key=api_key)
+    from ai_video_editor.worker.consumption import ConsumptionTransport, current_context
+
+    client_kwargs = {}
+    if current_context() is not None:
+        import httpx
+
+        transport = ConsumptionTransport(
+            "elevenlabs", model_id, "worker.transcription"
+        )
+        client_kwargs["httpx_client"] = httpx.Client(transport=transport)
+    client = ElevenLabs(api_key=api_key, **client_kwargs)
     mime = _guess_mime(path)
     name = path.name
 

@@ -21,6 +21,19 @@ results and undelivered Gradivo callbacks are persisted outside process memory
 and survive worker restarts; callback delivery is retried until Gradivo
 acknowledges it.
 
+Provider consumption is recorded locally during execution and attached as an
+optional `consumption` list to the terminal status callback (`completed` or
+`failed`). Progress callbacks contain no consumption; there is no separate
+consumption delivery endpoint or outbox. Gradivo commits the video result
+before processing this optional evidence and forwards accepted evidence to
+PostHog asynchronously. Invalid receipts are logged and skipped; transient
+consumption storage failures return a successful result acknowledgement with
+`consumption_acknowledged=false`. The worker replays the same terminal callback
+without affecting the already accepted video. Receipt collection/encoding
+failures also permit result-only delivery first. Local receipts are deleted
+after the complete terminal bundle is acknowledged, and unfinished calls are
+reported as interrupted with unknown usage rather than zero.
+
 The initial Mac worker uses one SQLite database on durable local storage for
 accepted job payloads and hashes, current and terminal snapshots, resolved
 render configuration, and a callback outbox. Its path comes from
@@ -45,6 +58,30 @@ starts a subprocess immediately after durably accepting a job; no internal
 pending queue, Redis, or Celery worker is introduced. The subprocess runs either
 operation and reports events to the control process, keeping the HTTP boundary
 responsive and isolating media-pipeline failures.
+
+Provider receipts use that same execution-event channel. The media subprocess
+holds only a receipt sender, never a JobStore or a SQLite connection. The control
+process validates each receipt against the running job, commits it through its
+JobStore, and returns a correlated acknowledgement. The sender waits at most one
+second (including contention between provider threads); late acknowledgements
+cannot confirm a different receipt. Receipt writes use short database/lock
+timeouts, and acknowledgement delivery never waits for the child. Failed writes
+or missing acknowledgements are logged and marked as coverage gaps when a later
+receipt can be saved; they never fail media processing. An acknowledged receipt
+survives an immediate subprocess crash. Unacknowledged evidence can be missing
+after a crash; unknown consumption is never replaced by zero. This internal
+channel does not add a scheduler or change the terminal callback contract.
+
+Speech-to-text receipts carry monetary cost when available, otherwise unknown
+cost. Submitted audio duration is not measured or stored as consumption. The
+transcript's word timestamps and media durations needed for editing/rendering
+remain part of the media pipeline.
+
+Provider receipts identify the production step separately from the provider and
+model: `worker.transcription`, `worker.transcript_grammar`,
+`worker.section_editing` and `worker.aside_review`. A fallback model keeps the
+same step. Gradivo's PostHog views display these as readable English labels;
+older generic `worker.llm` receipts remain explicitly unspecified.
 
 The primary worker is a separate ARM64 MacBook Air running OrbStack. Cloud
 fallback is deferred; no standby executor or automatic failover is implemented.

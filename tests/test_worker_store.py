@@ -63,6 +63,9 @@ def test_http_callback_uses_configured_url_and_independent_bearer_token(
     class Response:
         status = 200
 
+        def read(self):
+            return b'{"acknowledged": true, "consumption_acknowledged": true}'
+
         def __enter__(self):
             return self
 
@@ -111,6 +114,53 @@ def _render_config(*, crf: int) -> ResolvedRenderConfigV1:
         audio_bitrate="192k",
         movflags="+faststart",
     )
+
+
+@pytest.mark.parametrize("encoding_fails", [False, True])
+def test_http_terminal_callback_prioritizes_result_and_reads_consumption_ack(monkeypatch, encoding_fails):
+    from datetime import UTC, datetime
+    from ai_video_editor.worker.consumption import ConsumptionV1
+
+    snapshot = worker_snapshot_adapter.validate_json(
+        (FIXTURES / "render-completed-snapshot.v1.json").read_text()
+    )
+    receipt = ConsumptionV1(
+        job_id=snapshot.job_id, attempt_id=uuid4(), revision=2,
+        operation="worker.llm", provider="openrouter", started_at=datetime.now(UTC),
+        outcome="succeeded", usage={"total_tokens": 42},
+    )
+    bodies = []
+    accepted_consumption = False
+
+    class BadReceipt:
+        def model_dump(self, **kwargs):
+            raise ValueError("simulated evidence encoding failure")
+
+    class Response:
+        status = 200
+
+        def read(self):
+            return json.dumps({"acknowledged": True, "consumption_acknowledged": accepted_consumption}).encode()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            pass
+
+    def send(request, **kwargs):
+        bodies.append(json.loads(request.data))
+        assert request.full_url.endswith("/status")
+        return Response()
+
+    monkeypatch.setattr("ai_video_editor.worker.callbacks.urlopen", send)
+    client = HttpCallbackClient(base_url="http://gradivo.localhost", token="fixture")
+    assert client.deliver(snapshot, consumption=[BadReceipt() if encoding_fails else receipt]) is False
+    assert bodies[-1]["result"] == snapshot.result.model_dump(mode="json", by_alias=True, exclude_none=True)
+    assert ("consumption" in bodies[-1]) is not encoding_fails
+    accepted_consumption = True
+    assert client.deliver(snapshot, consumption=[receipt]) is True
+    assert bodies[-1]["consumption"][0]["usage"] == {"total_tokens": 42}
 
 
 def test_render_config_snapshot_survives_replay_and_new_jobs_use_new_config(
@@ -191,7 +241,7 @@ def test_transaction_start_failure_does_not_block_other_threads(tmp_path, monkey
     blocker = connect()
     opened = []
 
-    def failing_connect():
+    def failing_connect(**kwargs):
         if failure_point == "connect":
             raise sqlite3.OperationalError("simulated connection failure")
         connection = connect()

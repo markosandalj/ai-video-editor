@@ -409,7 +409,7 @@ class TestDetectSectionEditsEndToEnd:
                         }]})
                 return Structured()
 
-        monkeypatch.setattr(se, "build_chat_model", lambda cfg: LegacyLLM())
+        monkeypatch.setattr(se, "build_chat_model", lambda cfg, **kwargs: LegacyLLM())
         health = SectionHealth()
         flags = detect_section_edits(
             sents,
@@ -450,7 +450,7 @@ class TestDetectSectionEditsEndToEnd:
             def with_structured_output(self, schema):
                 return FakeStructured()
 
-        monkeypatch.setattr(se, "build_chat_model", lambda cfg: FakeLLM())
+        monkeypatch.setattr(se, "build_chat_model", lambda cfg, **kwargs: FakeLLM())
         trace = SectionTrace()
 
         flags = detect_section_edits(sents, SectionEditorConfig(), trace=trace)
@@ -497,7 +497,8 @@ class TestDetectSectionEditsEndToEnd:
 
         built = []
 
-        def fake_build(cfg):
+        def fake_build(cfg, *, operation):
+            assert operation == "worker.section_editing"
             built.append(cfg.id)
             return PrimaryLLM() if len(built) == 1 else FallbackLLM()
 
@@ -536,7 +537,8 @@ class TestDetectSectionEditsEndToEnd:
 
         built = []
 
-        def fake_build(cfg):
+        def fake_build(cfg, *, operation):
+            assert operation == "worker.section_editing"
             built.append(cfg.model)
             return BoomLLM()
 
@@ -592,7 +594,7 @@ class TestDetectSectionEditsEndToEnd:
             def with_structured_output(self, schema):
                 return FlakyStructured()
 
-        monkeypatch.setattr(se, "build_chat_model", lambda cfg: FlakyLLM())
+        monkeypatch.setattr(se, "build_chat_model", lambda cfg, **kwargs: FlakyLLM())
 
         health = SectionHealth()
         flags = detect_section_edits(
@@ -635,7 +637,7 @@ class TestDetectSectionEditsEndToEnd:
             def with_structured_output(self, schema):
                 return FakeStructured()
 
-        monkeypatch.setattr(se, "build_chat_model", lambda cfg: FakeLLM())
+        monkeypatch.setattr(se, "build_chat_model", lambda cfg, **kwargs: FakeLLM())
 
         flags = detect_section_edits(sents, SectionEditorConfig(protect_min_words=4))
         idxs = {f.idx for f in flags}
@@ -653,7 +655,7 @@ class TestDetectSectionEditsEndToEnd:
             def with_structured_output(self, schema):
                 raise RuntimeError("model exploded")
 
-        monkeypatch.setattr(se, "build_chat_model", lambda cfg: BoomLLM())
+        monkeypatch.setattr(se, "build_chat_model", lambda cfg, **kwargs: BoomLLM())
         # Must not raise — best-effort per section.
         flags = detect_section_edits(
             sents,

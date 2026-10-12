@@ -21,7 +21,9 @@ class LangChainModelConfig(BaseModel):
     )
     model: str = Field(description="Provider model name passed to the chat class.")
     temperature: float | None = Field(
-        default=0.0, ge=0.0, le=2.0,
+        default=0.0,
+        ge=0.0,
+        le=2.0,
         description="Sampling temperature; null omits it for reasoning models.",
     )
     api_key_env: str | None = Field(
@@ -131,7 +133,9 @@ def import_from_path(class_path: str) -> type[Any]:
     return cls
 
 
-def build_chat_model(config: LangChainModelConfig) -> Any:
+def build_chat_model(
+    config: LangChainModelConfig, *, operation: str = "worker.llm"
+) -> Any:
     """Construct a LangChain chat model from config.
 
     The function intentionally does not import provider packages directly. Gemini
@@ -151,5 +155,28 @@ def build_chat_model(config: LangChainModelConfig) -> Any:
                 f"{config.api_key_env} not found. Add it to your .env file or set api_key_env to null."
             )
         kwargs["api_key"] = api_key
+    from ai_video_editor.worker.consumption import ConsumptionTransport, current_context
+
+    if current_context() is not None:
+        import httpx
+
+        is_google = "google" in config.class_path
+        provider = (
+            "google"
+            if is_google
+            else "openrouter"
+            if "openrouter" in str(kwargs.get("base_url", ""))
+            else "openai"
+        )
+        transport = ConsumptionTransport(provider, config.model, operation)
+        if is_google:
+            kwargs["client_args"] = {
+                **kwargs.get("client_args", {}),
+                "transport": transport,
+            }
+        else:
+            kwargs["http_client"] = httpx.Client(transport=transport)
+            kwargs["http_async_client"] = httpx.AsyncClient(transport=transport)
+        kwargs["disable_streaming"] = True
     cls = import_from_path(config.class_path)
     return cls(**kwargs)

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-import os
 import re
 from typing import Annotated, TypedDict
 
@@ -9,7 +8,7 @@ from langgraph.graph import END, StateGraph
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from ai_video_editor.observability import configure_observability
+from ai_video_editor.llm import LangChainModelConfig, build_chat_model
 from ai_video_editor.transcription.models import Sentence, Transcript, Word
 
 MIN_WORD_LENGTH = 3
@@ -98,17 +97,6 @@ class CorrectionState(TypedDict):
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _load_gemini_key() -> str:
-    configure_observability()
-
-    key = os.environ.get("GEMINI_API_KEY")
-    if not key:
-        raise RuntimeError(
-            "GEMINI_API_KEY not found in environment. Add it to your .env file."
-        )
-    return key
-
-
 def _apply_corrections(
     sentences: list[Sentence],
     corrections: list[WordCorrection],
@@ -184,16 +172,13 @@ def _apply_corrections(
 
 def spell_check_node(state: CorrectionState) -> CorrectionState:
     """Send transcript to Gemini, get structured corrections back."""
-    api_key = _load_gemini_key()
-
-    from langchain_google_genai import ChatGoogleGenerativeAI
-
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",
-        temperature=0.1,
-        api_key=api_key,
-        timeout=120,
-        max_retries=4,
+    llm = build_chat_model(
+        LangChainModelConfig(
+            model="gemini-2.5-flash",
+            temperature=0.1,
+            provider_kwargs={"timeout": 120, "max_retries": 4},
+        ),
+        operation="worker.transcript_grammar",
     )
     structured_llm = llm.with_structured_output(CorrectionResult)
 

@@ -32,6 +32,9 @@ no live credentials, Drive/R2 access or local video corpus is required.
 
 ## Runtime
 
+For both applications on one development computer, use the
+[local Gradivo + worker guide](deployment/local/README.md).
+
 The deployed application command is `ai-video-worker`. Configure it using
 [worker env examples](deployment/mac/env/worker.env.example) and the
 [Mac deployment runbook](deployment/mac/README.md). Compose loads `.env.worker`

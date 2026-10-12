@@ -14,6 +14,8 @@ class WorkerSettings(BaseSettings):
 
     model_config = SettingsConfigDict(extra="ignore")
 
+    consumption_enabled: bool = Field(default=False, alias="PRODUCTION_CONSUMPTION_ENABLED")
+
     api_token: str = Field(alias="AI_VIDEO_EDITOR_API_TOKEN", min_length=16)
     callback_token: str = Field(alias="GRADIVO_VIDEO_CALLBACK_TOKEN", min_length=16)
     callback_base_url: str = Field(alias="GRADIVO_VIDEO_CALLBACK_BASE_URL")

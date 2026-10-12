@@ -488,7 +488,7 @@ def detect_section_edits(
         return []
 
     primary_config = llm_config or cfg.llm
-    llm = build_chat_model(primary_config)
+    llm = build_chat_model(primary_config, operation="worker.section_editing")
     fallback_config = cfg.fallback_llm
     if (
         fallback_config is not None
@@ -535,7 +535,9 @@ def detect_section_edits(
             )
             try:
                 if fallback_llm is None:
-                    fallback_llm = build_chat_model(fallback_config)
+                    fallback_llm = build_chat_model(
+                        fallback_config, operation="worker.section_editing"
+                    )
                 deletions = _edit_section_with_retry(
                     sentences, section, fallback_llm, cfg, health,
                     audio_candidates=audio_candidates,
