@@ -46,8 +46,9 @@ def write_env(path: Path, values: dict[str, str]) -> None:
 
 
 def read_env(path: Path) -> dict:
-    values = dotenv_values(path, interpolate=False)
-    if path.is_file() and path.read_text().startswith(LITERAL_ENV_HEADER):
+    literal = path.is_file() and path.read_text().startswith(LITERAL_ENV_HEADER)
+    values = dotenv_values(path, interpolate=not literal)
+    if literal:
         # python-dotenv understands quoting but not Compose's dollar escape.
         return {
             key: value.replace("$$", "$") if value is not None else None

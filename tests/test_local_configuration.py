@@ -66,6 +66,51 @@ def test_env_round_trip_through_compose_and_helper(tmp_path):
     assert worker["volumes"][0]["source"] == values["MOUNT"]
 
 
+@pytest.mark.parametrize("source_name", [".env", ".env.worker"])
+def test_configure_expands_source_references_once(tmp_path, monkeypatch, source_name):
+    root = tmp_path / "worker"
+    root.mkdir()
+    shutil.copytree(configure.ROOT / "deployment", root / "deployment")
+    gradivo = tmp_path / "gradivo"
+    gradivo.mkdir()
+    (gradivo / "docker-compose.worktree.yml").touch()
+    (gradivo / ".env").touch()
+    (root / source_name).write_text(
+        'SHARED_KEY="fixture-$NAME # suffix\'s"\n'
+        "GEMINI_API_KEY=${SHARED_KEY}\n"
+        "OPENROUTER_API_KEY=${CONFIGURATION_TEST_KEY}\n"
+    )
+    expected = {
+        "GEMINI_API_KEY": "fixture-$NAME # suffix's",
+        "OPENROUTER_API_KEY": "fixture-$NAME-${NAME} # literal",
+    }
+    monkeypatch.setenv("CONFIGURATION_TEST_KEY", expected["OPENROUTER_API_KEY"])
+    monkeypatch.setenv("NAME", "must-not-expand")
+    monkeypatch.setattr(configure, "ROOT", root)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "configure",
+            "--gradivo-dir",
+            str(gradivo),
+            "--callback-url",
+            "http://main.gradivo.localhost",
+        ],
+    )
+
+    configure.main()
+    # Reading the generated file on a rerun must keep the expanded values literal.
+    configure.main()
+    path = root / ".env.worker.local"
+    values = configure.read_env(path)
+    for key, value in expected.items():
+        assert values[key] == value
+    worker = compose_config(path)["services"]["worker"]
+    for key, value in expected.items():
+        assert worker["environment"][key] == value
+
+
 def test_configure_rerun_preserves_literals_and_uses_host_owner(tmp_path, monkeypatch):
     root = tmp_path / "$NAME # worker's checkout"
     root.mkdir()
