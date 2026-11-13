@@ -19,8 +19,9 @@ from ai_video_editor.worker.contracts import (
 
 logger = logging.getLogger(__name__)
 
-# Drive resumable upload chunks must be multiples of 256 KiB.
-_DRIVE_UPLOAD_CHUNK_BYTES = 1024 * 1024
+# Use Drive's smallest resumable chunk. On the production uplink a 1 MiB
+# PUT can repeatedly time out before Drive acknowledges even the first byte.
+_DRIVE_UPLOAD_CHUNK_BYTES = 256 * 1024
 _DRIVE_UPLOAD_MAX_RETRIES = 4
 
 

@@ -415,7 +415,7 @@ def test_drive_upload_resumes_at_server_offset_after_timeout(tmp_path, drop_fina
     from googleapiclient.http import HttpRequest
     from httplib2 import Response
 
-    content = bytes(range(251)) * 10000  # More than two 1 MiB chunks.
+    content = bytes(range(251)) * 10000
     source = tmp_path / "rendered.mp4"
     source.write_bytes(content)
     files = FakeDriveOutputFiles(source)
@@ -436,11 +436,14 @@ def test_drive_upload_resumes_at_server_offset_after_timeout(tmp_path, drop_fina
         else:
             data = body.read()
             start = len(saved)
-            assert 0 < len(data) <= 1024 * 1024
+            # Larger PUTs can time out without Drive acknowledging any bytes.
+            if len(data) > 256 * 1024:
+                raise TimeoutError("no bytes acknowledged for oversized PUT")
+            assert data
             assert byte_range == f"bytes {start}-{start + len(data) - 1}/{len(content)}"
             assert data == content[start:start + len(data)]
             if start and not dropped and not drop_final_response:
-                saved.extend(data[:256 * 1024])  # Drive accepted only part of this PUT.
+                saved.extend(data[:128 * 1024])  # Drive accepted only part of this PUT.
                 dropped = True
                 raise TimeoutError("write timed out")
             saved.extend(data)
@@ -451,6 +454,8 @@ def test_drive_upload_resumes_at_server_offset_after_timeout(tmp_path, drop_fina
                     raise TimeoutError("read timed out")
         if len(saved) == len(content):
             return Response({"status": "200"}), b"done"
+        if not saved:
+            return Response({"status": "308"}), b""
         return Response({"status": "308", "range": f"bytes=0-{len(saved) - 1}"}), b""
 
     def update(*, fileId, media_body, **kwargs):
@@ -462,7 +467,7 @@ def test_drive_upload_resumes_at_server_offset_after_timeout(tmp_path, drop_fina
     with patch.object(files, "update", side_effect=update) as updates, patch("time.sleep"):
         result = provider.upload(uuid4(), source, _drive_output())
     assert dropped and len(probes) == 1
-    assert probes[0] == (len(content) if drop_final_response else 1280 * 1024)
+    assert probes[0] == (len(content) if drop_final_response else 384 * 1024)
     assert len(session_starts) == updates.call_count == files.created == 1
     assert saved == content and result.size_bytes == len(saved)
 
