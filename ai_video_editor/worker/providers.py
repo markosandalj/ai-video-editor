@@ -3,6 +3,8 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import logging
+import time
 from pathlib import Path
 from typing import Protocol
 
@@ -14,6 +16,12 @@ from ai_video_editor.worker.contracts import (
     GoogleDriveSource,
     S3ObjectReference,
 )
+
+logger = logging.getLogger(__name__)
+
+# Drive resumable upload chunks must be multiples of 256 KiB.
+_DRIVE_UPLOAD_CHUNK_BYTES = 1024 * 1024
+_DRIVE_UPLOAD_MAX_RETRIES = 4
 
 
 class SourceNotFound(Exception):
@@ -429,39 +437,46 @@ class GoogleDriveOutputProvider:
                 media_body=MediaFileUpload(
                     str(source),
                     mimetype="video/mp4",
+                    chunksize=_DRIVE_UPLOAD_CHUNK_BYTES,
                     resumable=True,
                 ),
                 fields=_DRIVE_FINAL_FIELDS,
                 supportsAllDrives=True,
             )
             response = None
+            retries = 0
             while response is None:
-                _, response = request.next_chunk()
+                try:
+                    _, response = request.next_chunk()
+                except Exception as exc:
+                    if retries >= _DRIVE_UPLOAD_MAX_RETRIES or not _retryable_drive_upload(exc):
+                        raise
+                    # Re-enter next_chunk on this request: after an ambiguous PUT
+                    # the SDK probes the session for Drive's acknowledged offset.
+                    retries += 1
+                    logger.warning(
+                        "drive_upload_retry job_id=%s retry=%d acknowledged_bytes=%d "
+                        "total_bytes=%d error_type=%s",
+                        job_id, retries, request.resumable_progress,
+                        request.resumable.size(), type(exc).__name__,
+                    )
+                    time.sleep(2 ** (retries - 1))
+                else:
+                    retries = 0
         except Exception as exc:
-            reconciled = self._reconcile_after_unknown(job_id, output)
-            if reconciled is not None:
-                return reconciled
-            raise OutputUploadFailed from exc
+            # A lost final response can leave a complete file on Drive. Verify
+            # it against the rendered bytes just as we do after a normal upload.
+            final = self.find_completed(job_id, output)
+            if final is None:
+                raise OutputUploadFailed from exc
+        else:
+            final = self.find_completed(job_id, output)
+            if final is None:
+                raise OutputUploadFailed
 
-        matches = self._find(job_id, output)
-        if len(matches) > 1:
-            raise DuplicateOutputArtifacts
-        if len(matches) != 1 or not _is_complete_drive_video(matches[0]):
-            raise OutputUploadFailed
-        final = _drive_final_video(matches[0])
         if final.size_bytes != source.stat().st_size or final.checksum.value != _md5(source):
             raise OutputUploadFailed
         return final
-
-    def _reconcile_after_unknown(
-        self, job_id: UUID, output: GoogleDriveOutput
-    ) -> GoogleDriveFinalVideo | None:
-        matches = self._find(job_id, output)
-        if len(matches) > 1:
-            raise DuplicateOutputArtifacts
-        if len(matches) == 1 and _is_complete_drive_video(matches[0]):
-            return _drive_final_video(matches[0])
-        return None
 
     def _find(self, job_id: UUID, output: GoogleDriveOutput) -> list[dict[str, object]]:
         escaped_folder = _drive_query_value(output.folder_id)
@@ -491,6 +506,12 @@ class GoogleDriveOutputProvider:
         if not isinstance(files, list) or not all(isinstance(item, dict) for item in files):
             raise OutputUploadFailed
         return files
+
+
+def _retryable_drive_upload(exc: Exception) -> bool:
+    if isinstance(exc, (TimeoutError, ConnectionError)):
+        return True
+    return getattr(getattr(exc, "resp", None), "status", None) in {408, 429, 500, 502, 503, 504}
 
 
 def _google_drive_service(*, client_id: str, client_secret: str, refresh_token: str):

@@ -18,6 +18,7 @@ from ai_video_editor.worker.providers import (
     DuplicateOutputArtifacts,
     GoogleDriveOutputProvider,
     GoogleDriveSourceProvider,
+    OutputUploadFailed,
     ProcessedAudioDownloadFailed,
     ProcessedAudioMissing,
     ProcessedAudioSourceMismatch,
@@ -407,6 +408,84 @@ def test_drive_output_uuid_lookup_reuses_one_and_rejects_duplicates(
     files.matches = [complete, {**complete, "id": "duplicate-id"}]
     with pytest.raises(DuplicateOutputArtifacts):
         provider.find_completed(uuid4(), _drive_output())
+
+
+@pytest.mark.parametrize("drop_final_response", [False, True])
+def test_drive_upload_resumes_at_server_offset_after_timeout(tmp_path, drop_final_response):
+    from googleapiclient.http import HttpRequest
+    from httplib2 import Response
+
+    content = bytes(range(251)) * 10000  # More than two 1 MiB chunks.
+    source = tmp_path / "rendered.mp4"
+    source.write_bytes(content)
+    files = FakeDriveOutputFiles(source)
+    saved = bytearray()
+    probes = []
+    session_starts = []
+    dropped = False
+
+    def transport(uri, method, body=None, headers=None):
+        nonlocal dropped
+        if method == "PATCH":
+            session_starts.append(uri)
+            return Response({"status": "200", "location": "https://drive.test/session"}), b""
+        assert uri == "https://drive.test/session" and method == "PUT"
+        byte_range = headers["Content-Range"]
+        if byte_range.startswith("bytes */"):
+            probes.append(len(saved))
+        else:
+            data = body.read()
+            start = len(saved)
+            assert 0 < len(data) <= 1024 * 1024
+            assert byte_range == f"bytes {start}-{start + len(data) - 1}/{len(content)}"
+            assert data == content[start:start + len(data)]
+            if start and not dropped and not drop_final_response:
+                saved.extend(data[:256 * 1024])  # Drive accepted only part of this PUT.
+                dropped = True
+                raise TimeoutError("write timed out")
+            saved.extend(data)
+            if len(saved) == len(content):
+                files.matches[0].update(size=str(len(saved)), md5Checksum=hashlib.md5(saved).hexdigest())
+                if drop_final_response:
+                    dropped = True
+                    raise TimeoutError("read timed out")
+        if len(saved) == len(content):
+            return Response({"status": "200"}), b"done"
+        return Response({"status": "308", "range": f"bytes=0-{len(saved) - 1}"}), b""
+
+    def update(*, fileId, media_body, **kwargs):
+        assert fileId == "stable-file-id"
+        return HttpRequest(SimpleNamespace(request=transport), lambda *_: {"id": fileId},
+                           "https://drive.test/update", method="PATCH", resumable=media_body)
+
+    provider = GoogleDriveOutputProvider(FakeDriveOutputService(files))
+    with patch.object(files, "update", side_effect=update) as updates, patch("time.sleep"):
+        result = provider.upload(uuid4(), source, _drive_output())
+    assert dropped and len(probes) == 1
+    assert probes[0] == (len(content) if drop_final_response else 1280 * 1024)
+    assert len(session_starts) == updates.call_count == files.created == 1
+    assert saved == content and result.size_bytes == len(saved)
+
+
+@pytest.mark.parametrize(("http_status", "attempts"), [(None, 5), (403, 1)])
+def test_drive_upload_stops_after_retry_budget_or_permanent_error(tmp_path, http_status, attempts):
+    from unittest.mock import Mock
+
+    source = tmp_path / "rendered.mp4"
+    source.write_bytes(b"rendered")
+    files = FakeDriveOutputFiles(source)
+    failure = TimeoutError() if http_status is None else RuntimeError("forbidden")
+    if http_status is not None:
+        failure.resp = SimpleNamespace(status=http_status)
+    req = Mock(resumable_progress=0)
+    req.resumable.size.return_value = source.stat().st_size
+    req.next_chunk.side_effect = failure
+    provider = GoogleDriveOutputProvider(FakeDriveOutputService(files))
+    with patch.object(files, "update", return_value=req), patch("time.sleep"), pytest.raises(OutputUploadFailed) as error:
+        provider.upload(uuid4(), source, _drive_output())
+    assert error.value.__cause__ is failure
+    assert req.next_chunk.call_count == attempts
+    assert files.created == 1
 
 
 @pytest.mark.parametrize("provider_type", [GoogleDriveSourceProvider, GoogleDriveOutputProvider])
