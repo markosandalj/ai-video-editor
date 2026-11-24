@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import threading
+import time
 from typing import Protocol
 from urllib.request import Request, urlopen
 
@@ -88,24 +89,42 @@ class CallbackDispatcher:
         self._idle_wait_seconds = idle_wait_seconds
         self._stop = threading.Event()
         self._wake = threading.Event()
+        self._state_lock = threading.Lock()
+        self._close_store_on_exit = False
         self._thread: threading.Thread | None = None
 
     def start(self) -> None:
-        if self._thread is not None:
-            return
-        self._thread = threading.Thread(
-            target=self._run,
-            name="video-callback-dispatcher",
-            daemon=True,
-        )
-        self._thread.start()
+        with self._state_lock:
+            if self._thread is not None and self._thread.is_alive():
+                return
+            self._stop.clear()
+            self._close_store_on_exit = False
+            self._thread = threading.Thread(
+                target=self._run,
+                name="video-callback-dispatcher",
+                daemon=True,
+            )
+            self._thread.start()
 
-    def stop(self) -> None:
-        self._stop.set()
-        self._wake.set()
-        if self._thread is not None:
-            self._thread.join(timeout=5.0)
-            self._thread = None
+    def stop(self, *, timeout: float = 15.0, close_store: bool = False) -> None:
+        with self._state_lock:
+            self._stop.set()
+            self._wake.set()
+            if close_store:
+                self._close_store_on_exit = True
+            thread = self._thread
+        if thread is not None:
+            thread.join(timeout=timeout)
+        should_close_now = False
+        with self._state_lock:
+            if thread is None or not thread.is_alive():
+                if self._thread is thread:
+                    self._thread = None
+                if self._close_store_on_exit:
+                    self._close_store_on_exit = False
+                    should_close_now = True
+        if should_close_now:
+            self._store.close()
 
     def notify(self) -> None:
         self._wake.set()
@@ -158,12 +177,35 @@ class CallbackDispatcher:
         return True
 
     def _run(self) -> None:
-        while not self._stop.is_set():
-            try:
-                dispatched = self.dispatch_once()
-            except Exception as exc:
-                logger.warning("callback_dispatch_failed error_type=%s", type(exc).__name__)
-                dispatched = False
-            if not dispatched:
-                self._wake.wait(self._idle_wait_seconds)
+        try:
+            while not self._stop.is_set():
+                # Clear before checking the store so a notify() or stop() arriving
+                # during dispatch/query stays visible to the wait below.
                 self._wake.clear()
+                if self._stop.is_set():
+                    break
+                try:
+                    if self.dispatch_once():
+                        continue
+                    next_available_at = self._store.next_outbox_available_at()
+                except Exception as exc:
+                    logger.warning("callback_dispatch_failed error_type=%s", type(exc).__name__)
+                    self._wake.wait(self._idle_wait_seconds)
+                    continue
+
+                if next_available_at is None:
+                    self._wake.wait()
+                else:
+                    delay = next_available_at - time.time()
+                    if delay > 0:
+                        self._wake.wait(delay)
+        finally:
+            should_close = False
+            with self._state_lock:
+                if self._thread is threading.current_thread():
+                    self._thread = None
+                if self._close_store_on_exit:
+                    self._close_store_on_exit = False
+                    should_close = True
+            if should_close:
+                self._store.close()

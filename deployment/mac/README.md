@@ -40,8 +40,9 @@ before that login because OrbStack is a user session application.
 ## Durable host layout
 
 While signed in as the dedicated account, keep the three discoverable Compose
-environment files in the repository root and the durable worker data outside
-the Git checkout. The example contract uses:
+environment files in the repository root, the durable scratch and log
+directories outside the Git checkout, and SQLite state in an external Docker
+named volume. The example contract uses:
 
 ```text
 /absolute/path/to/ai-video-editor/
@@ -49,32 +50,94 @@ the Git checkout. The example contract uses:
   .env.worker
   .env.cloudflared
 /Users/ai-video-worker/ai-video-worker-data/
-  state/
   scratch/
   logs/
+Docker named volume (external):
+  ai-video-worker-state -> /var/lib/ai-video-worker/state
 ```
 
 Copy `env/stack.env.example`, `env/worker.env.example`, and
 `env/cloudflared.env.example` to `.env.stack.local`, `.env.worker`, and
 `.env.cloudflared` in the repository root. Update the absolute paths, create the
-three external data directories, and set both secret files to mode `0600`:
+two external host data directories (`scratch/` and `logs/`), create the external
+state volume once, and set both secret files to mode `0600`:
 
 ```bash
+docker volume create ai-video-worker-state
 chmod 0600 /absolute/path/to/ai-video-editor/.env.worker
 chmod 0600 /absolute/path/to/ai-video-editor/.env.cloudflared
 ```
 
-`.env.stack.local` contains only image references and host paths. `.env.worker`
-is attached only to `worker`; `.env.cloudflared` is attached only to
-`cloudflared`. All three local files are excluded by `.gitignore` and
-`.dockerignore`, so they stay discoverable without entering Git history or the
-image build context. Do not source either secret file into a broad interactive
-shell.
+`.env.stack.local` contains only image references, the external state volume
+name (`AI_VIDEO_WORKER_STATE_VOLUME`), and host paths. `.env.worker` is attached
+only to `worker`; `.env.cloudflared` is attached only to `cloudflared`. All
+three local files are excluded by `.gitignore` and `.dockerignore`, so they stay
+discoverable without entering Git history or the image build context. Do not
+source either secret file into a broad interactive shell.
 
-SQLite is stored in `state/jobs.sqlite3`. Scratch remains job-scoped but uses a
-durable host mount so an operator can inspect interrupted work. Worker-owned
-file logs use the dedicated logs mount; normal container stdout remains
-available through `docker compose logs`.
+SQLite is stored in `/var/lib/ai-video-worker/state/jobs.sqlite3` inside the
+external Docker named volume so WAL I/O stays on container-local Linux storage
+instead of crossing OrbStack's `virtiofs` macOS bind mount, and `external: true`
+ensures `docker compose down -v` cannot accidentally delete production job
+state. Scratch remains job-scoped on a durable host bind mount so an operator
+can inspect interrupted work. Worker-owned file logs use the dedicated host logs
+bind mount; normal container stdout remains available through
+`docker compose logs`.
+
+### Migrating an existing host `jobs.sqlite3` into the external volume
+
+If an existing stack previously stored SQLite in a host bind-mount directory
+(for example `/Users/ai-video-worker/ai-video-worker-data/state`):
+
+1. Create the external volume and update `.env.stack.local` to set
+   `AI_VIDEO_WORKER_STATE_VOLUME=ai-video-worker-state` (replacing
+   `AI_VIDEO_WORKER_STATE_DIR`) so the updated `compose.yaml` interpolates
+   cleanly:
+
+   ```bash
+   docker volume create ai-video-worker-state
+   ```
+
+2. Stop the running worker and verify it has exited so SQLite checkpoints its
+   WAL and closes cleanly before copying (if you have not yet pulled the
+   updated `compose.yaml`, stop the worker using the previous `compose.yaml`
+   before editing `.env.stack.local`):
+
+   ```bash
+   docker compose --env-file "$AI_VIDEO_STACK_ENV" --file "$AI_VIDEO_COMPOSE_FILE" stop worker
+   docker compose --env-file "$AI_VIDEO_STACK_ENV" --file "$AI_VIDEO_COMPOSE_FILE" ps worker
+   ```
+
+3. Copy `jobs.sqlite3*` into the external volume with ownership set to the
+   worker container UID/GID (`10001:10001`):
+
+   ```bash
+   docker run --rm \
+     -v /Users/ai-video-worker/ai-video-worker-data/state:/old:ro \
+     -v ai-video-worker-state:/state \
+     alpine sh -c 'cp -a /old/jobs.sqlite3* /state/ && chown -R 10001:10001 /state'
+   ```
+
+4. Start the stack with `up --detach --no-build` and verify `worker` becomes `healthy`.
+
+### Online SQLite backup
+
+Never copy `jobs.sqlite3` directly out of the volume while `worker` is running
+(WAL mode can produce a torn backup). Take a consistent online backup through
+Python's `sqlite3.Connection.backup()` inside the running container:
+
+```bash
+docker compose --env-file "$AI_VIDEO_STACK_ENV" --file "$AI_VIDEO_COMPOSE_FILE" \
+  exec -T worker python -c '
+import sqlite3
+with sqlite3.connect("/var/lib/ai-video-worker/state/jobs.sqlite3") as src, \
+     sqlite3.connect("/var/lib/ai-video-worker/scratch/jobs-backup.sqlite3") as dst:
+    src.backup(dst)
+'
+```
+
+Move the resulting `jobs-backup.sqlite3` out of the host scratch directory once
+the command finishes so scratch stays reserved for active job directories.
 
 ## Manual Cloudflare setup
 
@@ -116,8 +179,9 @@ export AI_VIDEO_COMPOSE_FILE=/absolute/path/to/ai-video-editor/deployment/mac/co
 ```
 
 Render and inspect the configuration before starting it. The rendered output
-must show no host `ports`, no `/var/run/docker.sock`, and three durable-data bind
-mounts outside the checkout:
+must show no host `ports`, no `/var/run/docker.sock`, two durable-data bind
+mounts outside the checkout (`scratch` and `logs`), and one external named
+volume (`worker_state`) for SQLite state:
 
 ```bash
 docker compose --env-file "$AI_VIDEO_STACK_ENV" --file "$AI_VIDEO_COMPOSE_FILE" config
@@ -160,7 +224,7 @@ worker Bearer token, and a matching job snapshot.
 To verify persistence, choose a terminal job, record its reported revision,
 force-recreate only the worker container, wait for it to become healthy, and
 run the smoke again. The job and revision must still be present because the
-SQLite bind mount did not change:
+external SQLite state volume did not change:
 
 ```bash
 docker compose --env-file "$AI_VIDEO_STACK_ENV" --file "$AI_VIDEO_COMPOSE_FILE" up --detach --no-deps --force-recreate worker
@@ -237,9 +301,10 @@ manually before creating a new Gradivo retry attempt.
 5. If OrbStack did not start, start it in this account, then inspect
    container status and logs. Do not enable automatic macOS login as a fix.
 
-Stopping or recreating containers does not remove the external state, scratch,
-or log directories. Never use a cleanup command that deletes those host paths
-during routine rollout or recovery.
+Stopping or recreating containers does not remove the external state volume,
+scratch, or log directories. Because the state volume is declared
+`external: true`, `docker compose down -v` will not delete it either; never
+remove that volume or those host paths during routine rollout or recovery.
 
 ### Scratch and shutdown lifecycle
 

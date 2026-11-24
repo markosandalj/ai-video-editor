@@ -28,6 +28,13 @@ from ai_video_editor.worker.contracts import (
 )
 
 
+_DEFAULT_TIMEOUT_SECONDS = 30.0
+
+
+def _timeout_ms(timeout: float) -> int:
+    return max(0, int(round(timeout * 1000)))
+
+
 class JobPayloadMismatchError(Exception):
     pass
 
@@ -72,10 +79,24 @@ class JobStore:
             resolved_render_config or _default_render_config()
         )
         self._lock = threading.RLock()
+        self._connection: sqlite3.Connection | None = None
+        self._busy_timeout_ms: int | None = None
+
+    def close(self) -> None:
+        with self._lock:
+            self._close_locked()
+
+    def _close_locked(self) -> None:
+        connection = self._connection
+        self._connection = None
+        self._busy_timeout_ms = None
+        if connection is not None:
+            connection.close()
 
     def initialize(self) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        with self._lock, closing(self._connect()) as connection:
+        with self._lock:
+            connection = self._get_connection()
             connection.executescript(
                 """
                 CREATE TABLE IF NOT EXISTS consumption_attempts (
@@ -114,10 +135,8 @@ class JobStore:
                 ON callback_outbox(delivered_at, available_at, id);
                 """
             )
-            columns = {
-                row["name"]
-                for row in connection.execute("PRAGMA table_info(jobs)").fetchall()
-            }
+            with closing(connection.execute("PRAGMA table_info(jobs)")) as cursor:
+                columns = {row["name"] for row in cursor.fetchall()}
             if "resolved_render_config_json" not in columns:
                 connection.execute(
                     "ALTER TABLE jobs ADD COLUMN resolved_render_config_json TEXT"
@@ -211,20 +230,24 @@ class JobStore:
         )
 
     def get_snapshot(self, job_id: UUID) -> WorkerSnapshot | None:
-        with self._lock, closing(self._connect()) as connection:
-            row = connection.execute(
+        with self._read() as connection, closing(
+            connection.execute(
                 "SELECT snapshot_json FROM jobs WHERE job_id = ?", (str(job_id),)
-            ).fetchone()
+            )
+        ) as cursor:
+            row = cursor.fetchone()
         if row is None:
             return None
         return worker_snapshot_adapter.validate_json(row["snapshot_json"])
 
     def get_resolved_render_config(self, job_id: UUID) -> ResolvedRenderConfigV1 | None:
-        with self._lock, closing(self._connect()) as connection:
-            row = connection.execute(
+        with self._read() as connection, closing(
+            connection.execute(
                 "SELECT resolved_render_config_json FROM jobs WHERE job_id = ?",
                 (str(job_id),),
-            ).fetchone()
+            )
+        ) as cursor:
+            row = cursor.fetchone()
         return (
             None
             if row is None
@@ -355,21 +378,25 @@ class JobStore:
         if snapshot is None or isinstance(snapshot, ProcessingSnapshot):
             raise ValueError("Consumption is delivered only with a terminal job")
         self.recover_consumption(job_id=job_id)
-        with self._lock, closing(self._connect()) as connection:
-            rows = connection.execute(
+        with self._read() as connection, closing(
+            connection.execute(
                 "SELECT payload_json FROM consumption_attempts WHERE job_id = ? ORDER BY attempt_id",
                 (str(job_id),),
-            ).fetchall()
+            )
+        ) as cursor:
+            rows = cursor.fetchall()
         return [ConsumptionV1.model_validate_json(row["payload_json"]) for row in rows]
 
     def recover_consumption(self, *, job_id: UUID | None = None) -> None:
         """Finalize unfinished receipts after the relevant subprocesses have stopped."""
-        with self._lock, closing(self._connect()) as connection:
-            rows = connection.execute(
+        with self._read() as connection, closing(
+            connection.execute(
                 "SELECT payload_json FROM consumption_attempts"
                 + (" WHERE job_id = ?" if job_id is not None else ""),
                 (str(job_id),) if job_id is not None else (),
-            ).fetchall()
+            )
+        ) as cursor:
+            rows = cursor.fetchall()
         for row in rows:
             payload = ConsumptionV1.model_validate_json(row["payload_json"])
             if payload.outcome == "started":
@@ -388,8 +415,8 @@ class JobStore:
 
     def next_outbox(self, *, now: float | None = None) -> OutboxEntry | None:
         available = time.time() if now is None else now
-        with self._lock, closing(self._connect()) as connection:
-            row = connection.execute(
+        with self._read() as connection, closing(
+            connection.execute(
                 """
                 SELECT id, job_id, revision, snapshot_json, terminal, attempts
                 FROM callback_outbox
@@ -398,7 +425,9 @@ class JobStore:
                 LIMIT 1
                 """,
                 (available,),
-            ).fetchone()
+            )
+        ) as cursor:
+            row = cursor.fetchone()
         if row is None:
             return None
         return OutboxEntry(
@@ -409,6 +438,19 @@ class JobStore:
             terminal=bool(row["terminal"]),
             attempts=row["attempts"],
         )
+
+    def next_outbox_available_at(self) -> float | None:
+        with self._read() as connection, closing(
+            connection.execute(
+                """
+                SELECT MIN(available_at)
+                FROM callback_outbox
+                WHERE delivered_at IS NULL
+                """
+            )
+        ) as cursor:
+            row = cursor.fetchone()
+        return None if row is None or row[0] is None else float(row[0])
 
     def mark_outbox_delivered(self, entry_id: int) -> None:
         with self._transaction() as connection:
@@ -436,36 +478,66 @@ class JobStore:
             )
 
     def pending_outbox_count(self) -> int:
-        with self._lock, closing(self._connect()) as connection:
-            return connection.execute(
+        with self._read() as connection, closing(
+            connection.execute(
                 "SELECT COUNT(*) FROM callback_outbox WHERE delivered_at IS NULL"
-            ).fetchone()[0]
+            )
+        ) as cursor:
+            return cursor.fetchone()[0]
 
-    def _connect(self, *, timeout: float = 30.0) -> sqlite3.Connection:
-        connection = sqlite3.connect(self._path, timeout=timeout)
+    def _connect(
+        self, *, timeout: float = _DEFAULT_TIMEOUT_SECONDS
+    ) -> sqlite3.Connection:
+        connection = sqlite3.connect(
+            self._path,
+            timeout=timeout,
+            check_same_thread=False,
+        )
         try:
             connection.row_factory = sqlite3.Row
             connection.execute("PRAGMA foreign_keys = ON")
             connection.execute("PRAGMA journal_mode = WAL")
+            connection.execute(f"PRAGMA busy_timeout = {_timeout_ms(timeout)}")
         except BaseException:
             connection.close()
             raise
         return connection
 
+    def _get_connection(
+        self, *, timeout: float = _DEFAULT_TIMEOUT_SECONDS
+    ) -> sqlite3.Connection:
+        timeout_ms = _timeout_ms(timeout)
+        if self._connection is None:
+            self._connection = self._connect(timeout=timeout)
+            self._busy_timeout_ms = timeout_ms
+        elif self._busy_timeout_ms != timeout_ms:
+            self._connection.execute(f"PRAGMA busy_timeout = {timeout_ms}")
+            self._busy_timeout_ms = timeout_ms
+        return self._connection
+
     @contextmanager
-    def _transaction(self, *, timeout: float = 30.0):
+    def _read(self):
+        with self._lock:
+            yield self._get_connection()
+
+    @contextmanager
+    def _transaction(self, *, timeout: float = _DEFAULT_TIMEOUT_SECONDS):
         # Each context unwinds even when opening the connection or BEGIN fails.
         if not self._lock.acquire(timeout=timeout):
             raise TimeoutError("Job store is busy")
         try:
-            with closing(self._connect(timeout=timeout)) as connection:
-                connection.execute("BEGIN IMMEDIATE")
-                try:
-                    yield connection
-                    connection.commit()
-                except BaseException:
-                    connection.rollback()
-                    raise
+            connection = self._get_connection(timeout=timeout)
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                yield connection
+                connection.commit()
+            except BaseException:
+                if connection.in_transaction:
+                    try:
+                        connection.rollback()
+                    except BaseException:
+                        self._close_locked()
+                raise
         finally:
             self._lock.release()
 

@@ -154,13 +154,22 @@ def test_configure_rerun_preserves_literals_and_uses_host_owner(tmp_path, monkey
     configure.write_env(path, first)
     configure.main()
     assert configure.read_env(path) == first
-    worker = compose_config(path)["services"]["worker"]
+    config = compose_config(path)
+    assert not config.get("volumes")
+    worker = config["services"]["worker"]
     assert worker["user"] == "12345:12346"
     assert (
         worker["environment"]["OPENROUTER_API_KEY"]
         == "literal-$NAME-${NAME} # suffix's"
     )
+    assert len(worker["volumes"]) == 3
+    mounts_by_target = {mount["target"]: mount for mount in worker["volumes"]}
+    assert (
+        mounts_by_target["/var/lib/ai-video-worker/state"]["source"]
+        == overrides["AI_VIDEO_WORKER_STATE_DIR"]
+    )
     for mount in worker["volumes"]:
+        assert mount["type"] == "bind"
         assert Path(mount["source"]).is_dir()
     for key in (
         "VIDEO_PROCESSING_RENDER_CRF",

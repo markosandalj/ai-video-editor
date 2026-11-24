@@ -41,7 +41,7 @@ class WorkerService:
         try:
             self._executor.shutdown()
         finally:
-            self._callbacks.stop()
+            self._callbacks.stop(close_store=True)
 
     def dispatch_callbacks_once(self) -> bool:
         """Run one delivery attempt for deterministic control-plane integration tests."""
