@@ -6,6 +6,10 @@ services:
     build:
       context: ../..
       dockerfile: deployment/mac/Dockerfile
+    volumes:
+      - type: bind
+        source: "${AI_VIDEO_WORKER_STATE_DIR:?Set a local state directory}"
+        target: /var/lib/ai-video-worker/state
     ports:
       - "${AI_VIDEO_WORKER_BIND_ADDRESS:-127.0.0.1}:${AI_VIDEO_WORKER_PORT:-8000}:8000"
     extra_hosts:
@@ -13,3 +17,5 @@ services:
 
   cloudflared:
     profiles: [tunnel]
+
+volumes: !reset {}

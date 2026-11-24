@@ -11,8 +11,8 @@ services:
       VIDEO_PROCESSING_SCRATCH_DIR: /var/lib/ai-video-worker/scratch
       VIDEO_PROCESSING_LOG_DIR: /var/log/ai-video-worker
     volumes:
-      - type: bind
-        source: "${AI_VIDEO_WORKER_STATE_DIR:?Set an external state directory}"
+      - type: volume
+        source: worker_state
         target: /var/lib/ai-video-worker/state
       - type: bind
         source: "${AI_VIDEO_WORKER_SCRATCH_DIR:?Set an external scratch directory}"
@@ -64,3 +64,8 @@ services:
 networks:
   tunnel:
     driver: bridge
+
+volumes:
+  worker_state:
+    external: true
+    name: "${AI_VIDEO_WORKER_STATE_VOLUME:?Set an external state volume}"

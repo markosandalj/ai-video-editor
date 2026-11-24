@@ -110,8 +110,9 @@ def main() -> None:
         AI_VIDEO_WORKER_LOG_DIR=str(local_data / "logs"),
         AI_VIDEO_WORKER_BIND_ADDRESS="127.0.0.1",
         AI_VIDEO_WORKER_PORT="8000",
-        # Compose resolves every service even when only worker is selected.
-        # The local override disables cloudflared unless explicitly profiled in.
+        # Compose resolves every service and top-level volume before local
+        # overrides disable cloudflared and switch state back to a bind mount.
+        AI_VIDEO_WORKER_STATE_VOLUME=stack_defaults["AI_VIDEO_WORKER_STATE_VOLUME"],
         CLOUDFLARED_IMAGE=stack_defaults["CLOUDFLARED_IMAGE"],
         AI_VIDEO_CLOUDFLARED_ENV_FILE=str(
             ROOT / "deployment/mac/env/cloudflared.env.example"

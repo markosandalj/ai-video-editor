@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import threading
+import time
 from typing import Protocol
 from urllib.request import Request, urlopen
 
@@ -93,6 +94,7 @@ class CallbackDispatcher:
     def start(self) -> None:
         if self._thread is not None:
             return
+        self._stop.clear()
         self._thread = threading.Thread(
             target=self._run,
             name="video-callback-dispatcher",
@@ -159,11 +161,23 @@ class CallbackDispatcher:
 
     def _run(self) -> None:
         while not self._stop.is_set():
+            # Clear before checking the store so a notify() or stop() arriving
+            # during dispatch/query stays visible to the wait below.
+            self._wake.clear()
+            if self._stop.is_set():
+                break
             try:
-                dispatched = self.dispatch_once()
+                if self.dispatch_once():
+                    continue
+                next_available_at = self._store.next_outbox_available_at()
             except Exception as exc:
                 logger.warning("callback_dispatch_failed error_type=%s", type(exc).__name__)
-                dispatched = False
-            if not dispatched:
                 self._wake.wait(self._idle_wait_seconds)
-                self._wake.clear()
+                continue
+
+            if next_available_at is None:
+                self._wake.wait()
+            else:
+                delay = next_available_at - time.time()
+                if delay > 0:
+                    self._wake.wait(delay)

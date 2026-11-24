@@ -54,11 +54,77 @@ def test_compose_keeps_services_separate_and_host_state_explicit() -> None:
     assert "ports:" not in compose
     assert "AI_VIDEO_WORKER_ENV_FILE" in compose
     assert "AI_VIDEO_CLOUDFLARED_ENV_FILE" in compose
-    assert compose.count("type: bind") == 3
-    assert "AI_VIDEO_WORKER_STATE_DIR" in compose
+    assert compose.count("type: bind") == 2
+    assert compose.count("type: volume") == 1
+    assert "external: true" in compose
+    assert "AI_VIDEO_WORKER_STATE_VOLUME" in compose
+    assert "AI_VIDEO_WORKER_STATE_DIR" not in compose
     assert "AI_VIDEO_WORKER_SCRATCH_DIR" in compose
     assert "AI_VIDEO_WORKER_LOG_DIR" in compose
     assert "http://worker:8000" not in compose
+
+
+def test_mac_compose_resolves_external_state_volume_and_two_bind_mounts(
+    tmp_path: Path,
+) -> None:
+    import os
+    import shutil
+    import subprocess
+
+    if not shutil.which("docker"):
+        pytest.skip("Docker Compose is required to validate deployment/mac/compose.yaml")
+
+    worker_env = tmp_path / ".env.worker"
+    cloudflared_env = tmp_path / ".env.cloudflared"
+    scratch_dir = tmp_path / "scratch"
+    log_dir = tmp_path / "logs"
+    worker_env.write_text("AI_VIDEO_EDITOR_API_TOKEN=test\n")
+    cloudflared_env.write_text("TUNNEL_TOKEN=test\n")
+    scratch_dir.mkdir()
+    log_dir.mkdir()
+
+    stack_env = tmp_path / ".env.stack.local"
+    stack_env.write_text(
+        "\n".join(
+            [
+                "AI_VIDEO_WORKER_IMAGE=ai-video-worker:test",
+                "CLOUDFLARED_IMAGE=cloudflare/cloudflared:2026.7.3",
+                "AI_VIDEO_WORKER_STATE_VOLUME=ai-video-worker-prod-state",
+                f"AI_VIDEO_WORKER_ENV_FILE={worker_env}",
+                f"AI_VIDEO_CLOUDFLARED_ENV_FILE={cloudflared_env}",
+                f"AI_VIDEO_WORKER_SCRATCH_DIR={scratch_dir}",
+                f"AI_VIDEO_WORKER_LOG_DIR={log_dir}",
+            ]
+        )
+        + "\n"
+    )
+    result = subprocess.run(
+        [
+            "docker",
+            "compose",
+            "--env-file",
+            str(stack_env),
+            "-f",
+            str(DEPLOYMENT / "compose.yaml"),
+            "config",
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        env={"PATH": os.environ["PATH"], "HOME": os.environ["HOME"]},
+    )
+    config = json.loads(result.stdout)
+    mounts = {m["target"]: m for m in config["services"]["worker"]["volumes"]}
+    assert mounts["/var/lib/ai-video-worker/state"]["type"] == "volume"
+    assert mounts["/var/lib/ai-video-worker/state"]["source"] == "worker_state"
+    assert mounts["/var/lib/ai-video-worker/scratch"]["type"] == "bind"
+    assert mounts["/var/lib/ai-video-worker/scratch"]["source"] == str(scratch_dir)
+    assert mounts["/var/log/ai-video-worker"]["type"] == "bind"
+    assert mounts["/var/log/ai-video-worker"]["source"] == str(log_dir)
+    assert config["volumes"]["worker_state"]["external"] is True
+    assert config["volumes"]["worker_state"]["name"] == "ai-video-worker-prod-state"
 
 
 def test_worker_file_logging_is_bounded_and_uses_the_mounted_log_directory(
