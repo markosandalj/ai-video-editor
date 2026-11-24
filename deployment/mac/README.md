@@ -89,25 +89,36 @@ bind mount; normal container stdout remains available through
 If an existing stack previously stored SQLite in a host bind-mount directory
 (for example `/Users/ai-video-worker/ai-video-worker-data/state`):
 
-1. Stop the running worker first so SQLite checkpoints its WAL and closes cleanly:
-
-   ```bash
-   docker compose --env-file "$AI_VIDEO_STACK_ENV" --file "$AI_VIDEO_COMPOSE_FILE" stop worker
-   ```
-
-2. Create the external volume (if not already created) and copy `jobs.sqlite3`
-   with ownership set to the worker container UID/GID (`10001:10001`):
+1. Create the external volume and update `.env.stack.local` to set
+   `AI_VIDEO_WORKER_STATE_VOLUME=ai-video-worker-state` (replacing
+   `AI_VIDEO_WORKER_STATE_DIR`) so the updated `compose.yaml` interpolates
+   cleanly:
 
    ```bash
    docker volume create ai-video-worker-state
+   ```
+
+2. Stop the running worker and verify it has exited so SQLite checkpoints its
+   WAL and closes cleanly before copying (if you have not yet pulled the
+   updated `compose.yaml`, stop the worker using the previous `compose.yaml`
+   before editing `.env.stack.local`):
+
+   ```bash
+   docker compose --env-file "$AI_VIDEO_STACK_ENV" --file "$AI_VIDEO_COMPOSE_FILE" stop worker
+   docker compose --env-file "$AI_VIDEO_STACK_ENV" --file "$AI_VIDEO_COMPOSE_FILE" ps worker
+   ```
+
+3. Copy `jobs.sqlite3*` into the external volume with ownership set to the
+   worker container UID/GID (`10001:10001`):
+
+   ```bash
    docker run --rm \
      -v /Users/ai-video-worker/ai-video-worker-data/state:/old:ro \
      -v ai-video-worker-state:/state \
      alpine sh -c 'cp -a /old/jobs.sqlite3* /state/ && chown -R 10001:10001 /state'
    ```
 
-3. Update `.env.stack.local` to set `AI_VIDEO_WORKER_STATE_VOLUME=ai-video-worker-state`
-   (replacing `AI_VIDEO_WORKER_STATE_DIR`) and start the stack with `up --detach --no-build`.
+4. Start the stack with `up --detach --no-build` and verify `worker` becomes `healthy`.
 
 ### Online SQLite backup
 

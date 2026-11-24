@@ -347,6 +347,49 @@ def test_worker_service_shutdown_closes_store_connection(tmp_path: Path) -> None
     store.close()
 
 
+def test_shutdown_defers_store_close_until_in_flight_callback_finishes(
+    tmp_path: Path,
+) -> None:
+    import threading
+
+    from ai_video_editor.worker.callbacks import CallbackDispatcher
+
+    store = JobStore(tmp_path / "jobs.sqlite3")
+    store.initialize()
+    request = job_request_adapter.validate_json(
+        (FIXTURES / "analysis-request.v1.json").read_text()
+    )
+    store.accept(uuid4(), request)
+
+    in_delivery = threading.Event()
+    release_delivery = threading.Event()
+
+    class SlowClient:
+        def deliver(self, snapshot, *, consumption=None) -> bool:
+            del snapshot, consumption
+            in_delivery.set()
+            assert release_delivery.wait(5)
+            return True
+
+    dispatcher = CallbackDispatcher(store, SlowClient())
+    dispatcher.start()
+    assert in_delivery.wait(2)
+
+    # Stop with a short join timeout while the callback is still in flight:
+    # the store must stay open for mark_outbox_delivered(), then close on exit.
+    dispatcher.stop(timeout=0.05, close_store=True)
+    thread = dispatcher._thread
+    assert thread is not None and thread.is_alive()
+    assert store._connection is not None
+
+    release_delivery.set()
+    thread.join(timeout=2)
+    assert not thread.is_alive()
+    assert store._connection is None
+    assert store.pending_outbox_count() == 0
+    store.close()
+
+
 def test_callback_dispatcher_does_not_poll_when_idle_and_wakes_on_notify(
     tmp_path: Path, monkeypatch
 ) -> None:
